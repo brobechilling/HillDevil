@@ -1,0 +1,13 @@
+services:
+  spring-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DB_URL=${DB_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "8080:8080"
+    container_name: spring-app-container
+    restart: unless-stopped
