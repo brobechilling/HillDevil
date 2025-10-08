@@ -7,21 +7,23 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: app
-        ports:
-          - 5432:5432
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd "pg_isready -U test" 
-          --health-interval 10s 
-          --health-timeout 5s 
-          --health-retries 5
+    
+    # if want to test connect db
+    # services:
+    #   postgres:
+    #     image: postgres:16
+    #     env:
+    #       POSTGRES_USER: test
+    #       POSTGRES_PASSWORD: test
+    #       POSTGRES_DB: app
+    #     ports:
+    #       - 5432:5432
+    #     # Set health checks to wait until postgres has started
+    #     options: >-
+    #       --health-cmd "pg_isready -U test" 
+    #       --health-interval 10s 
+    #       --health-timeout 5s 
+    #       --health-retries 5
     
     env:
       DB_URL: jdbc:postgresql://localhost:5432/app
