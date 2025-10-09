@@ -1,4 +1,4 @@
 databaseChangeLog:
   - include:
-      file: test-changelog.sql
+      file: create-table-changelog.sql
       relativeToChangelogFile: true
