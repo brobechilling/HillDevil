@@ -30,7 +30,7 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID categoryId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "restaurant_id")
     private Restaurant restaurant;
 
@@ -45,7 +45,7 @@ public class Category {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "category_customization",
         joinColumns = @JoinColumn(name = "category_id"),
@@ -53,7 +53,7 @@ public class Category {
     )
     private Set<Customization> customizations = new LinkedHashSet<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "category")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "category")
     private Set<MenuItem> menuItems = new LinkedHashSet<>();
 
     public UUID getCategoryId() {

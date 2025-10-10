@@ -21,11 +21,11 @@ public class OrderItemCustomization {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID orderItemCustomizationId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false,name = "order_item_id")
     private OrderItem orderItem;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false,name = "customization_id")
     private Customization customization;
 

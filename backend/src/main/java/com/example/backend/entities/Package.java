@@ -20,7 +20,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "package")
+@Table(name = "packages")
 public class Package {
     
     @Id
@@ -55,7 +55,7 @@ public class Package {
     @OneToMany(mappedBy = "aPackage", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<PackageFeature> packageFeatures = new LinkedHashSet<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "aPackage")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "aPackage")
     private Set<Subscription> subscriptions = new LinkedHashSet<>();
 
 

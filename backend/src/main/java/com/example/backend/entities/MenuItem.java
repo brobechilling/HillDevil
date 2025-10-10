@@ -31,17 +31,17 @@ public class MenuItem {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID menuItemId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "restaurant_id")
     private Restaurant restaurant;
 
     // allow menu item to have customization of its category
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
 
     // allow menu item to have its own customization
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "menuitem_customization",
         joinColumns = @JoinColumn(name = "menu_item_id"),

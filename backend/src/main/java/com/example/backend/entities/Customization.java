@@ -30,7 +30,7 @@ public class Customization {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID customizationId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "restaurant_id")
     private Restaurant restaurant;
 

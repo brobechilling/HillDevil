@@ -28,7 +28,7 @@ public class Area {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID areaId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "branch_id")
     private Branch branch;
 
@@ -46,7 +46,7 @@ public class Area {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "area")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "area")
     private Set<AreaTable> areas = new LinkedHashSet<>();
 
     public UUID getAreaId() {

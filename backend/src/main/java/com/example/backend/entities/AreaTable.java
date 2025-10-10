@@ -30,7 +30,7 @@ public class AreaTable {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID areaTableId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "area_id")
     private Area area;
 
@@ -41,6 +41,7 @@ public class AreaTable {
     private int capacity;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "status")
     private TableStatus status;
 
     @Column(name = "qr")
@@ -54,10 +55,10 @@ public class AreaTable {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "areaTable")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "areaTable")
     private Set<Reservation> reservations = new LinkedHashSet<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "areaTable")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "areaTable")
     private Set<Order> orders = new LinkedHashSet<>();
 
     public UUID getAreaTableId() {

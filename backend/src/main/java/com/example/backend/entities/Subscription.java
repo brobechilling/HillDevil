@@ -29,11 +29,11 @@ public class Subscription {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID subscriptionId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "restaurant_id")
     private Restaurant restaurant;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "package_id")
     private Package aPackage;
 

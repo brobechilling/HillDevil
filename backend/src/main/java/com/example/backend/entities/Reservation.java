@@ -28,12 +28,12 @@ public class Reservation {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID reservationId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "branch_id")
     private Branch branch;
 
     // this can be set later by the receptionist
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "area_table_id")
     private AreaTable areaTable;
 
@@ -56,6 +56,7 @@ public class Reservation {
     private String note;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "status")
     private ReservationStatus status;
 
     @CreationTimestamp

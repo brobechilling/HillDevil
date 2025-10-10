@@ -24,11 +24,11 @@ public class BranchMenuItem {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID branchMenuItemId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "branch_id")
     private Branch branch;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "menu_item_id")
     private MenuItem menuItem;
 

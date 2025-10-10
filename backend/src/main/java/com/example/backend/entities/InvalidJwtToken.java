@@ -2,6 +2,7 @@ package com.example.backend.entities;
 
 import java.util.Date;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -14,6 +15,7 @@ public class InvalidJwtToken {
     private String id;
     // we have this expirationTime for worker service (service run per period) to clean expired token, not just invalid token (when log out)
     // -> make sure the database not expand too large
+    @Column(name = "expiration_time")
     private Date expirationTime;
 
     public String getId() {

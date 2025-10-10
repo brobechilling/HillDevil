@@ -25,11 +25,11 @@ public class StaffAccount {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID staffAccountId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "role_id")
     private Role role;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "branch_id")
     private Branch branch;
 

@@ -29,11 +29,11 @@ public class Bill {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID billId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false,name = "order_id")
     private Order order;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false,name = "branch_id")
     private Branch branch;
 

@@ -25,11 +25,12 @@ public class RestaurantReport {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID restaurantReportId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "restaurant_id")
     private Restaurant restaurant;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "report_type")
     private ReportType reportType;
 
     // 1/10 : 00:00 will be monthly

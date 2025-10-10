@@ -23,7 +23,7 @@ public class SubscriptionPayment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID subscriptionPaymentId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "subscription_id")
     private Subscription subscription;
 

@@ -1,6 +1,6 @@
 -- liquibase formatted sql
 
--- changeset quoc:1760003747564-1
+-- changeset wave:1760081378696-1
 CREATE TABLE area
 (
     area_id    UUID NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE area
     CONSTRAINT pk_area PRIMARY KEY (area_id)
 );
 
--- changeset quoc:1760003747564-2
+-- changeset wave:1760081378696-2
 CREATE TABLE area_table
 (
     area_table_id UUID NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE area_table
     CONSTRAINT pk_area_table PRIMARY KEY (area_table_id)
 );
 
--- changeset quoc:1760003747564-3
+-- changeset wave:1760081378696-3
 CREATE TABLE bill
 (
     bill_id        UUID           NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE bill
     CONSTRAINT pk_bill PRIMARY KEY (bill_id)
 );
 
--- changeset quoc:1760003747564-4
+-- changeset wave:1760081378696-4
 CREATE TABLE branch
 (
     branch_id     UUID         NOT NULL,
@@ -57,7 +57,7 @@ CREATE TABLE branch
     CONSTRAINT pk_branch PRIMARY KEY (branch_id)
 );
 
--- changeset quoc:1760003747564-5
+-- changeset wave:1760081378696-5
 CREATE TABLE branch_menu_item
 (
     branch_menu_item_id UUID NOT NULL,
@@ -68,7 +68,7 @@ CREATE TABLE branch_menu_item
     CONSTRAINT pk_branch_menu_item PRIMARY KEY (branch_menu_item_id)
 );
 
--- changeset quoc:1760003747564-6
+-- changeset wave:1760081378696-6
 CREATE TABLE branch_report
 (
     branch_report_id UUID           NOT NULL,
@@ -82,7 +82,7 @@ CREATE TABLE branch_report
     CONSTRAINT pk_branch_report PRIMARY KEY (branch_report_id)
 );
 
--- changeset quoc:1760003747564-7
+-- changeset wave:1760081378696-7
 CREATE TABLE category
 (
     category_id   UUID NOT NULL,
@@ -93,7 +93,7 @@ CREATE TABLE category
     CONSTRAINT pk_category PRIMARY KEY (category_id)
 );
 
--- changeset quoc:1760003747564-8
+-- changeset wave:1760081378696-8
 CREATE TABLE category_customization
 (
     category_id      UUID NOT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE category_customization
     CONSTRAINT pk_category_customization PRIMARY KEY (category_id, customization_id)
 );
 
--- changeset quoc:1760003747564-9
+-- changeset wave:1760081378696-9
 CREATE TABLE customization
 (
     customization_id UUID           NOT NULL,
@@ -113,7 +113,7 @@ CREATE TABLE customization
     CONSTRAINT pk_customization PRIMARY KEY (customization_id)
 );
 
--- changeset quoc:1760003747564-10
+-- changeset wave:1760081378696-10
 CREATE TABLE feature
 (
     feature_id  UUID         NOT NULL,
@@ -122,7 +122,7 @@ CREATE TABLE feature
     CONSTRAINT pk_feature PRIMARY KEY (feature_id)
 );
 
--- changeset quoc:1760003747564-11
+-- changeset wave:1760081378696-11
 CREATE TABLE invalid_jwt_token
 (
     id              VARCHAR(255) NOT NULL,
@@ -130,7 +130,7 @@ CREATE TABLE invalid_jwt_token
     CONSTRAINT pk_invalid_jwt_token PRIMARY KEY (id)
 );
 
--- changeset quoc:1760003747564-12
+-- changeset wave:1760081378696-12
 CREATE TABLE media
 (
     media_id       UUID NOT NULL,
@@ -143,7 +143,7 @@ CREATE TABLE media
     CONSTRAINT pk_media PRIMARY KEY (media_id)
 );
 
--- changeset quoc:1760003747564-13
+-- changeset wave:1760081378696-13
 CREATE TABLE menu_item
 (
     menu_item_id      UUID           NOT NULL,
@@ -160,7 +160,7 @@ CREATE TABLE menu_item
     CONSTRAINT pk_menu_item PRIMARY KEY (menu_item_id)
 );
 
--- changeset quoc:1760003747564-14
+-- changeset wave:1760081378696-14
 CREATE TABLE menuitem_customization
 (
     customization_id UUID NOT NULL,
@@ -168,19 +168,7 @@ CREATE TABLE menuitem_customization
     CONSTRAINT pk_menuitem_customization PRIMARY KEY (customization_id, menu_item_id)
 );
 
--- changeset quoc:1760003747564-15
-CREATE TABLE "order"
-(
-    order_id      UUID           NOT NULL,
-    area_table_id UUID           NOT NULL,
-    status        VARCHAR(255),
-    total_price   DECIMAL(10, 2) NOT NULL,
-    created_at    TIMESTAMP WITHOUT TIME ZONE,
-    updated_at    TIMESTAMP WITHOUT TIME ZONE,
-    CONSTRAINT pk_order PRIMARY KEY (order_id)
-);
-
--- changeset quoc:1760003747564-16
+-- changeset wave:1760081378696-15
 CREATE TABLE order_item
 (
     order_item_id UUID           NOT NULL,
@@ -193,7 +181,7 @@ CREATE TABLE order_item
     CONSTRAINT pk_order_item PRIMARY KEY (order_item_id)
 );
 
--- changeset quoc:1760003747564-17
+-- changeset wave:1760081378696-16
 CREATE TABLE order_item_customization
 (
     order_item_customization_id UUID           NOT NULL,
@@ -204,7 +192,7 @@ CREATE TABLE order_item_customization
     CONSTRAINT pk_order_item_customization PRIMARY KEY (order_item_customization_id)
 );
 
--- changeset quoc:1760003747564-18
+-- changeset wave:1760081378696-17
 CREATE TABLE order_line
 (
     order_line_id     UUID NOT NULL,
@@ -215,8 +203,29 @@ CREATE TABLE order_line
     CONSTRAINT pk_order_line PRIMARY KEY (order_line_id)
 );
 
--- changeset quoc:1760003747564-19
-CREATE TABLE package
+-- changeset wave:1760081378696-18
+CREATE TABLE orders
+(
+    order_id      UUID           NOT NULL,
+    area_table_id UUID           NOT NULL,
+    status        VARCHAR(255),
+    total_price   DECIMAL(10, 2) NOT NULL,
+    created_at    TIMESTAMP WITHOUT TIME ZONE,
+    updated_at    TIMESTAMP WITHOUT TIME ZONE,
+    CONSTRAINT pk_orders PRIMARY KEY (order_id)
+);
+
+-- changeset wave:1760081378696-19
+CREATE TABLE package_feature
+(
+    value      INTEGER,
+    package_id UUID NOT NULL,
+    feature_id UUID NOT NULL,
+    CONSTRAINT pk_package_feature PRIMARY KEY (package_id, feature_id)
+);
+
+-- changeset wave:1760081378696-20
+CREATE TABLE packages
 (
     package_id     UUID           NOT NULL,
     name           VARCHAR(255)   NOT NULL,
@@ -226,19 +235,10 @@ CREATE TABLE package
     created_at     TIMESTAMP WITHOUT TIME ZONE,
     updated_at     TIMESTAMP WITHOUT TIME ZONE,
     billing_period INTEGER        NOT NULL,
-    CONSTRAINT pk_package PRIMARY KEY (package_id)
+    CONSTRAINT pk_packages PRIMARY KEY (package_id)
 );
 
--- changeset quoc:1760003747564-20
-CREATE TABLE package_feature
-(
-    value      INTEGER,
-    package_id UUID NOT NULL,
-    feature_id UUID NOT NULL,
-    CONSTRAINT pk_package_feature PRIMARY KEY (package_id, feature_id)
-);
-
--- changeset quoc:1760003747564-21
+-- changeset wave:1760081378696-21
 CREATE TABLE reservation
 (
     reservation_id UUID NOT NULL,
@@ -256,7 +256,7 @@ CREATE TABLE reservation
     CONSTRAINT pk_reservation PRIMARY KEY (reservation_id)
 );
 
--- changeset quoc:1760003747564-22
+-- changeset wave:1760081378696-22
 CREATE TABLE restaurant
 (
     restaurant_id    UUID         NOT NULL,
@@ -272,7 +272,7 @@ CREATE TABLE restaurant
     CONSTRAINT pk_restaurant PRIMARY KEY (restaurant_id)
 );
 
--- changeset quoc:1760003747564-23
+-- changeset wave:1760081378696-23
 CREATE TABLE restaurant_report
 (
     restaurant_report_id UUID           NOT NULL,
@@ -288,7 +288,7 @@ CREATE TABLE restaurant_report
     CONSTRAINT pk_restaurant_report PRIMARY KEY (restaurant_report_id)
 );
 
--- changeset quoc:1760003747564-24
+-- changeset wave:1760081378696-24
 CREATE TABLE role
 (
     role_id     UUID         NOT NULL,
@@ -298,7 +298,7 @@ CREATE TABLE role
     CONSTRAINT pk_role PRIMARY KEY (role_id)
 );
 
--- changeset quoc:1760003747564-25
+-- changeset wave:1760081378696-25
 CREATE TABLE staff_account
 (
     staff_account_id UUID         NOT NULL,
@@ -312,7 +312,7 @@ CREATE TABLE staff_account
     CONSTRAINT pk_staff_account PRIMARY KEY (staff_account_id)
 );
 
--- changeset quoc:1760003747564-26
+-- changeset wave:1760081378696-26
 CREATE TABLE subscription
 (
     subscription_id UUID NOT NULL,
@@ -326,7 +326,7 @@ CREATE TABLE subscription
     CONSTRAINT pk_subscription PRIMARY KEY (subscription_id)
 );
 
--- changeset quoc:1760003747564-27
+-- changeset wave:1760081378696-27
 CREATE TABLE subscription_payment
 (
     subscription_payment_id UUID           NOT NULL,
@@ -344,7 +344,7 @@ CREATE TABLE subscription_payment
     CONSTRAINT pk_subscription_payment PRIMARY KEY (subscription_payment_id)
 );
 
--- changeset quoc:1760003747564-28
+-- changeset wave:1760081378696-28
 CREATE TABLE target_type
 (
     target_type_id UUID NOT NULL,
@@ -352,8 +352,8 @@ CREATE TABLE target_type
     CONSTRAINT pk_target_type PRIMARY KEY (target_type_id)
 );
 
--- changeset quoc:1760003747564-29
-CREATE TABLE "user"
+-- changeset wave:1760081378696-29
+CREATE TABLE users
 (
     user_id    UUID         NOT NULL,
     email      VARCHAR(255) NOT NULL,
@@ -364,158 +364,159 @@ CREATE TABLE "user"
     updated_at TIMESTAMP WITHOUT TIME ZONE,
     phone      VARCHAR(255),
     status     BOOLEAN,
-    CONSTRAINT pk_user PRIMARY KEY (user_id)
+    role_id    UUID         NOT NULL,
+    CONSTRAINT pk_users PRIMARY KEY (user_id)
 );
 
--- changeset quoc:1760003747564-30
+-- changeset wave:1760081378696-30
 ALTER TABLE branch
     ADD CONSTRAINT uc_branch_address UNIQUE (address);
 
--- changeset quoc:1760003747564-31
+-- changeset wave:1760081378696-31
 ALTER TABLE branch
     ADD CONSTRAINT uc_branch_mail UNIQUE (mail);
 
--- changeset quoc:1760003747564-32
-ALTER TABLE role
-    ADD CONSTRAINT uc_role_name UNIQUE (name);
+-- changeset wave:1760081378696-32
+ALTER TABLE users
+    ADD CONSTRAINT uc_users_email UNIQUE (email);
 
--- changeset quoc:1760003747564-33
-ALTER TABLE "user"
-    ADD CONSTRAINT uc_user_email UNIQUE (email);
-
--- changeset quoc:1760003747564-34
+-- changeset wave:1760081378696-33
 ALTER TABLE area
     ADD CONSTRAINT FK_AREA_ON_BRANCH FOREIGN KEY (branch_id) REFERENCES branch (branch_id);
 
--- changeset quoc:1760003747564-35
+-- changeset wave:1760081378696-34
 ALTER TABLE area_table
     ADD CONSTRAINT FK_AREA_TABLE_ON_AREA FOREIGN KEY (area_id) REFERENCES area (area_id);
 
--- changeset quoc:1760003747564-36
+-- changeset wave:1760081378696-35
 ALTER TABLE bill
     ADD CONSTRAINT FK_BILL_ON_BRANCH FOREIGN KEY (branch_id) REFERENCES branch (branch_id);
 
--- changeset quoc:1760003747564-37
+-- changeset wave:1760081378696-36
 ALTER TABLE bill
-    ADD CONSTRAINT FK_BILL_ON_ORDER FOREIGN KEY (order_id) REFERENCES "order" (order_id);
+    ADD CONSTRAINT FK_BILL_ON_ORDER FOREIGN KEY (order_id) REFERENCES orders (order_id);
 
--- changeset quoc:1760003747564-38
+-- changeset wave:1760081378696-37
 ALTER TABLE branch_menu_item
     ADD CONSTRAINT FK_BRANCH_MENU_ITEM_ON_BRANCH FOREIGN KEY (branch_id) REFERENCES branch (branch_id);
 
--- changeset quoc:1760003747564-39
+-- changeset wave:1760081378696-38
 ALTER TABLE branch_menu_item
     ADD CONSTRAINT FK_BRANCH_MENU_ITEM_ON_MENU_ITEM FOREIGN KEY (menu_item_id) REFERENCES menu_item (menu_item_id);
 
--- changeset quoc:1760003747564-40
+-- changeset wave:1760081378696-39
 ALTER TABLE branch
     ADD CONSTRAINT FK_BRANCH_ON_RESTAURANT FOREIGN KEY (restaurant_id) REFERENCES restaurant (restaurant_id);
 
--- changeset quoc:1760003747564-41
+-- changeset wave:1760081378696-40
 ALTER TABLE branch_report
     ADD CONSTRAINT FK_BRANCH_REPORT_ON_BRANCH FOREIGN KEY (branch_id) REFERENCES branch (branch_id);
 
--- changeset quoc:1760003747564-42
+-- changeset wave:1760081378696-41
 ALTER TABLE category
     ADD CONSTRAINT FK_CATEGORY_ON_RESTAURANT FOREIGN KEY (restaurant_id) REFERENCES restaurant (restaurant_id);
 
--- changeset quoc:1760003747564-43
+-- changeset wave:1760081378696-42
 ALTER TABLE customization
     ADD CONSTRAINT FK_CUSTOMIZATION_ON_RESTAURANT FOREIGN KEY (restaurant_id) REFERENCES restaurant (restaurant_id);
 
--- changeset quoc:1760003747564-44
+-- changeset wave:1760081378696-43
 ALTER TABLE media
     ADD CONSTRAINT FK_MEDIA_ON_TARGET_TYPE FOREIGN KEY (target_type_id) REFERENCES target_type (target_type_id);
 
--- changeset quoc:1760003747564-45
+-- changeset wave:1760081378696-44
 ALTER TABLE menu_item
     ADD CONSTRAINT FK_MENU_ITEM_ON_CATEGORY FOREIGN KEY (category_id) REFERENCES category (category_id);
 
--- changeset quoc:1760003747564-46
+-- changeset wave:1760081378696-45
 ALTER TABLE menu_item
     ADD CONSTRAINT FK_MENU_ITEM_ON_RESTAURANT FOREIGN KEY (restaurant_id) REFERENCES restaurant (restaurant_id);
 
--- changeset quoc:1760003747564-47
+-- changeset wave:1760081378696-46
+ALTER TABLE orders
+    ADD CONSTRAINT FK_ORDERS_ON_AREA_TABLE FOREIGN KEY (area_table_id) REFERENCES area_table (area_table_id);
+
+-- changeset wave:1760081378696-47
 ALTER TABLE order_item_customization
     ADD CONSTRAINT FK_ORDER_ITEM_CUSTOMIZATION_ON_CUSTOMIZATION FOREIGN KEY (customization_id) REFERENCES customization (customization_id);
 
--- changeset quoc:1760003747564-48
+-- changeset wave:1760081378696-48
 ALTER TABLE order_item_customization
     ADD CONSTRAINT FK_ORDER_ITEM_CUSTOMIZATION_ON_ORDER_ITEM FOREIGN KEY (order_item_id) REFERENCES order_item (order_item_id);
 
--- changeset quoc:1760003747564-49
+-- changeset wave:1760081378696-49
 ALTER TABLE order_item
     ADD CONSTRAINT FK_ORDER_ITEM_ON_MENU_ITEM FOREIGN KEY (menu_item_id) REFERENCES menu_item (menu_item_id);
 
--- changeset quoc:1760003747564-50
+-- changeset wave:1760081378696-50
 ALTER TABLE order_item
     ADD CONSTRAINT FK_ORDER_ITEM_ON_ORDER_LINE FOREIGN KEY (order_line_id) REFERENCES order_line (order_line_id);
 
--- changeset quoc:1760003747564-51
+-- changeset wave:1760081378696-51
 ALTER TABLE order_line
-    ADD CONSTRAINT FK_ORDER_LINE_ON_ORDER FOREIGN KEY (order_id) REFERENCES "order" (order_id);
+    ADD CONSTRAINT FK_ORDER_LINE_ON_ORDER FOREIGN KEY (order_id) REFERENCES orders (order_id);
 
--- changeset quoc:1760003747564-52
-ALTER TABLE "order"
-    ADD CONSTRAINT FK_ORDER_ON_AREA_TABLE FOREIGN KEY (area_table_id) REFERENCES area_table (area_table_id);
-
--- changeset quoc:1760003747564-53
+-- changeset wave:1760081378696-52
 ALTER TABLE package_feature
     ADD CONSTRAINT FK_PACKAGE_FEATURE_ON_FEATURE FOREIGN KEY (feature_id) REFERENCES feature (feature_id);
 
--- changeset quoc:1760003747564-54
+-- changeset wave:1760081378696-53
 ALTER TABLE package_feature
-    ADD CONSTRAINT FK_PACKAGE_FEATURE_ON_PACKAGE FOREIGN KEY (package_id) REFERENCES package (package_id);
+    ADD CONSTRAINT FK_PACKAGE_FEATURE_ON_PACKAGE FOREIGN KEY (package_id) REFERENCES packages (package_id);
 
--- changeset quoc:1760003747564-55
+-- changeset wave:1760081378696-54
 ALTER TABLE reservation
     ADD CONSTRAINT FK_RESERVATION_ON_AREA_TABLE FOREIGN KEY (area_table_id) REFERENCES area_table (area_table_id);
 
--- changeset quoc:1760003747564-56
+-- changeset wave:1760081378696-55
 ALTER TABLE reservation
     ADD CONSTRAINT FK_RESERVATION_ON_BRANCH FOREIGN KEY (branch_id) REFERENCES branch (branch_id);
 
--- changeset quoc:1760003747564-57
+-- changeset wave:1760081378696-56
 ALTER TABLE restaurant
-    ADD CONSTRAINT FK_RESTAURANT_ON_USER FOREIGN KEY (user_id) REFERENCES "user" (user_id);
+    ADD CONSTRAINT FK_RESTAURANT_ON_USER FOREIGN KEY (user_id) REFERENCES users (user_id);
 
--- changeset quoc:1760003747564-58
+-- changeset wave:1760081378696-57
 ALTER TABLE restaurant_report
     ADD CONSTRAINT FK_RESTAURANT_REPORT_ON_RESTAURANT FOREIGN KEY (restaurant_id) REFERENCES restaurant (restaurant_id);
 
--- changeset quoc:1760003747564-59
+-- changeset wave:1760081378696-58
 ALTER TABLE staff_account
     ADD CONSTRAINT FK_STAFF_ACCOUNT_ON_BRANCH FOREIGN KEY (branch_id) REFERENCES branch (branch_id);
 
--- changeset quoc:1760003747564-60
+-- changeset wave:1760081378696-59
 ALTER TABLE staff_account
     ADD CONSTRAINT FK_STAFF_ACCOUNT_ON_ROLE FOREIGN KEY (role_id) REFERENCES role (role_id);
 
--- changeset quoc:1760003747564-61
+-- changeset wave:1760081378696-60
 ALTER TABLE subscription
-    ADD CONSTRAINT FK_SUBSCRIPTION_ON_PACKAGE FOREIGN KEY (package_id) REFERENCES package (package_id);
+    ADD CONSTRAINT FK_SUBSCRIPTION_ON_PACKAGE FOREIGN KEY (package_id) REFERENCES packages (package_id);
 
--- changeset quoc:1760003747564-62
+-- changeset wave:1760081378696-61
 ALTER TABLE subscription
     ADD CONSTRAINT FK_SUBSCRIPTION_ON_RESTAURANT FOREIGN KEY (restaurant_id) REFERENCES restaurant (restaurant_id);
 
--- changeset quoc:1760003747564-63
+-- changeset wave:1760081378696-62
 ALTER TABLE subscription_payment
     ADD CONSTRAINT FK_SUBSCRIPTION_PAYMENT_ON_SUBSCRIPTION FOREIGN KEY (subscription_id) REFERENCES subscription (subscription_id);
 
--- changeset quoc:1760003747564-64
+-- changeset wave:1760081378696-63
+ALTER TABLE users
+    ADD CONSTRAINT FK_USERS_ON_ROLE FOREIGN KEY (role_id) REFERENCES role (role_id);
+
+-- changeset wave:1760081378696-64
 ALTER TABLE category_customization
     ADD CONSTRAINT fk_catcus_on_category FOREIGN KEY (category_id) REFERENCES category (category_id);
 
--- changeset quoc:1760003747564-65
+-- changeset wave:1760081378696-65
 ALTER TABLE category_customization
     ADD CONSTRAINT fk_catcus_on_customization FOREIGN KEY (customization_id) REFERENCES customization (customization_id);
 
--- changeset quoc:1760003747564-66
+-- changeset wave:1760081378696-66
 ALTER TABLE menuitem_customization
     ADD CONSTRAINT fk_mencus_on_customization FOREIGN KEY (customization_id) REFERENCES customization (customization_id);
 
--- changeset quoc:1760003747564-67
+-- changeset wave:1760081378696-67
 ALTER TABLE menuitem_customization
     ADD CONSTRAINT fk_mencus_on_menu_item FOREIGN KEY (menu_item_id) REFERENCES menu_item (menu_item_id);
 

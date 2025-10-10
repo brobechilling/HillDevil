@@ -30,14 +30,15 @@ public class OrderLine {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID orderLineId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false,name = "order_id")
     private Order order;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "orderLine")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "orderLine")
     private Set<OrderItem> orderItems = new LinkedHashSet<>();
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "order_line_status")
     private OrderLineStatus orderLineStatus;
 
     @CreationTimestamp

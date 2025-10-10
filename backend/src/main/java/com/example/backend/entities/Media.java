@@ -28,7 +28,7 @@ public class Media {
     @Column(name = "target_id")
     private UUID targetId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "target_type_id")
     private TargetType targetType;
 

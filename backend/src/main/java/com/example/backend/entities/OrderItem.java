@@ -25,11 +25,11 @@ public class OrderItem {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID orderItemId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false,name = "order_line_id")
     private OrderLine orderLine;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false,name = "menu_item_id")
     private MenuItem menuItem;
 
@@ -46,7 +46,7 @@ public class OrderItem {
     @Column(name = "status")
     private boolean status;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "orderItem")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "orderItem")
     private Set<OrderItemCustomization> orderItemCustomizations = new LinkedHashSet<>();
 
     public UUID getOrderItemId() {

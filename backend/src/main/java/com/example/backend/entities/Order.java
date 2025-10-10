@@ -23,7 +23,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "order")
+@Table(name = "orders")
 public class Order {
 
     @Id
@@ -31,11 +31,12 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID orderId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "area_table_id")
     private AreaTable areaTable;
     
     @Enumerated(EnumType.STRING)
+    @Column(name = "status")
     private OrderStatus status;
 
     @Column(name = "total_price", precision = 10, scale = 2, nullable = false)
@@ -49,7 +50,7 @@ public class Order {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "order")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "order")
     private Set<OrderLine> orderLines = new LinkedHashSet<>();
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "order")

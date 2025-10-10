@@ -29,7 +29,7 @@ public class Branch {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID branchId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "restaurant_id")
     private Restaurant restaurant;
 
@@ -71,7 +71,7 @@ public class Branch {
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "branch")
     private Set<Bill> bills = new LinkedHashSet<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "branch")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "branch")
     private Set<BranchMenuItem> branchMenuItems = new LinkedHashSet<>();
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "branch")

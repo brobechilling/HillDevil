@@ -28,7 +28,7 @@ public class Restaurant {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID restaurantId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "user_id")
     private User user;
 

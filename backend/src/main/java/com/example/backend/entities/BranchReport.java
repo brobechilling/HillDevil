@@ -25,11 +25,12 @@ public class BranchReport {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID branchReportId;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "branch_id")
     private Branch branch;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "report_type")
     private ReportType reportType;
 
     // 1/10 : 00:00 will be monthly
