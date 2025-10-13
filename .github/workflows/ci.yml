@@ -29,6 +29,8 @@ jobs:
       DB_URL: jdbc:postgresql://localhost:5432/app
       DB_USERNAME: test
       DB_PASSWORD: test
+      JWT_SIGNER_KEY: testSignerKey
+      JWT_ISSUER: test
     
     steps:
       - name: Checkout source code

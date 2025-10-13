@@ -11,4 +11,5 @@ import com.example.backend.entities.User;
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmailAndPassword(String email, String password);    
+    Optional<User> findByEmail(String email);
 }

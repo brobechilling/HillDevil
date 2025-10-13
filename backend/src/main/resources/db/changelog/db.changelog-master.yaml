@@ -8,3 +8,7 @@ databaseChangeLog:
   - include:
       file: seed-authenticate-authorize-changelog.sql
       relativeToChangelogFile: true
+  - include:
+      file: refresh-token-table-changelog.sql
+      relativeToChangelogFile: true
+      
