@@ -12,6 +12,8 @@ public enum ErrorCode {
     UNAUTHORIZED(1005,"You do not have permission", HttpStatus.FORBIDDEN),
     JWT_EXCEPTION(1006, "Jwt handling exception", HttpStatus.INTERNAL_SERVER_ERROR),
     ROLE_NOTEXISTED(1007, "The role not exist", HttpStatus.INTERNAL_SERVER_ERROR),
+    TOKEN_INVALID(1008, "The refresh token not exist in db", HttpStatus.BAD_REQUEST),
+    TOKEN_EXPIRED(1009, "The refresh token already expired or used", HttpStatus.BAD_REQUEST),
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private int code;

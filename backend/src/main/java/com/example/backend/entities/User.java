@@ -63,6 +63,9 @@ public class User {
     @JoinColumn(nullable = false, name = "role_id")
     private Role role;
 
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
+    private Set<RefreshToken> refreshTokens = new LinkedHashSet<>();
+
     public UUID getUserId() {
         return userId;
     }
@@ -130,5 +133,11 @@ public class User {
     public void setRole(Role role) {
         this.role = role;
     }
-
+    public Set<RefreshToken> getRefreshTokens() {
+        return refreshTokens;
+    }
+    public void setRefreshTokens(Set<RefreshToken> refreshTokens) {
+        this.refreshTokens = refreshTokens;
+    }
+    
 }

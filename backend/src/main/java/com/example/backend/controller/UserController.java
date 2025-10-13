@@ -5,7 +5,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.UserDTO;
-import com.example.backend.dto.request.AuthenticationRequest;
 import com.example.backend.entities.User;
 import com.example.backend.service.UserService;
 
@@ -16,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -25,19 +25,21 @@ public class UserController {
     public UserController(UserService userService) {
         this.userService = userService;
     }
-
-    @GetMapping("/login")
-    public ApiResponse<UserDTO> testLogin(@RequestBody AuthenticationRequest authenticationRequest) {
-        ApiResponse<UserDTO> apiResponse = new ApiResponse<>();
-        apiResponse.setResult(userService.login(authenticationRequest));
-        return apiResponse;
-    }
     
     @GetMapping("")
-    public ApiResponse<List<UserDTO>> getAll() {
+    public ApiResponse<List<UserDTO>> getAllUsers() {
         ApiResponse<List<UserDTO>> apiResponse = new ApiResponse<>();
         apiResponse.setResult(userService.getAll());
         return apiResponse;
     }
+
+    // hash seed data password to fit the spring password encoder
+    // @GetMapping("seed")
+    // public ApiResponse<List<UserDTO>> hashSeedPassword() {
+    //     ApiResponse<List<UserDTO>> apiResponse = new ApiResponse<>();
+    //     apiResponse.setResult(userService.hashSeedPassword());
+    //     return apiResponse;
+    // }
+    
 
 }

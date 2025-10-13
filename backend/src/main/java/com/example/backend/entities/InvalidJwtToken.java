@@ -1,5 +1,6 @@
 package com.example.backend.entities;
 
+import java.time.Instant;
 import java.util.Date;
 
 import jakarta.persistence.Column;
@@ -13,10 +14,8 @@ public class InvalidJwtToken {
 
     @Id
     private String id;
-    // we have this expirationTime for worker service (service run per period) to clean expired token, not just invalid token (when log out)
-    // -> make sure the database not expand too large
     @Column(name = "expiration_time")
-    private Date expirationTime;
+    private Instant expirationTime;
 
     public String getId() {
         return id;
@@ -26,11 +25,11 @@ public class InvalidJwtToken {
         this.id = id;
     }
 
-    public Date getExpirationTime() {
+    public Instant getExpirationTime() {
         return expirationTime;
     }
     
-    public void setExpirationTime(Date expirationTime) {
+    public void setExpirationTime(Instant expirationTime) {
         this.expirationTime = expirationTime;
     }
 
