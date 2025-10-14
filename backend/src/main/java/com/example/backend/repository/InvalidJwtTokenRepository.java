@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 import com.example.backend.entities.InvalidJwtToken;
 
 @Repository
-public interface InvalidJwtTokenRepository extends JpaRepository<InvalidJwtToken, String>  {
-
+public interface InvalidJwtTokenRepository extends JpaRepository<InvalidJwtToken, String>, InvalidJwtTokenCustomRepository  {
+    
 }
