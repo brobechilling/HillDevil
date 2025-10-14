@@ -19,5 +19,11 @@ spring:
 jwt:
   signer-key: ${JWT_SIGNER_KEY}
   issuer: ${JWT_ISSUER}
-  valid-duration: 600 # in seconds
-  refreshable-duration: 36000 # in seconds
+  valid-duration: 600 # in seconds -> 10 minutes
+  refreshable-duration: 36000 # in seconds -> 10 hours
+
+schedule:
+  cleanup-token:
+    enabled: true
+    batch-size: 500
+    fixed-delay-ms: 21600000 # 6 hours

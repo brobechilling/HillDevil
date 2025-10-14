@@ -42,7 +42,7 @@ public class AuthenticationService {
     private final InvalidJwtTokenRepository invalidJwtTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final Logger logger;
+    private final Logger logger = LoggerFactory.getLogger(AuthenticationService.class);;
 
     @Value("${jwt.signer-key}")
     private String signerKey;
@@ -58,7 +58,6 @@ public class AuthenticationService {
         this.userRepository = userRepository;
         this.invalidJwtTokenRepository = invalidJwtTokenRepository;
         this.passwordEncoder = passwordEncoder;
-        this.logger = LoggerFactory.getLogger(AuthenticationService.class);
         this.refreshTokenRepository = refreshTokenRepository;
     }
 
