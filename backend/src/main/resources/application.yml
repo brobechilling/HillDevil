@@ -29,9 +29,9 @@ schedule:
     fixed-delay-ms: 21600000 # 6 hours
 
 
-    payos:
-      client-id: ${PAYOS_CLIENTID_KEY}
-      api-key: ${PAYOS_API_KEY}
-      checksum-key: ${PAYOS_CHECKSUM_KEY}
-      return-url: ${PAYMENT_RETURN_URL}
-      cancel-url: ${PAYMENT_CANCEL_URL}
+#    payos:
+#      client-id: ${PAYOS_CLIENTID_KEY}
+#      api-key: ${PAYOS_API_KEY}
+#      checksum-key: ${PAYOS_CHECKSUM_KEY}
+#      return-url: ${PAYMENT_RETURN_URL}
+#      cancel-url: ${PAYMENT_CANCEL_URL}

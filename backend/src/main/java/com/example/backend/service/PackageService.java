@@ -1,55 +1,53 @@
 package com.example.backend.service;
 
-import com.example.backend.dto.PackageDTO;
+import com.example.backend.dto.PackageFeatureDTO;
 import com.example.backend.entities.Package;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
-import com.example.backend.mapper.PackageMapper;
 import com.example.backend.repository.PackageRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Service
 public class PackageService {
+
     private final PackageRepository packageRepository;
-    private final PackageMapper packageMapper;
     private final PackageFeatureService packageFeatureService;
 
     public PackageService(PackageRepository packageRepository,
-                          PackageMapper packageMapper,
                           PackageFeatureService packageFeatureService) {
         this.packageRepository = packageRepository;
-        this.packageMapper = packageMapper;
         this.packageFeatureService = packageFeatureService;
     }
 
-    public List<PackageDTO> getAvailablePackages() {
-        return packageRepository.findByIsAvailableTrue()
-                .stream()
-                .map(packageMapper::toPackageDto)
-                .collect(Collectors.toList());
-    }
-
     @Transactional
-    public PackageDTO createPackage(PackageDTO dto) {
-        Package pkg = packageMapper.toPackage(dto);
-        pkg.setPackageId(UUID.randomUUID());
-        pkg.setAvailable(true);
-
-        Package saved = packageRepository.save(pkg);
-
-        if (dto.getFeatures() != null && !dto.getFeatures().isEmpty()) {
-            packageFeatureService.assignFeaturesToPackage(saved, dto.getFeatures());
+    public PackageFeatureDTO createPackageWithFeatures(PackageFeatureDTO dto) {
+        if (packageRepository.existsByName(dto.getName())) {
+            throw new AppException(ErrorCode.PACKAGE_NAME_EXISTED);
         }
 
-        return packageMapper.toPackageDto(saved);
+        Package pkg = new Package();
+        pkg.setName(dto.getName());
+        pkg.setDescription(dto.getDescription());
+        pkg.setPrice(dto.getPrice());
+        pkg.setAvailable(true);
+        pkg.setBillingPeriod(dto.getBillingPeriod());
+
+        Package savedPkg = packageRepository.save(pkg);
+
+        if (dto.getFeatures() != null && !dto.getFeatures().isEmpty()) {
+            for (var fv : dto.getFeatures()) {
+                packageFeatureService.addOrUpdateFeature(savedPkg.getPackageId(), fv);
+            }
+        }
+
+        return packageFeatureService.getPackageWithFeatures(savedPkg.getPackageId());
     }
 
     @Transactional
-    public PackageDTO updatePackage(UUID packageId, PackageDTO dto) {
+    public PackageFeatureDTO updatePackageWithFeatures(UUID packageId, PackageFeatureDTO dto) {
         Package existing = packageRepository.findById(packageId)
                 .orElseThrow(() -> new AppException(ErrorCode.PACKAGE_NOTEXISTED));
 
@@ -58,20 +56,20 @@ public class PackageService {
         existing.setPrice(dto.getPrice());
         existing.setAvailable(dto.isAvailable());
         existing.setBillingPeriod(dto.getBillingPeriod());
+        packageRepository.save(existing);
 
-        Package updated = packageRepository.save(existing);
+        if (dto.getFeatures() != null && !dto.getFeatures().isEmpty()) {
+            dto.getFeatures().forEach(fv -> packageFeatureService.addOrUpdateFeature(packageId, fv));
+        }
 
-        packageFeatureService.updatePackageFeatures(updated, dto.getFeatures());
-
-        return packageMapper.toPackageDto(updated);
+        return packageFeatureService.getPackageWithFeatures(packageId);
     }
 
     @Transactional
-    public PackageDTO deactivatePackage(UUID packageId) {
+    public void deactivatePackage(UUID packageId) {
         Package pkg = packageRepository.findById(packageId)
                 .orElseThrow(() -> new AppException(ErrorCode.PACKAGE_NOTEXISTED));
-
         pkg.setAvailable(false);
-        return packageMapper.toPackageDto(packageRepository.save(pkg));
+        packageRepository.save(pkg);
     }
 }

@@ -6,16 +6,7 @@ public class FeatureDTO {
     private UUID id;
     private String name;
     private String description;
-    private int value;
     private boolean hasValue;
-
-    public int getValue() {
-        return value;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
-    }
 
     public UUID getId() {
         return id;

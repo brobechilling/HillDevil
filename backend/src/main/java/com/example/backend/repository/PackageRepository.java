@@ -9,6 +9,6 @@ import java.util.UUID;
 
 public interface PackageRepository extends JpaRepository<Package, UUID> {
     Optional<Package> findById(UUID id);
-    List<Package> findByIsAvailableTrue();
+    boolean existsByName(String name);
 
 }
