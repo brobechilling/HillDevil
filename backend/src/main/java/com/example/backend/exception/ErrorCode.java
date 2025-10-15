@@ -12,6 +12,9 @@ public enum ErrorCode {
     UNAUTHORIZED(1005,"You do not have permission", HttpStatus.FORBIDDEN),
     JWT_EXCEPTION(1006, "Jwt handling exception", HttpStatus.INTERNAL_SERVER_ERROR),
     ROLE_NOTEXISTED(1007, "The role not exist", HttpStatus.INTERNAL_SERVER_ERROR),
+    //Subcriptions handling error: Khoi
+    PACKAGE_NOTEXISTED(1008, "The package does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
+    FEATURE_NOTEXISTED(1009, "The feature does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private int code;

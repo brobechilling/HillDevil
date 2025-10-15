@@ -8,3 +8,9 @@ databaseChangeLog:
   - include:
       file: seed-authenticate-authorize-changelog.sql
       relativeToChangelogFile: true
+  - include:
+    - file: seed-subcriptions-changelog.sql
+      relativeToChangelogFile: true
+  - include:
+      - file: fix-value-packagefeature-changelog.sql
+        relativeToChangelogFile: true
