@@ -15,6 +15,9 @@ spring:
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     show-sql: true
+  mvc:
+    pathmatch:
+      matching-strategy: ant-path-matcher
 
 jwt:
   signer-key: ${JWT_SIGNER_KEY}

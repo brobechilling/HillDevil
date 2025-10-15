@@ -39,7 +39,8 @@ public class SecurityConfig {
             request
                 .requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users").hasAnyRole(RoleName.ADMIN.name()) 
-                .anyRequest().authenticated());
+                .requestMatchers("/api/**").authenticated()
+                .anyRequest().permitAll());
 
             // config jwt authentication provider so that authentication filter can check the Authorization: Bearer token in the header of the request
             httpSecurity.oauth2ResourceServer(oauth2 -> 
