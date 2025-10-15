@@ -1,6 +1,7 @@
 package com.example.backend.exception;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -26,6 +27,15 @@ public class GlobalExceptionHandler {
         apiResponse.setMessage(ErrorCode.VALIDATION_VIOLATED.getMessage() + " " + e.getFieldError().getDefaultMessage());
         return ResponseEntity.status(ErrorCode.VALIDATION_VIOLATED.getStatusCode()).body(apiResponse);
     }
+
+    @ExceptionHandler(value = AccessDeniedException.class)
+    ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException e) {
+        ApiResponse<Void> apiResponse = new ApiResponse<>();
+        apiResponse.setCode(ErrorCode.UNAUTHORIZED.getCode());
+        apiResponse.setMessage(ErrorCode.UNAUTHORIZED.getMessage());
+        return ResponseEntity.status(ErrorCode.UNAUTHORIZED.getStatusCode()).body(apiResponse);
+    }
+
 
     // handle unexpected exception
     @ExceptionHandler(value = Exception.class)

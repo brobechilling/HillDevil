@@ -15,3 +15,15 @@ spring:
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     show-sql: true
+
+jwt:
+  signer-key: ${JWT_SIGNER_KEY}
+  issuer: ${JWT_ISSUER}
+  valid-duration: 600 # in seconds -> 10 minutes
+  refreshable-duration: 36000 # in seconds -> 10 hours
+
+schedule:
+  cleanup-token:
+    enabled: true
+    batch-size: 500
+    fixed-delay-ms: 21600000 # 6 hours
