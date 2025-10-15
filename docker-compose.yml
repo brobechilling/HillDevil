@@ -7,6 +7,8 @@ services:
       - DB_URL=${DB_URL}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SIGNER_KEY=${JWT_SIGNER_KEY}
+      - JWT_ISSUER=${JWT_ISSUER}
     ports:
       - "8080:8080"
     container_name: spring-app-container
