@@ -11,3 +11,6 @@ databaseChangeLog:
   - include:
       file: refresh-token-table-changelog.sql
       relativeToChangelogFile: true
+  - include:
+      file: seed-restaurant-branch-changelog.sql
+      relativeToChangelogFile: true
