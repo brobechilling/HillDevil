@@ -44,7 +44,6 @@ public class FeatureService {
                         throw new RuntimeException("Feature name cannot be null or empty");
                     }
                     Feature f = new Feature();
-                    f.setFeatureId(UUID.randomUUID());
                     f.setName(dto.getName().trim());
                     f.setDescription(dto.getDescription());
                     return featureRepository.save(f);
