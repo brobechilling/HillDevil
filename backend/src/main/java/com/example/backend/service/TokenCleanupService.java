@@ -30,7 +30,7 @@ public class TokenCleanupService {
         this.invalidJwtTokenRepository = invalidJwtTokenRepository;
     }
 
-    @Scheduled(fixedDelayString = "${schedule.cleanup-token.fixed-delay-ms}") //10 minutes
+    @Scheduled(fixedDelayString = "${schedule.cleanup-token.fixed-delay-ms}") 
     @Transactional
     public void cleanupExpiredTokens() {
         if (!enabled)
