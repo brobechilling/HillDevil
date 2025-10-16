@@ -1,6 +1,7 @@
 package com.example.backend.dto.request;
 
 import com.example.backend.validator.Password;
+import com.example.backend.validator.Phone;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
@@ -12,7 +13,7 @@ public class SignupRequest {
     private String password;
     @Size(min = 5, max = 25, message = "username's length must be between 5 and 25")
     private String username;
-
+    @Phone
     private String phone;
     
     public String getEmail() {
