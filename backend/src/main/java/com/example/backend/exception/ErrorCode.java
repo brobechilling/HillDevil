@@ -14,6 +14,11 @@ public enum ErrorCode {
     ROLE_NOTEXISTED(1007, "The role not exist", HttpStatus.INTERNAL_SERVER_ERROR),
     TOKEN_INVALID(1008, "The refresh token not exist in db", HttpStatus.BAD_REQUEST),
     TOKEN_EXPIRED(1009, "The refresh token already expired or used", HttpStatus.BAD_REQUEST),
+    //Subcriptions handling error: Khoi
+    PACKAGE_NOTEXISTED(1010, "The package does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
+    FEATURE_NOTEXISTED(1011, "The feature does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
+    FEATURE_NOTEXISTED_IN_PACKAGE(1012, "The feature does not exist in this package", HttpStatus.INTERNAL_SERVER_ERROR),
+    PACKAGE_NAME_EXISTED(1013, "Package name already exists", HttpStatus.BAD_REQUEST),
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private int code;

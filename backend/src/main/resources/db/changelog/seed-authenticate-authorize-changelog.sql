@@ -27,5 +27,13 @@ VALUES
 -- UPDATE public."user"
 -- SET password = crypt(password, 'hill');
 
+-- changeset nguyen:seed-more-user-data-v2
+INSERT INTO public.users (user_id, email, password, username, created_at, updated_at, status, role_id)
+VALUES
+    ('f5555555-ffff-ffff-ffff-ffffffffffff', 'owner2@example.com', 'owner', 'rest_owner2', NOW(), NOW(), TRUE, '22222222-2222-2222-2222-222222222222'),
+    ('66666666-6666-6666-6666-666666666666', 'owner3@example.com', 'owner', 'rest_owner3', NOW(), NOW(), TRUE, '22222222-2222-2222-2222-222222222222');
+
+-- changeset nguyen:update-user-id-data
+UPDATE public.users SET user_id = 'f6666666-6666-6666-6666-666666666666' WHERE user_id = '66666666-6666-6666-6666-666666666666';
 
 

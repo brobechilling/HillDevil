@@ -24,7 +24,8 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
         ApiResponse<Void> apiResponse = new ApiResponse<>();
         apiResponse.setCode(ErrorCode.VALIDATION_VIOLATED.getCode());
-        apiResponse.setMessage(ErrorCode.VALIDATION_VIOLATED.getMessage() + " " + e.getFieldError().getDefaultMessage());
+        apiResponse
+                .setMessage(ErrorCode.VALIDATION_VIOLATED.getMessage() + " " + e.getFieldError().getDefaultMessage());
         return ResponseEntity.status(ErrorCode.VALIDATION_VIOLATED.getStatusCode()).body(apiResponse);
     }
 
@@ -36,15 +37,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ErrorCode.UNAUTHORIZED.getStatusCode()).body(apiResponse);
     }
 
+    // // handle unexpected exception
+    // @ExceptionHandler(value = Exception.class)
+    // ResponseEntity<ApiResponse<Void>> handleUncategorizedException(Exception e) {
+    // ApiResponse<Void> apiResponse = new ApiResponse<>();
+    // apiResponse.setCode(ErrorCode.WE_COOKED.getCode());
+    // apiResponse.setMessage(ErrorCode.WE_COOKED.getMessage());
+    // return
+    // ResponseEntity.status(ErrorCode.WE_COOKED.getStatusCode()).body(apiResponse);
+    // }
 
-    // handle unexpected exception
-    @ExceptionHandler(value = Exception.class)
-    ResponseEntity<ApiResponse<Void>> handleUncategorizedException(Exception e) {
-        ApiResponse<Void> apiResponse = new ApiResponse<>();
-        apiResponse.setCode(ErrorCode.WE_COOKED.getCode());
-        apiResponse.setMessage(ErrorCode.WE_COOKED.getMessage());
-        return ResponseEntity.status(ErrorCode.WE_COOKED.getStatusCode()).body(apiResponse);
-    }
-
-    
 }
