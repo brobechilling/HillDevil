@@ -11,4 +11,10 @@ databaseChangeLog:
   - include:
       file: refresh-token-table-changelog.sql
       relativeToChangelogFile: true
-      
+
+  - include:
+    - file: seed-subcriptions-changelog.sql
+      relativeToChangelogFile: true
+  - include:
+      - file: fix-value-packagefeature-changelog.sql
+        relativeToChangelogFile: true
