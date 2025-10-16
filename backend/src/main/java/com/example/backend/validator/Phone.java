@@ -10,9 +10,9 @@ import java.lang.annotation.Target;
 
 @Target({ ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
-@Constraint(validatedBy = PasswordValidator.class)
-public @interface Password {
-    String message() default "Password must contain at least one digit, one lowercase and uppercase letter, one special character, minimum length of 8";
+@Constraint(validatedBy = PhoneValidator.class)
+public @interface Phone {
+    String message() default "Phone number must start with +84 or 0 and length must be 10 or 11";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 }
