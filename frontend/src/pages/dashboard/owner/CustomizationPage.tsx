@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { BranchCustomization } from '@/components/owner/BranchThemeEditor';
 import { BranchLandingCustomizer } from '@/components/owner/BranchLandingEditor';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { PREDEFINED_THEMES } from '@/lib/themes';
+import { localStorageWithEvents } from '@/lib/utils';
 
 const CustomizationPage = () => {
   // Get active branch from localStorage
@@ -13,8 +14,8 @@ const CustomizationPage = () => {
   const brandBranches = allBranches.filter((b: any) => b.brandName === selectedBrand);
   const activeBranch = brandBranches[0] || null;
 
-  // Initialize with fresh data from localStorage
-  const getInitialThemeData = () => ({
+  // Shared state for both components
+  const [themeData, setThemeData] = useState({
     logoUrl: activeBranch?.logoUrl || '',
     bannerUrl: activeBranch?.bannerUrl || '',
     selectedThemeId: activeBranch?.selectedThemeId || 'midnight',
@@ -23,7 +24,7 @@ const CustomizationPage = () => {
     sliderImages: activeBranch?.sliderImages || [],
   });
 
-  const getInitialLandingData = () => ({
+  const [landingData, setLandingData] = useState({
     brandName: activeBranch?.brandName || '',
     description: activeBranch?.description || '',
     phone: activeBranch?.phone || '',
@@ -41,18 +42,6 @@ const CustomizationPage = () => {
     aboutSection2Image: activeBranch?.aboutSection2Image || '',
   });
 
-  // Shared state for both components
-  const [themeData, setThemeData] = useState(getInitialThemeData());
-  const [landingData, setLandingData] = useState(getInitialLandingData());
-
-  // Refresh data when activeBranch changes
-  useEffect(() => {
-    if (activeBranch) {
-      setThemeData(getInitialThemeData());
-      setLandingData(getInitialLandingData());
-    }
-  }, [activeBranch?.id]);
-
   const handleSaveAll = () => {
     const branches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
     const theme = PREDEFINED_THEMES.find(t => t.id === themeData.selectedThemeId);
@@ -67,7 +56,8 @@ const CustomizationPage = () => {
           }
         : b
     );
-    localStorage.setItem('mock_branches', JSON.stringify(updatedBranches));
+    // Use localStorageWithEvents to trigger listeners in same tab
+    localStorageWithEvents.setItem('mock_branches', JSON.stringify(updatedBranches));
 
     toast({
       title: 'All Changes Saved',

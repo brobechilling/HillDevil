@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Eye, Copy, Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { localStorageWithEvents } from '@/lib/utils';
 
 interface BranchLandingCustomizerProps {
   branch: any;
@@ -43,8 +44,8 @@ export const BranchLandingCustomizer = ({ branch, landingData: externalLandingDa
     const updatedBranches = branches.map((b: any) =>
       b.id === branch.id ? { ...b, ...landingData } : b
     );
-    localStorage.setItem('mock_branches', JSON.stringify(updatedBranches));
-    
+    localStorageWithEvents.setItem('mock_branches', JSON.stringify(updatedBranches));
+
     toast({
       title: 'Landing Page Updated',
       description: 'Your landing page content and theme have been updated.',
@@ -112,18 +113,7 @@ export const BranchLandingCustomizer = ({ branch, landingData: externalLandingDa
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={() => {
-                  // Save data before opening preview
-                  const branches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
-                  const updatedBranches = branches.map((b: any) =>
-                    b.id === branch.id ? { ...b, ...landingData } : b
-                  );
-                  localStorage.setItem('mock_branches', JSON.stringify(updatedBranches));
-
-                  // Open preview in new window with cache busting parameter
-                  const timestamp = Date.now();
-                  window.open(`/branch/${branch.shortCode}?t=${timestamp}`, '_blank');
-                }}
+                onClick={() => window.open(`/branch/${branch.shortCode}`, '_blank')}
               >
                 <Eye className="mr-2 h-4 w-4" />
                 Preview
