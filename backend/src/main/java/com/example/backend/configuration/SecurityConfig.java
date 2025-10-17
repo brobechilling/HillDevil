@@ -10,6 +10,9 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import com.example.backend.entities.RoleName;
 
@@ -45,7 +48,7 @@ public class SecurityConfig {
             // config jwt authentication provider so that authentication filter can check the Authorization: Bearer token in the header of the request
             httpSecurity.oauth2ResourceServer(oauth2 -> 
                 oauth2.jwt(jwtConfig -> jwtConfig.decoder(myCustomJwtDecoder).jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                        .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
+                .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
             );
         
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
@@ -61,5 +64,21 @@ public class SecurityConfig {
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
         return jwtAuthenticationConverter;
     }
+
+    @Bean
+    public CorsFilter corsFilter() {
+        CorsConfiguration corsConfiguration = new CorsConfiguration();
+        corsConfiguration.addAllowedOrigin("http://localhost:5000");
+        corsConfiguration.addAllowedHeader("*");
+        corsConfiguration.addAllowedMethod("*");
+        corsConfiguration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
+        urlBasedCorsConfigurationSource.registerCorsConfiguration("/api/**", corsConfiguration);
+        return new CorsFilter(urlBasedCorsConfigurationSource);
+    } 
     
+    // @Bean
+    // public JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint() {
+    //     return new JwtAuthenticationEntryPoint();
+    // }
 }
