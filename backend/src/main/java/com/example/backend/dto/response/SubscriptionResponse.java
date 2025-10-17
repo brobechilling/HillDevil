@@ -1,20 +1,19 @@
-package com.example.backend.dto;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.UUID;
+package com.example.backend.dto.response;
 
-public class SubscriptionDTO {
+import java.time.LocalDate;
+import java.util.UUID;
+import java.math.BigDecimal;
+
+public class SubscriptionResponse {
     private UUID subscriptionId;
     private UUID restaurantId;
     private UUID packageId;
     private boolean status;
-    private Instant createdAt;
-    private Instant updatedAt;
     private LocalDate startDate;
     private LocalDate endDate;
-
-    private List<SubscriptionPaymentDTO> payments;
+    private BigDecimal amount;
+    private String checkoutUrl;
+    private String paymentStatus;
 
     public UUID getSubscriptionId() {
         return subscriptionId;
@@ -48,22 +47,6 @@ public class SubscriptionDTO {
         this.status = status;
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
     public LocalDate getStartDate() {
         return startDate;
     }
@@ -80,12 +63,27 @@ public class SubscriptionDTO {
         this.endDate = endDate;
     }
 
-    public List<SubscriptionPaymentDTO> getPayments() {
-        return payments;
+    public BigDecimal getAmount() {
+        return amount;
     }
 
-    public void setPayments(List<SubscriptionPaymentDTO> payments) {
-        this.payments = payments;
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
     }
 
+    public String getCheckoutUrl() {
+        return checkoutUrl;
+    }
+
+    public void setCheckoutUrl(String checkoutUrl) {
+        this.checkoutUrl = checkoutUrl;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
 }
