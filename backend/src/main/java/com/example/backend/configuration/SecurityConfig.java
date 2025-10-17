@@ -18,7 +18,7 @@ import com.example.backend.entities.RoleName;
 public class SecurityConfig {
 
     private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup"};
-    private final String[] ADMIN_ENDPOINTS = {};
+    private final String[] ADMIN_ENDPOINTS = {"/api/users/**", "/api/roles/**"};
     private final String[] RESTAURANT_OWNER_ENDPOINTS = {};
     private final String[] BRANCH_MANAGER_ENDPOINTS = {};
     private final String[] WAITER_ENDPOINTS = {};
@@ -38,8 +38,8 @@ public class SecurityConfig {
         httpSecurity.authorizeHttpRequests(request -> 
             request
                 .requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
-                // .requestMatchers(HttpMethod.GET, "/api/users").hasAnyRole(RoleName.ADMIN.name()) 
-                .requestMatchers("/api/**").permitAll()
+                .requestMatchers(ADMIN_ENDPOINTS).hasAnyRole(RoleName.ADMIN.name()) 
+                .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll());
 
             // config jwt authentication provider so that authentication filter can check the Authorization: Bearer token in the header of the request

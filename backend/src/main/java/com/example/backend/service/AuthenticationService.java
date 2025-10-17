@@ -68,7 +68,7 @@ public class AuthenticationService {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
         String accessToken = generateAccessToken(user);
-        String refreshToken = generateRefreshToken(user, clientIp, userAgent);
+        String refreshToken = generateRefreshToken(user, clientIp, userAgent, null);
         AuthenticationResponse authenticationResponse = new AuthenticationResponse();
         authenticationResponse.setAccessToken(accessToken);
         authenticationResponse.setRefreshToken(refreshToken);
@@ -98,7 +98,7 @@ public class AuthenticationService {
         }
     }
 
-    private String generateRefreshToken(User user, String clientIp, String userAgent) {
+    private String generateRefreshToken(User user, String clientIp, String userAgent, RefreshToken parentRefreshToken) {
         String raw = TokenUtils.generateRandomToken(48);
         String hashed = TokenUtils.sha256Hex(raw);
 
@@ -111,6 +111,8 @@ public class AuthenticationService {
         refreshToken.setRevoked(false);
         refreshToken.setClientIp(clientIp);
         refreshToken.setUserAgent(userAgent);
+        // if parentRefreshToken is null -> this refreshToken is generated when login 
+        refreshToken.setParentRefreshToken(parentRefreshToken);
         refreshTokenRepository.save(refreshToken);
 
         // return raw token to client
@@ -154,15 +156,20 @@ public class AuthenticationService {
     public AuthenticationResponse refreshWithOpaqueToken(String rawRefreshToken, String clientIp, String userAgent) {
         String hash = TokenUtils.sha256Hex(rawRefreshToken);
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hash).orElseThrow(() -> new AppException(ErrorCode.TOKEN_INVALID));
-        if (stored.isRevoked() || stored.getExpiresAt().isBefore(Instant.now())) {
+        if (stored.isRevoked()) {
+            // token reused -> token replay attack?
+            refreshTokenRepository.revokeAllByUserId(stored.getUser().getUserId());
+            throw new AppException(ErrorCode.TOKEN_REUSED);
+        }
+        if (stored.getExpiresAt().isBefore(Instant.now())) {
             throw new AppException(ErrorCode.TOKEN_EXPIRED);
         }
         // OPTIONAL: check clientIp/userAgent match stored -> additional security
         stored.setRevoked(true);
         User user = stored.getUser();
-        refreshTokenRepository.save(stored);
         String accessToken = generateAccessToken(user);
-        String newRawRefreshToken = generateRefreshToken(user, clientIp, userAgent);
+        String newRawRefreshToken = generateRefreshToken(user, clientIp, userAgent, stored);
+        refreshTokenRepository.save(stored);
         AuthenticationResponse response = new AuthenticationResponse();
         response.setAccessToken(accessToken);
         response.setRefreshToken(newRawRefreshToken);

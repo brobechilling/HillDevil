@@ -44,7 +44,7 @@ public class AuthenticationController {
         return res;
     }
 
-    // logout: accept refresh token in body or access token via Authorization header
+    // logout: invalidate both access token and refresh token
     @PostMapping("/logout")
     public ApiResponse<Void> logout(@RequestHeader(value = "Authorization", required = false) String authHeader, @RequestBody(required = false) RefreshRequest body) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
