@@ -20,6 +20,11 @@ public enum ErrorCode {
     FEATURE_NOTEXISTED(1011, "The feature does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
     FEATURE_NOTEXISTED_IN_PACKAGE(1012, "The feature does not exist in this package", HttpStatus.INTERNAL_SERVER_ERROR),
     PACKAGE_NAME_EXISTED(1013, "Package name already exists", HttpStatus.BAD_REQUEST),
+    PAYMENT_NOT_FOUND(1014, "Payment not found", HttpStatus.NOT_FOUND),
+    PAYMENT_GATEWAY_ERROR(1015, "Payment Gateway Error", HttpStatus.INTERNAL_SERVER_ERROR),
+    PAYMENT_SIGNATURE_VERIFY_FAILED(1016, "Payment Signature Verification Failed", HttpStatus.BAD_REQUEST),
+    SUBSCRIPTION_NOT_FOUND(1017, "Subscription not found", HttpStatus.NOT_FOUND),
+    SUBSCRIPTION_NOT_ACTIVE(1018, "Subscription not active", HttpStatus.BAD_REQUEST),
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private int code;

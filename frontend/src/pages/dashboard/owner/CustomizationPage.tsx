@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { PREDEFINED_THEMES } from '@/lib/themes';
+import { localStorageWithEvents } from '@/lib/utils';
 
 const CustomizationPage = () => {
   // Get active branch from localStorage
@@ -44,7 +45,7 @@ const CustomizationPage = () => {
   const handleSaveAll = () => {
     const branches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
     const theme = PREDEFINED_THEMES.find(t => t.id === themeData.selectedThemeId);
-    
+
     const updatedBranches = branches.map((b: any) =>
       b.id === activeBranch.id
         ? {
@@ -55,7 +56,8 @@ const CustomizationPage = () => {
           }
         : b
     );
-    localStorage.setItem('mock_branches', JSON.stringify(updatedBranches));
+    // Use localStorageWithEvents to trigger listeners in same tab
+    localStorageWithEvents.setItem('mock_branches', JSON.stringify(updatedBranches));
 
     toast({
       title: 'All Changes Saved',

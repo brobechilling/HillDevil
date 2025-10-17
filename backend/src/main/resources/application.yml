@@ -30,3 +30,11 @@ schedule:
     enabled: true
     batch-size: 500
     fixed-delay-ms: 21600000 # 6 hours
+
+payos:
+  client-id: ${PAYOS_CLIENT_ID}
+  api-key: ${PAYOS_API_KEY}
+  checksum-key: ${PAYOS_CHECKSUM_KEY}
+  base-url: https://api-sandbox.payos.vn/v2
+  return-url: http://localhost:8080/payment/success
+  cancel-url: http://localhost:8080/payment/cancel

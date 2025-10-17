@@ -4,15 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "subscription_payment")
@@ -31,7 +23,7 @@ public class SubscriptionPayment {
     private BigDecimal amount = BigDecimal.ZERO;
 
     @Column(name = "payos_order_code")
-    private String payOsOrderCode;
+    private Long payOsOrderCode;
 
     @Column(name = "payos_transaction_code")
     private String payOsTransactionCode;
@@ -42,13 +34,15 @@ public class SubscriptionPayment {
     @Column(name = "payment_status")
     private String paymentStatus;
 
+    @Lob
     @Column(name = "response_payload")
     private String responsePayload;
 
+    @Lob
     @Column(name = "webhook_payload")
     private String webhookPayload;
 
-    @Column(name = "webhoock_status")
+    @Column(name = "webhook_status")
     private boolean webhookStatus;
 
     @Column(name = "is_signature_verified")
@@ -81,11 +75,11 @@ public class SubscriptionPayment {
         this.amount = amount;
     }
 
-    public String getPayOsOrderCode() {
+    public Long getPayOsOrderCode() {
         return payOsOrderCode;
     }
 
-    public void setPayOsOrderCode(String payOsOrderCode) {
+    public void setPayOsOrderCode(Long payOsOrderCode) {
         this.payOsOrderCode = payOsOrderCode;
     }
 
