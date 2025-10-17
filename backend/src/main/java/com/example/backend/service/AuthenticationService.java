@@ -12,11 +12,13 @@ import org.springframework.stereotype.Service;
 
 import com.example.backend.dto.request.AuthenticationRequest;
 import com.example.backend.dto.response.AuthenticationResponse;
+import com.example.backend.dto.response.RefreshResponse;
 import com.example.backend.entities.InvalidJwtToken;
 import com.example.backend.entities.RefreshToken;
 import com.example.backend.entities.User;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
+import com.example.backend.mapper.UserMapper;
 import com.example.backend.repository.InvalidJwtTokenRepository;
 import com.example.backend.repository.RefreshTokenRepository;
 import com.example.backend.repository.UserRepository;
@@ -31,8 +33,6 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 
 @Service
@@ -42,7 +42,7 @@ public class AuthenticationService {
     private final InvalidJwtTokenRepository invalidJwtTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final Logger logger = LoggerFactory.getLogger(AuthenticationService.class);;
+    private final UserMapper userMapper;
 
     @Value("${jwt.signer-key}")
     private String signerKey;
@@ -54,11 +54,12 @@ public class AuthenticationService {
     private String issuer;
     
     
-    public AuthenticationService(UserRepository userRepository, InvalidJwtTokenRepository invalidJwtTokenRepository, PasswordEncoder passwordEncoder, RefreshTokenRepository refreshTokenRepository) {
+    public AuthenticationService(UserRepository userRepository, InvalidJwtTokenRepository invalidJwtTokenRepository, PasswordEncoder passwordEncoder, RefreshTokenRepository refreshTokenRepository, UserMapper userMapper) {
         this.userRepository = userRepository;
         this.invalidJwtTokenRepository = invalidJwtTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.userMapper = userMapper;
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest authenticationRequest, String clientIp, String userAgent) {
@@ -68,10 +69,11 @@ public class AuthenticationService {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
         String accessToken = generateAccessToken(user);
-        String refreshToken = generateRefreshToken(user, clientIp, userAgent);
+        String refreshToken = generateRefreshToken(user, clientIp, userAgent, null);
         AuthenticationResponse authenticationResponse = new AuthenticationResponse();
         authenticationResponse.setAccessToken(accessToken);
         authenticationResponse.setRefreshToken(refreshToken);
+        authenticationResponse.setUser(userMapper.toUserDto(user));
         return authenticationResponse;
     }
 
@@ -98,7 +100,7 @@ public class AuthenticationService {
         }
     }
 
-    private String generateRefreshToken(User user, String clientIp, String userAgent) {
+    private String generateRefreshToken(User user, String clientIp, String userAgent, RefreshToken parentRefreshToken) {
         String raw = TokenUtils.generateRandomToken(48);
         String hashed = TokenUtils.sha256Hex(raw);
 
@@ -111,6 +113,8 @@ public class AuthenticationService {
         refreshToken.setRevoked(false);
         refreshToken.setClientIp(clientIp);
         refreshToken.setUserAgent(userAgent);
+        // if parentRefreshToken is null -> this refreshToken is generated when login 
+        refreshToken.setParentRefreshToken(parentRefreshToken);
         refreshTokenRepository.save(refreshToken);
 
         // return raw token to client
@@ -151,19 +155,24 @@ public class AuthenticationService {
     }
 
     // refresh token rotation, issue new access and refresh
-    public AuthenticationResponse refreshWithOpaqueToken(String rawRefreshToken, String clientIp, String userAgent) {
+    public RefreshResponse refreshWithOpaqueToken(String rawRefreshToken, String clientIp, String userAgent) {
         String hash = TokenUtils.sha256Hex(rawRefreshToken);
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hash).orElseThrow(() -> new AppException(ErrorCode.TOKEN_INVALID));
-        if (stored.isRevoked() || stored.getExpiresAt().isBefore(Instant.now())) {
+        if (stored.isRevoked()) {
+            // token reused -> token replay attack?
+            refreshTokenRepository.revokeAllByUserId(stored.getUser().getUserId());
+            throw new AppException(ErrorCode.TOKEN_REUSED);
+        }
+        if (stored.getExpiresAt().isBefore(Instant.now())) {
             throw new AppException(ErrorCode.TOKEN_EXPIRED);
         }
         // OPTIONAL: check clientIp/userAgent match stored -> additional security
         stored.setRevoked(true);
         User user = stored.getUser();
-        refreshTokenRepository.save(stored);
         String accessToken = generateAccessToken(user);
-        String newRawRefreshToken = generateRefreshToken(user, clientIp, userAgent);
-        AuthenticationResponse response = new AuthenticationResponse();
+        String newRawRefreshToken = generateRefreshToken(user, clientIp, userAgent, stored);
+        refreshTokenRepository.save(stored);
+        RefreshResponse response = new RefreshResponse();
         response.setAccessToken(accessToken);
         response.setRefreshToken(newRawRefreshToken);
         return response;

@@ -40,6 +40,10 @@ public class RefreshToken {
     @Column(name = "user_agent")
     private String userAgent;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_refresh_token_id")
+    private RefreshToken parentRefreshToken;
+
     public String getId() {
         return id;
     }
@@ -102,6 +106,14 @@ public class RefreshToken {
 
     public void setUserAgent(String userAgent) {
         this.userAgent = userAgent;
+    }
+
+    public RefreshToken getParentRefreshToken() {
+        return parentRefreshToken;
+    }
+
+    public void setParentRefreshToken(RefreshToken parentRefreshToken) {
+        this.parentRefreshToken = parentRefreshToken;
     }
 
 }

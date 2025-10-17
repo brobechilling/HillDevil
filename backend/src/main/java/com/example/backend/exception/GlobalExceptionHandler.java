@@ -24,8 +24,7 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
         ApiResponse<Void> apiResponse = new ApiResponse<>();
         apiResponse.setCode(ErrorCode.VALIDATION_VIOLATED.getCode());
-        apiResponse
-                .setMessage(ErrorCode.VALIDATION_VIOLATED.getMessage() + " " + e.getFieldError().getDefaultMessage());
+        apiResponse.setMessage(ErrorCode.VALIDATION_VIOLATED.getMessage() + " " + e.getFieldError().getDefaultMessage());
         return ResponseEntity.status(ErrorCode.VALIDATION_VIOLATED.getStatusCode()).body(apiResponse);
     }
 

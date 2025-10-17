@@ -8,7 +8,8 @@ import { useAuthStore } from '@/store/authStore';
 import { UtensilsCrossed, Mail, Lock, Sparkles, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { UUID } from 'crypto';
+import { AuthenticationRequest } from '@/dto/auth.dto';
+import { authApi } from '@/api/authApi';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -19,35 +20,33 @@ const Login = () => {
   const login = useAuthStore((state) => state.login);
   const { toast } = useToast();
 
-  interface UserDto {
-    userId: UUID;
-    email: string;
-    username: string;
-    password: string;
-  }
-  
-  interface ApiResponse<T> {
-    code: number;
-    message?: string;
-    result: T;
-  }
-  
-  const testApi = () => {
-    const testApiCalling = async () => {
+
+  const testAxiosClient = () => {
+    const auth: AuthenticationRequest = {
+      email: "admin@example.com",
+      password: "admin"
+    };
+    const handleLogin = async () => {
       try {
-        const response = await fetch("api/users");
-        if (!response.ok)
-        {
-          throw new Error("cors problem or response problem");
-        }
-        const data: ApiResponse<UserDto[]> = await response.json();
-        const users = data.result;
-        console.log(users);
+        const res = await authApi.login(auth);
+        console.log(res);
       } catch (error) {
-        console.error('error occur: ${error}');
+        console.error(`error ${error}`);
       }
     };
-    testApiCalling();
+    handleLogin();
+  }
+
+  const testFetchApi = () => {
+    const handleFetchUsers = async () => {
+      try {
+        const res = await authApi.testGetUsers();
+        console.log(res);
+      } catch (error) {
+        console.error(`error ${error}`);
+      }
+    };
+    handleFetchUsers();
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -267,7 +266,7 @@ const Login = () => {
               className="w-full h-11 hover:bg-accent hover:border-primary/50 transition-all duration-300 group relative overflow-hidden animate-fade-in-up"
               style={{ animationDelay: '600ms' }}
               disabled={isLoading}
-              onClick={testApi}
+              onClick={testAxiosClient}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               
@@ -317,7 +316,8 @@ const Login = () => {
               type="button"
               variant="secondary"
               className="w-full h-11 bg-secondary/50 hover:bg-secondary transition-all duration-300 group relative overflow-hidden"
-              onClick={() => navigate('/restaurant-login')}
+              // onClick={() => navigate('/restaurant-login')}
+              onClick={testFetchApi}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-secondary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <span className="relative z-10 flex items-center gap-2">

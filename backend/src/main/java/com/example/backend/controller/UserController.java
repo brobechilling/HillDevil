@@ -6,19 +6,19 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.UserDTO;
 import com.example.backend.dto.request.SignupRequest;
-import com.example.backend.entities.User;
 import com.example.backend.service.UserService;
 
 import jakarta.validation.Valid;
 
 import java.util.List;
+import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
-
+import org.springframework.web.bind.annotation.PutMapping;
 
 
 @RestController
@@ -46,11 +46,40 @@ public class UserController {
     //     return apiResponse;
     // }
     
-    @PostMapping("signup")
+    @PostMapping("/signup")
     public ApiResponse<UserDTO> signUp(@RequestBody @Valid SignupRequest signupRequest) {
         ApiResponse<UserDTO> apiResponse = new ApiResponse<>();
         apiResponse.setResult(userService.signUp(signupRequest));
         return apiResponse;
     }
+
+    @GetMapping("/deleted")
+    public ApiResponse<List<UserDTO>> getAllUsersIncludeDeleted() {
+        ApiResponse<List<UserDTO>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(userService.getAll());
+        return apiResponse;
+    }
+
+    @GetMapping("/{userId}")
+    public ApiResponse<UserDTO> getUserById(@PathVariable UUID userId) {
+        ApiResponse<UserDTO> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(userService.getUserById(userId));
+        return apiResponse;
+    }
     
+    @PutMapping("")
+    public ApiResponse<UserDTO> updateUser(@RequestBody @Valid UserDTO userDTO) {
+        ApiResponse<UserDTO> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(userService.updateUser(userDTO));
+        return apiResponse;
+    }
+
+    @DeleteMapping("/{userId}")
+    public ApiResponse<UserDTO> deleteUserById(@PathVariable UUID userId) {
+        ApiResponse<UserDTO> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(userService.deleteUserById(userId));
+        return apiResponse;
+    }
+
+
 }

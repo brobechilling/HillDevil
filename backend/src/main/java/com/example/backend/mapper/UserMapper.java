@@ -6,7 +6,7 @@ import com.example.backend.dto.UserDTO;
 import com.example.backend.dto.request.SignupRequest;
 import com.example.backend.entities.User;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {RoleMapper.class})
 public interface UserMapper {
 
     UserDTO toUserDto(User user);

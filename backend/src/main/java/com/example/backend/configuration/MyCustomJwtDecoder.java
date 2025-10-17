@@ -6,12 +6,14 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Component;
 
+import com.example.backend.exception.AppException;
 import com.example.backend.service.AuthenticationService;
 import com.nimbusds.jose.JOSEException;
 
@@ -33,9 +35,9 @@ public class MyCustomJwtDecoder implements JwtDecoder {
     public Jwt decode(String token) throws JwtException {
         try {
             authenticationService.verifyToken(token, false);
-        } catch (JOSEException | ParseException e) {
+        } catch (JOSEException | ParseException | AppException e) {
             // be careful because this exception is thrown in the filter chain so we cannot catch this in GlobalExceptionHandler
-            throw new JwtException(e.getMessage());
+            throw new BadJwtException(e.getMessage());
         }
         if (nimbusJwtDecoder == null)
         {

@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,7 +33,13 @@ public class UserService {
     }
 
     public List<UserDTO> getAll() {
-        return userRepository.findAll().stream().map(user -> userMapper.toUserDto(user)).toList();
+        List<User> users = userRepository.findAll();
+        return users.stream().filter(user -> user.isStatus()).map(user -> userMapper.toUserDto(user)).toList();
+    }
+
+    public List<UserDTO> getAllIncludeDeleted() {
+        List<User> users = userRepository.findAll();
+        return users.stream().map(user -> userMapper.toUserDto(user)).toList();
     }
 
     public List<UserDTO> hashSeedPassword() {
@@ -48,5 +55,25 @@ public class UserService {
         newUser.setRole(ownerRole);
         return userMapper.toUserDto(userRepository.save(newUser));
     }
+
+    public UserDTO getUserById(UUID userId) {
+        return userMapper.toUserDto(userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED)));
+    }
+
+    public UserDTO deleteUserById(UUID userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
+        user.setStatus(false);
+        return userMapper.toUserDto(userRepository.save(user));
+    }
+
+    public UserDTO updateUser(UserDTO userDTO) {
+        User user = userRepository.findById(userDTO.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
+        user.setEmail(userDTO.getEmail());
+        user.setPhone(userDTO.getPhone());
+        user.setUsername(userDTO.getUsername());
+        user.setRole(roleRepository.findByName(userDTO.getRole().getName()).orElseThrow(() -> new AppException(ErrorCode.ROLE_NOTEXISTED)));
+        return userMapper.toUserDto(userRepository.save(user));
+    }
     
+
 }

@@ -1,12 +1,9 @@
 package com.example.backend.dto.response;
 
-import com.example.backend.dto.UserDTO;
+public class RefreshResponse {
 
-public class AuthenticationResponse {
-        
     private String accessToken;
     private String refreshToken;
-    private UserDTO user;
     
     public String getAccessToken() {
         return accessToken;
@@ -20,12 +17,5 @@ public class AuthenticationResponse {
     public void setRefreshToken(String refreshToken) {
         this.refreshToken = refreshToken;
     }
-    public UserDTO getUser() {
-        return user;
-    }
-    public void setUser(UserDTO user) {
-        this.user = user;
-    }
-
     
 }
