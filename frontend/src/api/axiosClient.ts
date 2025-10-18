@@ -5,7 +5,6 @@ import axios from "axios";
 // store accessToken in memory -> it only disappear when reload the whole page
 
 let accessToken: string | null = null;
-const isRefreshEndpoint = (url: string) => url.includes("/auth/refresh");
 
 export const setAccessToken = (token: string | null) => {
     accessToken = token;
@@ -17,8 +16,19 @@ export const axiosClient = axios.create({
 });
 
 
+const PUBLIC_ENDPOINTS = [
+    "/auth/token",
+    "/auth/logout",
+    "/auth/refresh",
+    "/users/signup",
+    "/payments/webhook"
+];
+
+const isPublicEndpoint = (url: string = "") =>
+    PUBLIC_ENDPOINTS.some(endpoint => url.includes(endpoint));
+
 axiosClient.interceptors.request.use((config) => {
-    if (accessToken && !isRefreshEndpoint(config.url || "")) {
+    if (accessToken && !isPublicEndpoint(config.url)) {
         config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;

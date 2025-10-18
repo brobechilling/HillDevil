@@ -22,7 +22,7 @@ spring:
 jwt:
   signer-key: ${JWT_SIGNER_KEY}
   issuer: ${JWT_ISSUER}
-  valid-duration: 30 # in seconds -> 10 minutes
+  valid-duration: 600 # in seconds -> 10 minutes
   refreshable-duration: 36000 # in seconds -> 10 hours
 
 schedule:

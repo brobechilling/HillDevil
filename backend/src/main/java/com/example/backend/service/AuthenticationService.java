@@ -105,6 +105,7 @@ public class AuthenticationService {
 
     private String generateRefreshToken(User user, String clientIp, String userAgent, RefreshToken parentRefreshToken) {
         String raw = TokenUtils.generateRandomToken(48);
+        logger.info("generate raw refresh token: " + raw);
         String hashed = TokenUtils.sha256Hex(raw);
         logger.info("generate hashed refresh token: " + hashed);
         RefreshToken refreshToken = new RefreshToken();
