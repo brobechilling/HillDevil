@@ -21,33 +21,44 @@ const Login = () => {
   const { toast } = useToast();
 
 
-  const testAxiosClient = () => {
-    const auth: AuthenticationRequest = {
-      email: "admin@example.com",
-      password: "admin"
-    };
-    const handleLogin = async () => {
-      try {
-        const res = await authApi.login(auth);
-        console.log(res);
-      } catch (error) {
-        console.error(`error ${error}`);
-      }
-    };
-    handleLogin();
-  }
+  // const testAxiosClient = () => {
+  //   const auth: AuthenticationRequest = {
+  //     email: "admin@example.com",
+  //     password: "admin"
+  //   };
+  //   const handleLogin = async () => {
+  //     try {
+  //       const res = await authApi.login(auth);
+  //       console.log(res);
+  //     } catch (error) {
+  //       console.error(`error ${error}`);
+  //     }
+  //   };
+  //   handleLogin();
+  // }
 
-  const testFetchApi = () => {
-    const handleFetchUsers = async () => {
-      try {
-        const res = await authApi.testGetUsers();
-        console.log(res);
-      } catch (error) {
-        console.error(`error ${error}`);
-      }
-    };
-    handleFetchUsers();
-  }
+  // const testFetchApi = () => {
+  //   const handleFetchUsers = async () => {
+  //     try {
+  //       const res = await authApi.testGetUsers();
+  //       console.log(res);
+  //     } catch (error) {
+  //       console.error(`error ${error}`);
+  //     }
+  //   };
+  //   handleFetchUsers();
+  // }
+
+  // const testFetchApi = () => {
+  //   const clearHttponlyCookie = async () => {
+  //     try {
+  //       const res = await authApi.logout();
+  //       console.log("logout successfully");
+  //     } catch (error) {
+  //     }
+  //   }
+  //   clearHttponlyCookie();
+  // }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,7 +277,7 @@ const Login = () => {
               className="w-full h-11 hover:bg-accent hover:border-primary/50 transition-all duration-300 group relative overflow-hidden animate-fade-in-up"
               style={{ animationDelay: '600ms' }}
               disabled={isLoading}
-              onClick={testAxiosClient}
+              // onClick={testAxiosClient}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               
@@ -316,8 +327,8 @@ const Login = () => {
               type="button"
               variant="secondary"
               className="w-full h-11 bg-secondary/50 hover:bg-secondary transition-all duration-300 group relative overflow-hidden"
-              // onClick={() => navigate('/restaurant-login')}
-              onClick={testFetchApi}
+              onClick={() => navigate('/restaurant-login')}
+              // onClick={testFetchApi}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-secondary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <span className="relative z-10 flex items-center gap-2">

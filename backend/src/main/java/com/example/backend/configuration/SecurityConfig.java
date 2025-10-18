@@ -78,8 +78,4 @@ public class SecurityConfig {
         return new CorsFilter(urlBasedCorsConfigurationSource);
     } 
     
-    // @Bean
-    // public JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint() {
-    //     return new JwtAuthenticationEntryPoint();
-    // }
 }
