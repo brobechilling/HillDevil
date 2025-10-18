@@ -6,6 +6,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,7 @@ public class AuthenticationService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private Logger logger = LoggerFactory.getLogger(getClass());
 
     @Value("${jwt.signer-key}")
     private String signerKey;
@@ -103,7 +106,7 @@ public class AuthenticationService {
     private String generateRefreshToken(User user, String clientIp, String userAgent, RefreshToken parentRefreshToken) {
         String raw = TokenUtils.generateRandomToken(48);
         String hashed = TokenUtils.sha256Hex(raw);
-
+        logger.info("generate hashed refresh token: " + hashed);
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setId(UUID.randomUUID().toString());
         refreshToken.setTokenHash(hashed);
@@ -157,6 +160,7 @@ public class AuthenticationService {
     // refresh token rotation, issue new access and refresh
     public RefreshResponse refreshWithOpaqueToken(String rawRefreshToken, String clientIp, String userAgent) {
         String hash = TokenUtils.sha256Hex(rawRefreshToken);
+        logger.info("check hesh refresh token from cookie: " + hash);
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hash).orElseThrow(() -> new AppException(ErrorCode.TOKEN_INVALID));
         if (stored.isRevoked()) {
             // token reused -> token replay attack?

@@ -73,7 +73,7 @@ public class AuthenticationController {
                 .findFirst()
                 .map(Cookie::getValue)
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
-        logger.info("refreshToken from cookie: "+refreshToken);
+        logger.info("refreshToken from cookie: " + refreshToken);
         RefreshResponse refreshResponse = authenticationService.refreshWithOpaqueToken(refreshToken, clientIp, userAgent);
         // update the refresh token cookie
         ResponseCookie cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE, refreshResponse.getRefreshToken())
