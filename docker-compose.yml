@@ -9,6 +9,9 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - JWT_SIGNER_KEY=${JWT_SIGNER_KEY}
       - JWT_ISSUER=${JWT_ISSUER}
+      - PAYOS_CLIENT_ID=${PAYOS_CLIENT_ID}
+      - PAYOS_API_KEY=${PAYOS_API_KEY}
+      - PAYOS_CHECKSUM_KEY=${PAYOS_CHECKSUM_KEY}
     ports:
       - "8080:8080"
     container_name: spring-app-container
