@@ -44,11 +44,6 @@ public class SubscriptionPaymentController {
         return response;
     }
 
-    @GetMapping("/webhook")
-    public ResponseEntity<String> testWebhook() {
-        return ResponseEntity.ok("Webhook is active");
-    }
-
     @PostMapping("/webhook")
     public ResponseEntity<ApiResponse<String>> handleWebhook(
             @RequestHeader("x-signature") String signature,
