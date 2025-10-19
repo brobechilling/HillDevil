@@ -1,5 +1,7 @@
 package com.example.backend.dto.response;
 
+import com.example.backend.entities.SubscriptionStatus;
+
 import java.time.LocalDate;
 import java.util.UUID;
 import java.math.BigDecimal;
@@ -8,7 +10,7 @@ public class SubscriptionResponse {
     private UUID subscriptionId;
     private UUID restaurantId;
     private UUID packageId;
-    private boolean status;
+    private SubscriptionStatus status;
     private LocalDate startDate;
     private LocalDate endDate;
     private BigDecimal amount;
@@ -39,11 +41,11 @@ public class SubscriptionResponse {
         this.packageId = packageId;
     }
 
-    public boolean isStatus() {
+    public SubscriptionStatus getStatus() {
         return status;
     }
 
-    public void setStatus(boolean status) {
+    public void setStatus(SubscriptionStatus status) {
         this.status = status;
     }
 
