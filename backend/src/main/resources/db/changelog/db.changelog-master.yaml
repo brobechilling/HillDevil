@@ -25,3 +25,6 @@ databaseChangeLog:
   - include:
       file: fix-payment-entity-error-changelog.sql
       relativeToChangelogFile: true
+  - include:
+      file: seed-subscriptions-changelog-v2.sql
+      relativeToChangelogFile: true

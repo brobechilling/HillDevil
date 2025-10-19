@@ -3,6 +3,7 @@ package com.example.backend.service;
 import com.example.backend.dto.response.SubscriptionPaymentResponse;
 import com.example.backend.entities.Subscription;
 import com.example.backend.entities.SubscriptionPayment;
+import com.example.backend.entities.SubscriptionStatus;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.SubscriptionPaymentMapper;
@@ -13,8 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -42,29 +43,29 @@ public class SubscriptionPaymentService {
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
-        // Tạo orderCode dạng Long (PayOS yêu cầu dạng số)
-        Long orderCode = System.currentTimeMillis(); // hoặc logic khác tùy bạn
+        Long orderCode = System.currentTimeMillis(); // unique order code cho PayOS
         String description = "Thanh toán gói đăng ký cho nhà hàng";
 
-        // Gọi PayOS API
         Map<String, Object> paymentData = payOSService.createPayment(amount, orderCode, description);
 
-        // Lưu thông tin thanh toán
         SubscriptionPayment payment = new SubscriptionPayment();
         payment.setSubscription(subscription);
         payment.setAmount(amount);
         payment.setPayOsOrderCode(orderCode);
+        payment.setPaymentStatus("PENDING");
+        payment.setDate(Instant.now());
+        payment.setResponsePayload(paymentData.toString());
 
         Object checkoutUrlObj = paymentData.get("checkoutUrl");
         if (checkoutUrlObj != null) {
-            payment.setCheckoutUrl(String.valueOf(checkoutUrlObj));
+            payment.setCheckoutUrl(checkoutUrlObj.toString());
         }
 
-        payment.setPaymentStatus("PENDING");
-        payment.setDate(Instant.now());
-        payment.setResponsePayload(paymentData.toString()); // lưu log response để trace
-
         payment = subscriptionPaymentRepository.save(payment);
+
+        subscription.setStatus(SubscriptionStatus.PENDING_PAYMENT);
+        subscriptionRepository.save(subscription);
+
         return subscriptionPaymentMapper.toSubscriptionPaymentResponse(payment);
     }
 
@@ -76,13 +77,10 @@ public class SubscriptionPaymentService {
         payment.setPaymentStatus("SUCCESS");
         subscriptionPaymentRepository.save(payment);
 
-        // Kích hoạt subscription
         Subscription subscription = payment.getSubscription();
-        if (!subscription.isStatus()) {
-            subscription.setStatus(true);
-            subscription.setStartDate(Instant.now()
-                    .atZone(java.time.ZoneId.systemDefault())
-                    .toLocalDate());
+        if (subscription.getStatus() != SubscriptionStatus.ACTIVE) {
+            subscription.setStatus(SubscriptionStatus.ACTIVE);
+            subscription.setStartDate(LocalDate.now());
             subscription.setEndDate(subscription.getStartDate().plusMonths(1));
             subscriptionRepository.save(subscription);
         }
