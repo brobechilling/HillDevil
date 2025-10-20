@@ -5,6 +5,7 @@ import com.example.backend.dto.response.SubscriptionResponse;
 import com.example.backend.entities.Package;
 import com.example.backend.entities.Restaurant;
 import com.example.backend.entities.Subscription;
+import com.example.backend.entities.SubscriptionStatus;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.SubscriptionMapper;
@@ -39,7 +40,7 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public SubscriptionResponse createSubscription(SubscriptionRequest request) {
+    public SubscriptionResponse createSubscriptionBeforePayment(SubscriptionRequest request) {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
 
@@ -49,13 +50,13 @@ public class SubscriptionService {
         Subscription subscription = subscriptionMapper.toSubscription(request);
         subscription.setRestaurant(restaurant);
         subscription.setaPackage(pack);
-        subscription.setStatus(false);
+        subscription.setStatus(SubscriptionStatus.PENDING_PAYMENT);
         subscription.setCreatedAt(Instant.now());
 
         Subscription saved = subscriptionRepository.save(subscription);
         return subscriptionMapper.toSubscriptionResponse(saved);
     }
-
+    // active subscription after payment success
     @Transactional
     public SubscriptionResponse activateSubscription(UUID subscriptionId, int durationMonths) {
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
@@ -64,7 +65,7 @@ public class SubscriptionService {
         LocalDate start = LocalDate.now();
         LocalDate end = start.plusMonths(Math.max(1, durationMonths));
 
-        subscription.setStatus(true);
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
         subscription.setStartDate(start);
         subscription.setEndDate(end);
         subscription.setUpdatedAt(Instant.now());
@@ -78,20 +79,15 @@ public class SubscriptionService {
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
-        if (!subscription.isStatus()) {
+        if (subscription.getStatus() != SubscriptionStatus.ACTIVE) {
             throw new AppException(ErrorCode.SUBSCRIPTION_NOT_ACTIVE);
         }
 
         LocalDate now = LocalDate.now();
-        LocalDate start = (subscription.getEndDate() != null && subscription.getEndDate().isAfter(now))
-                ? subscription.getStartDate()
-                : now;
-
         LocalDate newEnd = (subscription.getEndDate() != null && subscription.getEndDate().isAfter(now))
                 ? subscription.getEndDate().plusMonths(additionalMonths)
                 : now.plusMonths(additionalMonths);
 
-        subscription.setStartDate(start);
         subscription.setEndDate(newEnd);
         subscription.setUpdatedAt(Instant.now());
 
