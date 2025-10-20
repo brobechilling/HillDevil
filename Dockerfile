@@ -17,7 +17,7 @@ RUN ./mvnw dependency:go-offline
 COPY backend/src ./src
 # Copy frontend build output to static resources
 COPY --from=frontend-builder /app/frontend/dist ./src/main/resources/static
-RUN ./mvnw clean package -DskipTests
+RUN ./mvnw clean package
 
 
 # Stage 3: Runtime
