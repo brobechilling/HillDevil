@@ -57,12 +57,13 @@ public class SubscriptionPaymentService {
 
         BigDecimal amount = pkg.getPrice();
         String itemName = pkg.getName();
-        String description = pkg.getDescription();
+        String description = ("Pay " + pkg.getName());
+        if (description.length() > 25) description = description.substring(0, 25);
         int quantity = 1;
 
         long orderCode = System.currentTimeMillis() % 100_000_000;
 
-        CheckoutResponseData checkout = payOSService.createPayment(
+        CheckoutResponseData checkout = payOSService.createPaymentLink(
                 amount,
                 orderCode,
                 itemName,
@@ -85,7 +86,6 @@ public class SubscriptionPaymentService {
         }
 
         subscriptionPaymentRepository.save(payment);
-
         subscription.setStatus(SubscriptionStatus.PENDING_PAYMENT);
         subscriptionRepository.save(subscription);
 
@@ -94,15 +94,21 @@ public class SubscriptionPaymentService {
 
     @Transactional
     public void handlePaymentSuccess(Webhook webhookBody) {
-        WebhookData webhookData = payOSService.verifyWebhook(webhookBody);
-        SubscriptionPayment payment = updatePaymentFromWebhook(webhookBody, webhookData);
-        if ("PAID".equalsIgnoreCase(webhookData.getCode())) {
-            activateSubscription(payment.getSubscription());
+        try {
+            WebhookData webhookData = payOSService.verifyWebhook(webhookBody);
+            SubscriptionPayment payment = updatePaymentFromWebhook(webhookBody, webhookData);
+            if ("PAID".equalsIgnoreCase(webhookData.getCode())) {
+                activateSubscription(payment.getSubscription());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AppException(ErrorCode.PAYMENT_WEBHOOK_FAILED);
         }
     }
 
     private SubscriptionPayment updatePaymentFromWebhook(Webhook webhookBody, WebhookData webhookData) {
-        SubscriptionPayment payment = subscriptionPaymentRepository.findByPayOsOrderCode(webhookData.getOrderCode())
+        SubscriptionPayment payment = subscriptionPaymentRepository
+                .findByPayOsOrderCode(webhookData.getOrderCode())
                 .orElseThrow(() -> new AppException(ErrorCode.PAYMENT_NOT_FOUND));
 
         payment.setWebhookPayload(webhookBody.toString());

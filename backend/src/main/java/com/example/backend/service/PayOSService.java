@@ -13,8 +13,7 @@ import vn.payos.type.Webhook;
 import vn.payos.type.WebhookData;
 
 import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.UUID;
+import java.util.Collections;
 
 @Service
 public class PayOSService {
@@ -27,39 +26,32 @@ public class PayOSService {
         this.payOS = new PayOS(config.getClientId(), config.getApiKey(), config.getChecksumKey());
     }
 
-    public CheckoutResponseData createPayment(
+    public CheckoutResponseData createPaymentLink(
             BigDecimal amount,
-            Long orderCode,
+            long orderCode,
             String itemName,
             int quantity,
             String description
     ) {
         try {
-            long safeOrderCode = (orderCode != null && orderCode > 0)
-                    ? orderCode
-                    : Math.abs(UUID.randomUUID().getMostSignificantBits());
-
-            System.out.println("[PayOS] Creating payment link for orderCode=" + safeOrderCode);
-
             ItemData itemData = ItemData.builder()
-                    .name(itemName != null ? itemName : "Subscription Plan")
-                    .quantity(quantity > 0 ? quantity : 1)
-                    .price(amount.intValueExact()) // safer conversion
+                    .name(itemName)
+                    .quantity(quantity)
+                    .price(amount.intValueExact())
                     .build();
 
             PaymentData paymentData = PaymentData.builder()
-                    .orderCode(safeOrderCode)
+                    .orderCode(orderCode)
                     .amount(amount.intValueExact())
-                    .description(description != null ? description : "Subscription Payment")
+                    .description(description)
                     .returnUrl(config.getReturnUrl())
                     .cancelUrl(config.getCancelUrl())
-                    .items(Arrays.asList(itemData))
+                    .items(Collections.singletonList(itemData))
                     .build();
 
+            System.out.println("[PayOS] Creating payment link with orderCode=" + orderCode);
             CheckoutResponseData response = payOS.createPaymentLink(paymentData);
-
             System.out.println("[PayOS] Checkout URL: " + response.getCheckoutUrl());
-
             return response;
 
         } catch (Exception e) {
