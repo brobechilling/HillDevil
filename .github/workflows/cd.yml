@@ -36,3 +36,4 @@ jobs:
               exit 1
             fi
             echo "Container is running successfully"
+            echo "test"
