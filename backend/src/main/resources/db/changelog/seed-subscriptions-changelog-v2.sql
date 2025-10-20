@@ -44,5 +44,22 @@ INSERT INTO subscription (
           NULL
       );
 
+-- changeset hoahtm:1760876715853-5
+-- refactor record into VNĐ price (still keeping datatype bigDeci)
+UPDATE public.packages
+SET price = 1000,
+    billing_period = 1
+WHERE package_id = '69eba7c7-3390-4b84-9e14-3c2bf38c08ad';
+
+UPDATE public.packages
+SET price = 2000,
+    billing_period = 1
+WHERE package_id = 'a940d829-5a1d-4ac6-844a-49a8131232fd';
+
+UPDATE public.packages
+SET price = 3000,
+    billing_period = 1
+WHERE package_id = '638d0ec9-65da-4adf-b960-f08f0d3e4276';
+
 
 
