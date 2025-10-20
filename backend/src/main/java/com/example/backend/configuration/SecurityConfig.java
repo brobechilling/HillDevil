@@ -43,6 +43,7 @@ public class SecurityConfig {
             request
                 .requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
                 .requestMatchers(ADMIN_ENDPOINTS).hasAnyRole(RoleName.ADMIN.name()) 
+                .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll());
 
