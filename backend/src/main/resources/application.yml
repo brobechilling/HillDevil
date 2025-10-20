@@ -39,3 +39,12 @@ payos:
   # test first, will put this in env
   return-url: https://hilldevil.space/payment/success
   cancel-url: https://hilldevil.space/payment/cancel
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
