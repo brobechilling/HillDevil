@@ -26,3 +26,13 @@ jobs:
             sudo docker compose down
             sudo docker compose up -d --build
             sudo docker image prune -f
+
+            sleep 10
+            STATUS=$(sudo docker inspect -f '{{.State.Status}}' spring-app-container || echo "container not found")
+            if [ "$STATUS" != "running" ]; then
+              echo "Container is not running! Status: $STATUS"
+              echo "Showing last 100 lines of logs:"
+              sudo docker logs --tail 100 spring-app-container || true
+              exit 1
+            fi
+            echo "Container is running successfully"
