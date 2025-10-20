@@ -26,3 +26,17 @@ jobs:
             sudo docker compose down
             sudo docker compose up -d --build
             sudo docker image prune -f
+
+            sleep 8
+            echo "Performing HTTP health check..."
+            for i in {1..3}; do
+              if curl -fs http://localhost:8080/actuator/health >/dev/null; then
+                echo "Health check passed"
+                exit 0
+              fi
+              echo "Waiting for app to become healthy ($i/3)..."
+              sleep 5
+            done
+            echo "App failed health check after 3 attempts"
+            sudo docker logs --tail 100 spring-app-container || true
+            exit 1
