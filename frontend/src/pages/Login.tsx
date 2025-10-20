@@ -21,21 +21,21 @@ const Login = () => {
   const { toast } = useToast();
 
 
-  // const testAxiosClient = () => {
-  //   const auth: AuthenticationRequest = {
-  //     email: "admin@example.com",
-  //     password: "admin"
-  //   };
-  //   const handleLogin = async () => {
-  //     try {
-  //       const res = await authApi.login(auth);
-  //       console.log(res);
-  //     } catch (error) {
-  //       console.error(`error ${error}`);
-  //     }
-  //   };
-  //   handleLogin();
-  // }
+  const testAxiosClient = () => {
+    const auth: AuthenticationRequest = {
+      email: "admin@example.com",
+      password: "admin"
+    };
+    const handleLogin = async () => {
+      try {
+        const res = await authApi.login(auth);
+        console.log(res);
+      } catch (error) {
+        console.error(`error ${error}`);
+      }
+    };
+    handleLogin();
+  }
 
   // const testFetchApi = () => {
   //   const handleFetchUsers = async () => {
@@ -277,7 +277,7 @@ const Login = () => {
               className="w-full h-11 hover:bg-accent hover:border-primary/50 transition-all duration-300 group relative overflow-hidden animate-fade-in-up"
               style={{ animationDelay: '600ms' }}
               disabled={isLoading}
-              // onClick={testAxiosClient}
+              onClick={testAxiosClient}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               
