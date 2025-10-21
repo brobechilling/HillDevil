@@ -6,6 +6,9 @@ import { useAuthStore } from "./store/authStore";
 import { initializeMockData } from './lib/mockDataInit';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ThemeProvider } from "./components/theme-provider.tsx";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
 
 function AppWrapper() {
   const initialize = useAuthStore((state) => state.initialize);
@@ -21,10 +24,12 @@ function AppWrapper() {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <ErrorBoundary>
-        <AppWrapper />
-      </ErrorBoundary>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ErrorBoundary>
+          <AppWrapper />
+        </ErrorBoundary>
+      </ThemeProvider>
+    </QueryClientProvider>
   </StrictMode>
 );
