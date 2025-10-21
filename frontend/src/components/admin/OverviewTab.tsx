@@ -1,12 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAdminStore } from '@/store/adminStore';
-import { usePackageStore } from '@/store/packageStore';
+import { usePackages } from '@/hooks/usePackages';
 import { mockBranches } from '@/data/mockData';
 import { Activity, Database, DollarSign, Eye, Package, Users } from 'lucide-react';
 
 export const OverviewTab = () => {
   const { users, getTotalLandingVisits, getTopSpendingUser, getUsersWithPackages } = useAdminStore();
-  const { packages } = usePackageStore();
+  const { data: packages = [] } = usePackages(); // Fetch packages data using React Query from custom hook
 
   const topSpender = getTopSpendingUser();
   const usersWithPackages = getUsersWithPackages();
@@ -117,14 +117,12 @@ export const OverviewTab = () => {
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Packages Purchased</CardTitle>
+              <CardTitle className="text-sm font-medium">Packages Available</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalPackagesPurchased}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                By {usersWithPackages.length} users
-              </p>
+              <div className="text-2xl font-bold">{packages.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">Active packages</p>
             </CardContent>
           </Card>
 
@@ -137,7 +135,7 @@ export const OverviewTab = () => {
               {topSpender ? (
                 <>
                   <div className="text-2xl font-bold">${topSpender.totalSpent.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{topSpender.username}</p>
+                  <p className="text-xs text-muted-foreground">{topSpender.username}</p>
                 </>
               ) : (
                 <div className="text-sm text-muted-foreground">No purchases yet</div>

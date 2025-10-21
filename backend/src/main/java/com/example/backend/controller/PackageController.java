@@ -87,10 +87,14 @@ public class PackageController {
         return response;
     }
 
-    @DeleteMapping("/{packageId}")
-    public ApiResponse<Void> deletePackage(@PathVariable UUID packageId) {
+    @PutMapping("/{packageId}/deactivate")
+    public ApiResponse<Void> deactivatePackage(@PathVariable UUID packageId) {
+        log.info("Received deactivatePackage request: packageId={}", packageId);
+
         ApiResponse<Void> response = new ApiResponse<>();
         packageService.deactivatePackage(packageId);
+
+        log.info("Package {} deactivated successfully", packageId);
         response.setResult(null);
         return response;
     }
