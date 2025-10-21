@@ -37,7 +37,7 @@ axiosClient.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
         const originalRequest = error.config as AxiosRequestConfig & { _retry?: number };
-        if (!originalRequest || !error.response) 
+        if (!originalRequest || !error.response)
             return Promise.reject(error);
 
         const status = error.response.status;
@@ -69,7 +69,7 @@ axiosClient.interceptors.response.use(
             }
 
             const newToken = await refreshPromise;
-            if (!newToken) 
+            if (!newToken)
                 return Promise.reject(error);
 
             originalRequest.headers = originalRequest.headers || {};

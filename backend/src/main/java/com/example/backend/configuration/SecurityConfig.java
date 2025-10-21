@@ -22,7 +22,7 @@ public class SecurityConfig {
 
 
     private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "api/subscriptions/**"};
-    private final String[] ADMIN_ENDPOINTS = {"/api/users/**", "/api/roles/**"};
+    private final String[] ADMIN_ENDPOINTS = {"/api/users/**", "/api/roles/**",  "/api/packages/**", "/api/features/**"};
     private final String[] RESTAURANT_OWNER_ENDPOINTS = {};
     private final String[] BRANCH_MANAGER_ENDPOINTS = {};
     private final String[] WAITER_ENDPOINTS = {};
@@ -42,7 +42,7 @@ public class SecurityConfig {
         httpSecurity.authorizeHttpRequests(request -> 
             request
                 .requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
-                .requestMatchers(ADMIN_ENDPOINTS).hasAnyRole(RoleName.ADMIN.name()) 
+                .requestMatchers(ADMIN_ENDPOINTS).hasAnyRole(RoleName.ADMIN.name())
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll());
