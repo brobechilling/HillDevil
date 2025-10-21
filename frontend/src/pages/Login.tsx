@@ -8,18 +8,43 @@ import { useAuthStore } from '@/store/authStore';
 import { UtensilsCrossed, Mail, Lock, Sparkles, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { AuthenticationRequest } from '@/dto/auth.dto';
+import { AuthenticationRequest, AuthenticationResponse } from '@/dto/auth.dto';
 import { authApi } from '@/api/authApi';
+import { UserDTO } from '@/dto/user.dto';
+import { useMutation } from '@tanstack/react-query';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
   const { toast } = useToast();
 
+  const loginMutation = useMutation({
+    mutationFn: authApi.login,
+    onSuccess(data) {
+      localStorage.setItem("user", JSON.stringify(data.user));
+      switch(data.user.role.name) {
+        case "RESTAURANT_OWNER":
+          return;
+        case "BRANCH_MANAGER":
+          navigate('/dashboard/manager');
+          return;
+        case "WAITER":
+          navigate('/dashboard/waiter');
+          return;
+        case "RECEPTIONIST":
+          navigate('/dashboard/receptionist');
+          return;
+        case "ADMIN":
+          navigate('/dashboard/admin');
+          return;
+        default:
+          navigate('/dashboard');
+          return;
+      }
+    },
+  });  
 
   const testAxiosClient = () => {
     const auth: AuthenticationRequest = {
@@ -60,69 +85,67 @@ const Login = () => {
   //   clearHttponlyCookie();
   // }
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      const user = await login(email, password);
-      
+    const authenticationRequest: AuthenticationRequest = {
+      email: email,
+      password: password
+    };
+    loginMutation.mutate(authenticationRequest);
+
       // Smart routing based on user role
-      if (user.role === 'owner') {
-        const storedBranches = localStorage.getItem('mock_branches');
-        if (storedBranches) {
-          const allBranches = JSON.parse(storedBranches);
-          const userBranches = allBranches.filter((b: any) => b.ownerId === user.id);
+      // if (user.role.name === "RESTAURANT_OWNER") {
+      //   const storedBranches = localStorage.getItem('mock_branches');
+      //   if (storedBranches) {
+      //     const allBranches = JSON.parse(storedBranches);
+      //     const userBranches = allBranches.filter((b: any) => b.ownerId === 100);
           
-          if (userBranches.length === 0) {
-            navigate('/register/package');
-          } else {
-            // Get unique brands
-            const uniqueBrands = Array.from(
-              new Map(userBranches.map((b: any) => [b.brandName || 'Default Brand', b])).values()
-            );
+      //     if (userBranches.length === 0) {
+      //       navigate('/register/package');
+      //     } else {
+      //       // Get unique brands
+      //       const uniqueBrands = Array.from(
+      //         new Map(userBranches.map((b: any) => [b.brandName || 'Default Brand', b])).values()
+      //       );
             
-            if (uniqueBrands.length === 1) {
-              // Only one brand
-              const firstBrand = uniqueBrands[0] as any;
-              const brandBranches = userBranches.filter(
-                (b: any) => (b.brandName || 'Default Brand') === (firstBrand.brandName || 'Default Brand')
-              );
+      //       if (uniqueBrands.length === 1) {
+      //         // Only one brand
+      //         const firstBrand = uniqueBrands[0] as any;
+      //         const brandBranches = userBranches.filter(
+      //           (b: any) => (b.brandName || 'Default Brand') === (firstBrand.brandName || 'Default Brand')
+      //         );
               
-              if (brandBranches.length === 1) {
-                // Only one branch, select automatically
-                localStorage.setItem('selected_brand', firstBrand.brandName || 'Default Brand');
-                localStorage.setItem('selected_branch', brandBranches[0].id);
-                navigate('/dashboard/owner');
-              } else {
-                // Multiple branches in brand, show branch selection
-                localStorage.setItem('selected_brand', firstBrand.brandName || 'Default Brand');
-                navigate('/branch-selection');
-              }
-            } else {
-              // Multiple brands, show brand selection first
-              navigate('/brand-selection');
-            }
-          }
-        } else {
-          navigate('/register/package');
-        }
-      } else if (user.role === 'branch_manager') {
-        navigate('/dashboard/manager');
-      } else if (user.role === 'waiter') {
-        navigate('/dashboard/waiter');
-      } else if (user.role === 'receptionist') {
-        navigate('/dashboard/receptionist');
-      } else if (user.role === 'admin') {
-        navigate('/dashboard/admin');
-      } else {
-        navigate('/dashboard');
-      }
-    } catch (error) {
-      // Error handling is done in the auth store
-    } finally {
-      setIsLoading(false);
-    }
+      //         if (brandBranches.length === 1) {
+      //           // Only one branch, select automatically
+      //           localStorage.setItem('selected_brand', firstBrand.brandName || 'Default Brand');
+      //           localStorage.setItem('selected_branch', brandBranches[0].id);
+      //           navigate('/dashboard/owner');
+      //         } else {
+      //           // Multiple branches in brand, show branch selection
+      //           localStorage.setItem('selected_brand', firstBrand.brandName || 'Default Brand');
+      //           navigate('/branch-selection');
+      //         }
+      //       } else {
+      //         // Multiple brands, show brand selection first
+      //         navigate('/brand-selection');
+      //       }
+      //     }
+      //   } else {
+      //     navigate('/register/package');
+      //   }
+      // } else if (user.role.name === "BRANCH_MANAGER") {
+      //   navigate('/dashboard/manager');
+      // } else if (user.role.name === "WAITER") {
+      //   navigate('/dashboard/waiter');
+      // } else if (user.role.name === "RECEPTIONIST") {
+      //   navigate('/dashboard/receptionist');
+      // } else if (user.role.name === "ADMIN") {
+      //   navigate('/dashboard/admin');
+      // } else {
+      //   navigate('/dashboard');
+      // }
+    
   };
 
   return (
@@ -190,10 +213,10 @@ const Login = () => {
                   required
                 />
                 {/* Animated bottom border */}
-                <div className={cn(
+                {/* <div className={cn(
                   "absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-primary via-purple-500 to-pink-500 transition-all duration-300",
                   focusedField === 'email' ? "w-full" : "w-0"
-                )} />
+                )} /> */}
               </div>
             </div>
             
@@ -219,7 +242,6 @@ const Login = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onFocus={() => setFocusedField('password')}
@@ -231,10 +253,10 @@ const Login = () => {
                   required
                 />
                 {/* Animated bottom border */}
-                <div className={cn(
+                {/* <div className={cn(
                   "absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-primary via-purple-500 to-pink-500 transition-all duration-300",
                   focusedField === 'password' ? "w-full" : "w-0"
-                )} />
+                )} /> */}
               </div>
             </div>
 
@@ -243,13 +265,13 @@ const Login = () => {
               type="submit" 
               className="w-full h-11 bg-gradient-to-r from-primary via-purple-600 to-primary bg-size-200 bg-pos-0 hover:bg-pos-100 transition-all duration-500 relative group overflow-hidden animate-fade-in-up"
               style={{ animationDelay: '400ms' }}
-              disabled={isLoading}
+              disabled={loginMutation.isPending}
             >
               {/* Button glow effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
               
               <span className="relative z-10 font-semibold">
-                {isLoading ? (
+                {loginMutation.isPending ? (
                   <span className="flex items-center gap-2">
                     <span className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
                     Signing in...
@@ -276,8 +298,8 @@ const Login = () => {
               variant="outline" 
               className="w-full h-11 hover:bg-accent hover:border-primary/50 transition-all duration-300 group relative overflow-hidden animate-fade-in-up"
               style={{ animationDelay: '600ms' }}
-              disabled={isLoading}
-              onClick={testAxiosClient}
+              disabled={loginMutation.isPending}
+              // onClick={testAxiosClient}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               

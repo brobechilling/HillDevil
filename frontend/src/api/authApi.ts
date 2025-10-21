@@ -6,10 +6,8 @@ import { UserDTO } from "@/dto/user.dto";
 export const authApi = {
   async login(authenticationRequest: AuthenticationRequest) {
     const res = await axiosClient.post<ApiResponse<AuthenticationResponse>>("/auth/token", authenticationRequest);
-    if (res.data.code === 1000) {
-        const accessToken = res.data.result.accessToken;
-        setAccessToken(accessToken);
-    }
+    const accessToken = res.data.result.accessToken;
+    setAccessToken(accessToken);
     return res.data.result;
   },
 
