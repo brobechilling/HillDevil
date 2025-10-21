@@ -1,28 +1,21 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuthStore, UserRole } from '@/store/authStore';
+import { ROLE_NAME, UserDTO } from '@/dto/user.dto';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  allowedRoles?: UserRole[];
+  allowedRoles?: ROLE_NAME[];
 }
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading, user } = useAuthStore();
+  const userStr = localStorage.getItem('user');
+  const user: UserDTO | null = userStr ? JSON.parse(userStr) : null;
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && user.role && !allowedRoles.includes(user.role.name as ROLE_NAME)) {
     return <Navigate to="/dashboard" replace />;
   }
 

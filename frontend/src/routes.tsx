@@ -55,6 +55,7 @@ import ReceptionistCommunicationsPage from './pages/dashboard/receptionist/Commu
 import ReceptionistBillingPage from './pages/dashboard/receptionist/BillingPage';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import { ROLE_NAME } from './dto/user.dto';
 
 export const routes: RouteObject[] = [
   {
@@ -104,7 +105,7 @@ export const routes: RouteObject[] = [
   {
     path: '/dashboard/owner',
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute allowedRoles={[ROLE_NAME.RESTAURANT_OWNER]}>
         <OwnerDashboard />
       </ProtectedRoute>
     ),
@@ -147,18 +148,18 @@ export const routes: RouteObject[] = [
       },
     ],
   },
-  {
-    path: '/dashboard/staff',
-    element: (
-      <ProtectedRoute>
-        <StaffDashboard />
-      </ProtectedRoute>
-    ),
-  },
+  // {
+  //   path: '/dashboard/staff',
+  //   element: (
+  //     <ProtectedRoute>
+  //       <StaffDashboard />
+  //     </ProtectedRoute>
+  //   ),
+  // },
   {
     path: '/dashboard/manager',
     element: (
-      <ProtectedRoute allowedRoles={['branch_manager']}>
+      <ProtectedRoute allowedRoles={[ROLE_NAME.BRANCH_MANAGER]}>
         <ManagerDashboard />
       </ProtectedRoute>
     ),
@@ -200,7 +201,7 @@ export const routes: RouteObject[] = [
   {
     path: '/dashboard/admin',
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute allowedRoles={[ROLE_NAME.ADMIN]}>
         <AdminDashboard />
       </ProtectedRoute>
     ),
@@ -222,7 +223,7 @@ export const routes: RouteObject[] = [
   {
     path: '/dashboard/waiter',
     element: (
-      <ProtectedRoute allowedRoles={['waiter']}>
+      <ProtectedRoute allowedRoles={[ROLE_NAME.WAITER, ROLE_NAME.ADMIN]}>
         <WaiterDashboard />
       </ProtectedRoute>
     ),
@@ -248,7 +249,7 @@ export const routes: RouteObject[] = [
   {
     path: '/dashboard/receptionist',
     element: (
-      <ProtectedRoute allowedRoles={['receptionist']}>
+      <ProtectedRoute allowedRoles={[ROLE_NAME.RECEPTIONIST, ROLE_NAME.ADMIN]}>
         <ReceptionistDashboard />
       </ProtectedRoute>
     ),
