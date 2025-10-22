@@ -21,3 +21,10 @@ export enum ROLE_NAME {
     WAITER = "WAITER",
     RECEPTIONIST = "RECEPTIONIST"
 }
+
+export interface SignupRequest {
+    email: string;
+    password: string;
+    username: string;
+    phone: string;
+}
