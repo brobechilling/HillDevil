@@ -26,6 +26,8 @@ public enum ErrorCode {
     SUBSCRIPTION_NOT_FOUND(1017, "Subscription not found", HttpStatus.NOT_FOUND),
     SUBSCRIPTION_NOT_ACTIVE(1018, "Subscription not active", HttpStatus.BAD_REQUEST),
     PAYMENT_WEBHOOK_FAILED(1019, "Payment Webhook Failed", HttpStatus.INTERNAL_SERVER_ERROR),
+    // Restaurant error
+    RESTAURANT_NOTEXISTED(3000, "Restaurant not existed", HttpStatus.NOT_FOUND),
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private int code;

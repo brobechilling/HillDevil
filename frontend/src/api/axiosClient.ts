@@ -14,7 +14,8 @@ const PUBLIC_ENDPOINTS = [
     "/auth/logout",
     "/auth/refresh",
     "/users/signup",
-    "/payments/webhook"
+    "/payments/webhook",
+    "/restaurants/paginated"
 ];
 
 const isPublicEndpoint = (url: string = "") =>
