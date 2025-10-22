@@ -1,5 +1,7 @@
 package com.example.backend.configuration;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +13,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
@@ -21,8 +24,8 @@ import com.example.backend.entities.RoleName;
 public class SecurityConfig {
 
 
-    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "api/subscriptions/**"};
-    private final String[] ADMIN_ENDPOINTS = {"/api/users/**", "/api/roles/**",  "/api/packages/**", "/api/features/**"};
+    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated"};
+    private final String[] ADMIN_ENDPOINTS = {"/api/users/**", "/api/roles/**"};
     private final String[] RESTAURANT_OWNER_ENDPOINTS = {};
     private final String[] BRANCH_MANAGER_ENDPOINTS = {};
     private final String[] WAITER_ENDPOINTS = {};
@@ -41,8 +44,9 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.authorizeHttpRequests(request -> 
             request
-                .requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
-                .requestMatchers(ADMIN_ENDPOINTS).hasAnyRole(RoleName.ADMIN.name())
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // allow preflight request in local
+                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                .requestMatchers(ADMIN_ENDPOINTS).hasAnyRole(RoleName.ADMIN.name()) 
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll());
@@ -54,6 +58,7 @@ public class SecurityConfig {
             );
         
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
+        httpSecurity.cors(cors -> cors.configurationSource(corsConfigurationSource()));
         
         return httpSecurity.build();
     }
@@ -67,16 +72,34 @@ public class SecurityConfig {
         return jwtAuthenticationConverter;
     }
 
+    // @Bean
+    // public CorsFilter corsFilter() {
+    //     CorsConfiguration corsConfiguration = new CorsConfiguration();
+    //     corsConfiguration.setAllowedOrigins(List.of(
+    //         "https://hilldevil.space",
+    //         "http://localhost:5000" 
+    //     ));
+    //     corsConfiguration.addAllowedHeader("*");
+    //     corsConfiguration.addAllowedMethod("*");
+    //     corsConfiguration.setAllowCredentials(true);
+    //     UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
+    //     urlBasedCorsConfigurationSource.registerCorsConfiguration("/api/**", corsConfiguration);
+    //     return new CorsFilter(urlBasedCorsConfigurationSource);
+    // } 
+
     @Bean
-    public CorsFilter corsFilter() {
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.addAllowedOrigin("http://localhost:5000");
+        corsConfiguration.setAllowedOrigins(List.of(
+            "https://hilldevil.space",
+            "http://localhost:5000"
+        ));
         corsConfiguration.addAllowedHeader("*");
         corsConfiguration.addAllowedMethod("*");
         corsConfiguration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
-        urlBasedCorsConfigurationSource.registerCorsConfiguration("/api/**", corsConfiguration);
-        return new CorsFilter(urlBasedCorsConfigurationSource);
-    } 
-    
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfiguration);
+        return source;
+    }
 }

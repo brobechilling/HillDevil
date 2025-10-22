@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { UtensilsCrossed } from 'lucide-react';
-import { RestaurantList } from '@/components/auth/RestaurantList';
-import { RestaurantLoginForm } from '@/components/auth/RestaurantLoginForm';
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { UtensilsCrossed } from "lucide-react";
+import { RestaurantList } from "@/components/auth/RestaurantList";
+import { RestaurantLoginForm } from "@/components/auth/RestaurantLoginForm";
+import { RestaurantDTO } from "@/dto/restaurant.dto";
 
 export default function RestaurantLoginPage() {
-  const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<RestaurantDTO | null>(null);
 
   return (
     <div className="min-h-screen flex items-center justify-center gradient-hero p-4">
@@ -17,19 +18,20 @@ export default function RestaurantLoginPage() {
           <div>
             <CardTitle className="text-2xl">Restaurant Staff Login</CardTitle>
             <CardDescription className="text-base">
-              {selectedRestaurant 
-                ? `Login to ${selectedRestaurant.name}` 
-                : 'Select your brand to continue'}
+              {selectedRestaurant
+                ? `Login to ${selectedRestaurant.name}`
+                : "Select your restaurant to continue"}
             </CardDescription>
           </div>
         </CardHeader>
+
         <CardContent>
           {!selectedRestaurant ? (
             <RestaurantList onSelectRestaurant={setSelectedRestaurant} />
           ) : (
-            <RestaurantLoginForm 
-              restaurant={selectedRestaurant} 
-              onBack={() => setSelectedRestaurant(null)} 
+            <RestaurantLoginForm
+              restaurant={selectedRestaurant}
+              onBack={() => setSelectedRestaurant(null)}
             />
           )}
         </CardContent>

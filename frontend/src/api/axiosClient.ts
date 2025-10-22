@@ -14,14 +14,17 @@ const PUBLIC_ENDPOINTS = [
     "/auth/logout",
     "/auth/refresh",
     "/users/signup",
-    "/payments/webhook"
+    "/payments/webhook",
+    "/restaurants/paginated"
 ];
 
 const isPublicEndpoint = (url: string = "") =>
     PUBLIC_ENDPOINTS.some(endpoint => url.includes(endpoint));
 
+const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
+
 export const axiosClient = axios.create({
-    baseURL: "/api",
+    baseURL: baseUrl,
     withCredentials: true,
 });
 
@@ -50,7 +53,7 @@ axiosClient.interceptors.response.use(
                 refreshPromise = (async () => {
                     try {
                         const res = await axios.post<ApiResponse<RefreshResponse>>(
-                            "/api/auth/refresh",
+                            `${baseUrl}/auth/refresh`,
                             {},
                             { withCredentials: true }
                         );
