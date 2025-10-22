@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuthStore } from '@/store/authStore';
 import { UtensilsCrossed, Mail, Lock, User, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SignupRequest } from '@/dto/user.dto';
 import { useMutation } from '@tanstack/react-query';
 import { register } from '@/api/userApi';
+import { ApiResponse } from '@/dto/apiResponse';
+import { AxiosError } from 'axios';
 
 const Register = () => {
   const [formData, setFormData] = useState<SignupRequest>({
@@ -20,13 +21,25 @@ const Register = () => {
   });
   const [confirmPassword, setConfirmPassword] = useState<string>("");
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
 
   const registerMutation = useMutation({
      mutationFn: register,
      onSuccess: () => {
+      toast({
+        variant: "default",
+        title: "Success",
+        description: "You have registered successfully.",
+      });
       navigate('/login');
+     },
+     onError(error: AxiosError<ApiResponse<null>>) {
+      const message = error.response?.data?.message || "Unexpected error occured. Please try again";
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: message,
+      });
      },
   });
 
@@ -73,6 +86,7 @@ const Register = () => {
                   id="username"
                   type="text"
                   value={formData.username}
+                  placeholder='pizza pho mai'
                   onChange={handleChange}
                   className="pl-10"
                   required
@@ -88,6 +102,7 @@ const Register = () => {
                   id="email"
                   type="email"
                   value={formData.email}
+                  placeholder='sushicahoi@gmail.com'
                   onChange={handleChange}
                   className="pl-10"
                   required
@@ -117,6 +132,7 @@ const Register = () => {
                 <Input
                   id="password"
                   type="password"
+                  placeholder='password'
                   value={formData.password}
                   onChange={handleChange}
                   className="pl-10"
@@ -132,6 +148,7 @@ const Register = () => {
                 <Input
                   id="confirmPassword"
                   type="password"
+                  placeholder='password'
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="pl-10"
