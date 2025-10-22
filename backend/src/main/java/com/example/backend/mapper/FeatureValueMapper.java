@@ -1,6 +1,5 @@
 package com.example.backend.mapper;
 
-import ch.qos.logback.core.model.ComponentModel;
 import com.example.backend.dto.FeatureDTO;
 import com.example.backend.dto.FeatureValueDTO;
 import org.mapstruct.Mapper;
