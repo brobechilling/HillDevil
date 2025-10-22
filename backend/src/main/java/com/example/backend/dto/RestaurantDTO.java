@@ -1,6 +1,5 @@
 package com.example.backend.dto;
 
-import java.time.Instant;
 import java.util.UUID;
 
 public class RestaurantDTO {
@@ -10,8 +9,6 @@ public class RestaurantDTO {
     private String email;
     private boolean status;
     private String restaurantPhone;
-    private Instant createdAt;
-    private Instant updatedAt;
     private String publicUrl;
     private String description;
 
@@ -63,22 +60,6 @@ public class RestaurantDTO {
         this.restaurantPhone = restaurantPhone;
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
     public String getPublicUrl() {
         return publicUrl;
     }
@@ -94,4 +75,5 @@ public class RestaurantDTO {
     public void setDescription(String description) {
         this.description = description;
     }
+    
 }

@@ -14,7 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.RestaurantDTO;
+import com.example.backend.dto.response.PageResponse;
 import com.example.backend.service.RestaurantService;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 @RestController
 @RequestMapping("/api/restaurants")
@@ -67,4 +70,13 @@ public class RestaurantController {
         res.setResult(restaurantService.getByOwner(userId));
         return res;
     }
+
+    @GetMapping("/paginated")
+    public ApiResponse<PageResponse<RestaurantDTO>> getPaginated(@RequestParam( required = false, defaultValue = "1") int page, 
+                                                        @RequestParam( required = false, defaultValue = "1") int size) {
+        ApiResponse<PageResponse<RestaurantDTO>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(restaurantService.getRestaurantPaginated(page, size));
+        return apiResponse;
+    }
+    
 }
