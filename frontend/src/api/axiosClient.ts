@@ -21,7 +21,7 @@ const isPublicEndpoint = (url: string = "") =>
     PUBLIC_ENDPOINTS.some(endpoint => url.includes(endpoint));
 
 export const axiosClient = axios.create({
-    baseURL: "http://localhost:8080/api",
+    baseURL: "/api",
     withCredentials: true,
 });
 
@@ -50,7 +50,7 @@ axiosClient.interceptors.response.use(
                 refreshPromise = (async () => {
                     try {
                         const res = await axios.post<ApiResponse<RefreshResponse>>(
-                            "http://localhost:8080/api/auth/refresh",
+                            "/api/auth/refresh",
                             {},
                             { withCredentials: true }
                         );
