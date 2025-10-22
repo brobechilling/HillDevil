@@ -98,6 +98,19 @@ public class PackageController {
         response.setResult(null);
         return response;
     }
+
+    @PutMapping("/{packageId}/activate")
+    public ApiResponse<Void> activatePackage(@PathVariable UUID packageId) {
+        log.info("Received activatePackage request: packageId={}", packageId);
+
+        ApiResponse<Void> response = new ApiResponse<>();
+        packageService.activatePackage(packageId);
+
+        log.info("Package {} activated successfully", packageId);
+        response.setResult(null);
+        return response;
+    }
+
 }
 
 

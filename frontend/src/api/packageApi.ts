@@ -5,7 +5,7 @@ import { CreatePackageDTO, UpdatePackageDTO, PackageFeatureDTO } from "@/dto/pac
 export const packageApi = {
   async getAll(): Promise<PackageFeatureDTO[]> {
     const res = await axiosClient.get<ApiResponse<PackageFeatureDTO[]>>("/packages");
-    return res.data.result;
+    return res.data?.result ?? [];
   },
 
   async getById(id: string): Promise<PackageFeatureDTO> {
@@ -33,5 +33,9 @@ export const packageApi = {
 
   async deactivate(id: string): Promise<void> {
     await axiosClient.put<ApiResponse<void>>(`/packages/${id}/deactivate`);
+  },
+
+  async activate(id: string): Promise<void> {
+    await axiosClient.put<ApiResponse<void>>(`/packages/${id}/activate`);
   },
 };

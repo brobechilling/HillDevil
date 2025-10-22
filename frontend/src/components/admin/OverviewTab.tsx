@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAdminStore } from '@/store/adminStore';
-import { usePackages } from '@/hooks/usePackages';
+import { usePackages } from '@/hooks/queries/usePackages';
 import { mockBranches } from '@/data/mockData';
 import { Activity, Database, DollarSign, Eye, Package, Users } from 'lucide-react';
 

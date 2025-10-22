@@ -1,6 +1,10 @@
 import { Fragment, useState } from "react";
 import { usePackageStore } from "@/store/packageStore";
-import { usePackages, useDeletePackage, useDeactivatePackage } from "@/hooks/usePackages";
+import {
+  usePackages,
+  useDeletePackage,
+  useTogglePackageAvailability,
+} from "@/hooks/queries/usePackages";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,31 +16,37 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PackageDialog } from "./PackageDialog";
 import { Edit, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 export const PackageTab = () => {
-  // 👉 Lấy data từ React Query
   const { data: packages = [], isLoading } = usePackages();
   const deleteMutation = useDeletePackage();
-  const deactivateMutation = useDeactivatePackage();
+  const toggleMutation = useTogglePackageAvailability();
+  const { toast } = useToast();
 
-  const handleDeactivate = (packageId: string, available: boolean) => {
-    const confirmMsg = available
-      ? "Are you sure you want to deactivate this package?"
-      : "Do you want to activate this package again?";
-    if (confirm(confirmMsg)) {
-      deactivateMutation.mutate(packageId);
-    }
-  };
-
-  // 👉 UI state từ Zustand
   const { toggleAvailability } = usePackageStore();
-
-  // 👉 State cục bộ cho dialog + expand
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
+
+  // Alert states
+  const [packageToDelete, setPackageToDelete] = useState<string | null>(null);
+  const [packageToToggle, setPackageToToggle] = useState<{
+    id: string;
+    available: boolean;
+  } | null>(null);
 
   const handleEdit = (packageId: string) => {
     setSelectedPackage(packageId);
@@ -48,17 +58,49 @@ export const PackageTab = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = (packageId: string) => {
-    if (confirm("Are you sure you want to delete this package?")) {
-      deleteMutation.mutate(packageId);
-    }
+  const confirmDelete = () => {
+    if (!packageToDelete) return;
+    deleteMutation.mutate(packageToDelete, {
+      onSuccess: () => {
+        toast({ title: "Deleted successfully", description: "Package removed." });
+        setPackageToDelete(null);
+      },
+      onError: () => {
+        toast({ title: "Error", description: "Failed to delete package.", variant: "destructive" });
+      },
+    });
   };
+
+  const confirmToggleAvailability = () => {
+    if (!packageToToggle) return;
+    const { id, available } = packageToToggle;
+    toggleMutation.mutate(
+      { id, available },
+      {
+        onSuccess: () => {
+          toast({
+            title: available ? "Package Deactivated" : "Package Activated",
+            description: `The package has been ${
+              available ? "deactivated" : "activated"
+            } successfully.`,
+          });
+          setPackageToToggle(null);
+        },
+        onError: () => {
+          toast({
+            title: "Error",
+            description: "Failed to update package availability.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  }; // ✅ thêm ngoặc đóng ở đây
 
   const togglePackageExpansion = (packageId: string) => {
     setExpandedPackages((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(packageId)) newSet.delete(packageId);
-      else newSet.add(packageId);
+      newSet.has(packageId) ? newSet.delete(packageId) : newSet.add(packageId);
       return newSet;
     });
   };
@@ -114,12 +156,17 @@ export const PackageTab = () => {
                         </Button>
                       </TableCell>
                       <TableCell className="font-medium">{pkg.name}</TableCell>
-                      <TableCell>${pkg.price.toFixed(2)}</TableCell>
+                      <TableCell>{pkg.price.toFixed(2)}VND</TableCell>
                       <TableCell>
                         <Badge
                           variant={pkg.available ? "default" : "secondary"}
                           className="cursor-pointer"
-                          onClick={() => handleDeactivate(pkg.packageId, pkg.available)}
+                          onClick={() =>
+                            setPackageToToggle({
+                              id: pkg.packageId,
+                              available: pkg.available,
+                            })
+                          }
                         >
                           {pkg.available ? "Available" : "Unavailable"}
                         </Badge>
@@ -136,19 +183,23 @@ export const PackageTab = () => {
                           <Button
                             variant={pkg.available ? "secondary" : "default"}
                             size="sm"
-                            onClick={() => handleDeactivate(pkg.packageId, pkg.available)}
-                            disabled={deactivateMutation.isPending}
+                            onClick={() =>
+                              setPackageToToggle({
+                                id: pkg.packageId,
+                                available: pkg.available,
+                              })
+                            }
+                            disabled={toggleMutation.isPending} // ✅ thay dòng này
                           >
                             {pkg.available ? "Deactivate" : "Activate"}
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDelete(pkg.packageId)}
+                            onClick={() => setPackageToDelete(pkg.packageId)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-
                         </div>
                       </TableCell>
                     </TableRow>
@@ -197,12 +248,50 @@ export const PackageTab = () => {
         </CardContent>
       </Card>
 
-      {/* Dialog */}
+      {/* Create / Edit Dialog */}
       <PackageDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         packageId={selectedPackage}
       />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!packageToDelete} onOpenChange={() => setPackageToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Package</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this package? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Activate / Deactivate Confirmation */}
+      <AlertDialog open={!!packageToToggle} onOpenChange={() => setPackageToToggle(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {packageToToggle?.available ? "Deactivate Package" : "Activate Package"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {packageToToggle?.available
+                ? "Are you sure you want to deactivate this package?"
+                : "Do you want to activate this package again?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmToggleAvailability}>
+              {packageToToggle?.available ? "Deactivate" : "Activate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

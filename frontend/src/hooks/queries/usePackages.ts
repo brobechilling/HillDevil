@@ -42,10 +42,17 @@ export const useDeletePackage = () => {
   });
 };
 
-export const useDeactivatePackage = () => {
+export const useTogglePackageAvailability = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => packageApi.deactivate(id),
+    mutationFn: async ({ id, available }: { id: string; available: boolean }) => {
+      if (available) {
+        await packageApi.deactivate(id);
+      } else {
+        await packageApi.activate(id);
+      }
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["packages"] }),
   });
 };
+
