@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { routes } from "./routes";
 
-
 // Helper to render routes recursively
 const renderRoutes = (routes: any[]) => {
   return routes.map((route, index) => {
