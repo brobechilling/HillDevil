@@ -1,64 +1,61 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
-import { useAuthStore } from '@/store/authStore';
+import { UserDTO } from '@/dto/user.dto';
 import OwnerDashboardLayout from '@/components/layout/OwnerDashboardLayout';
-import { seedBranchData } from '@/lib/mockDataInit';
 
 const OwnerDashboard = () => {
-  const { user } = useAuthStore();
+  const [user, setUser] = useState<UserDTO | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    if (!user || user.role !== 'owner') {
+    // Get user data from localStorage (stored by Login component)
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) {
+      console.log('OwnerDashboard - No user found, redirecting to login');
       navigate('/login');
       return;
     }
 
-    // Load selected brand and its branches
-    const selectedBrand = localStorage.getItem('selected_brand');
-    if (!selectedBrand) {
+    const userData = JSON.parse(storedUser) as UserDTO;
+    setUser(userData);
+
+    // Check if user has RESTAURANT_OWNER role
+    if (userData.role.name !== 'RESTAURANT_OWNER') {
+      console.log('OwnerDashboard - User is not RESTAURANT_OWNER, redirecting to login');
+      navigate('/login');
+      return;
+    }
+
+    // Check if restaurant is selected
+    const selectedRestaurant = localStorage.getItem('selected_restaurant');
+    if (!selectedRestaurant) {
+      console.log('OwnerDashboard - No restaurant selected, redirecting to brand selection');
       toast({
         variant: 'destructive',
-        title: 'No brand selected',
-        description: 'Please select a brand first.',
+        title: 'No restaurant selected',
+        description: 'Please select a restaurant first.',
       });
       navigate('/brand-selection');
       return;
     }
 
-    const allBranches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
-    const brandBranches = allBranches.filter((b: any) => 
-      b.brandName === selectedBrand && b.ownerId === user.id
-    );
-
-    if (brandBranches.length === 0) {
-      // No branches yet for the selected brand. Keep owner on the dashboard so they
-      // can create the first branch. Don't redirect to brand-selection.
-      // If currently on the base dashboard route, route to overview so the owner
-      // sees the dashboard UI (which will include a Create Branch CTA).
-      if (location.pathname === '/dashboard/owner') {
-        navigate('/dashboard/owner/overview', { replace: true });
-      }
-      return;
-    }
-
-    // Seed data for first branch (only when branches exist)
-    const activeBranch = brandBranches[0];
-    if (activeBranch?.id) {
-      const seededKey = `seeded_${activeBranch.id}`;
-      if (!sessionStorage.getItem(seededKey)) {
-        seedBranchData(activeBranch.id);
-        sessionStorage.setItem(seededKey, 'true');
-      }
-    }
+    console.log('OwnerDashboard - User authenticated and restaurant selected');
 
     // Redirect to overview if on base route
     if (location.pathname === '/dashboard/owner') {
       navigate('/dashboard/owner/overview', { replace: true });
     }
-  }, [user, navigate, location.pathname]);
+  }, [navigate, location.pathname]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return (
     <OwnerDashboardLayout>

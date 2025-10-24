@@ -34,7 +34,11 @@ databaseChangeLog:
   - include:
       file: seed-subscriptions-changelog-v2.sql
       relativeToChangelogFile: true
+
   - include:
       file: db.changelog-seed-owner-tables-v2.sql
       relativeToChangelogFile: true
 
+  - include:
+      file: fix-subscription-payment-entity-changelog.sql
+      relativeToChangelogFile: true
