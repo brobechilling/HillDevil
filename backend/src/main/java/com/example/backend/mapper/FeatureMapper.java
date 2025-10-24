@@ -6,6 +6,6 @@ import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface FeatureMapper {
-    public FeatureDTO toFeatureDto(Feature feature);
-    public Feature toFeature(FeatureDTO featureDTO);
+    FeatureDTO toFeatureDto(Feature feature);
+    Feature toFeature(FeatureDTO featureDTO);
 }

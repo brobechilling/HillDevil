@@ -11,18 +11,20 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import com.example.backend.dto.request.AuthenticationRequest;
 import com.example.backend.dto.response.AuthenticationResponse;
 import com.example.backend.dto.response.RefreshResponse;
 import com.example.backend.entities.InvalidJwtToken;
 import com.example.backend.entities.RefreshToken;
+import com.example.backend.entities.StaffAccount;
 import com.example.backend.entities.User;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
+import com.example.backend.mapper.StaffAccountMapper;
 import com.example.backend.mapper.UserMapper;
 import com.example.backend.repository.InvalidJwtTokenRepository;
 import com.example.backend.repository.RefreshTokenRepository;
+import com.example.backend.repository.StaffAccountRepository;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.utils.TokenUtils;
 import com.nimbusds.jose.JOSEException;
@@ -46,6 +48,8 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private Logger logger = LoggerFactory.getLogger(getClass());
+    private final StaffAccountRepository staffAccountRepository;
+    private final StaffAccountMapper staffAccountMapper;
 
     @Value("${jwt.signer-key}")
     private String signerKey;
@@ -57,29 +61,56 @@ public class AuthenticationService {
     private String issuer;
     
     
-    public AuthenticationService(UserRepository userRepository, InvalidJwtTokenRepository invalidJwtTokenRepository, PasswordEncoder passwordEncoder, RefreshTokenRepository refreshTokenRepository, UserMapper userMapper) {
+    public AuthenticationService(UserRepository userRepository, InvalidJwtTokenRepository invalidJwtTokenRepository, PasswordEncoder passwordEncoder, RefreshTokenRepository refreshTokenRepository, UserMapper userMapper, StaffAccountRepository staffAccountRepository, StaffAccountMapper staffAccountMapper) {
         this.userRepository = userRepository;
         this.invalidJwtTokenRepository = invalidJwtTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenRepository = refreshTokenRepository;
         this.userMapper = userMapper;
+        this.staffAccountRepository = staffAccountRepository;
+        this.staffAccountMapper = staffAccountMapper;
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest authenticationRequest, String clientIp, String userAgent) {
-        User user = userRepository.findByEmail(authenticationRequest.getEmail()).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
-        boolean isAuthenticated = passwordEncoder.matches(authenticationRequest.getPassword(), user.getPassword());
-        if (!isAuthenticated) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        if (!authenticationRequest.getEmail().isBlank()) {
+            // if is user
+            User user = userRepository.findByEmail(authenticationRequest.getEmail()).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
+            boolean isAuthenticated = passwordEncoder.matches(authenticationRequest.getPassword(), user.getPassword());
+            if (!isAuthenticated) {
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+            String accessToken = generateAccessToken(user);
+            String refreshToken = generateRefreshToken(user, clientIp, userAgent, null);
+            AuthenticationResponse authenticationResponse = new AuthenticationResponse();
+            authenticationResponse.setAccessToken(accessToken);
+            authenticationResponse.setRefreshToken(refreshToken);
+            authenticationResponse.setUser(userMapper.toUserDto(user));
+            return authenticationResponse;
         }
-        String accessToken = generateAccessToken(user);
-        String refreshToken = generateRefreshToken(user, clientIp, userAgent, null);
-        AuthenticationResponse authenticationResponse = new AuthenticationResponse();
-        authenticationResponse.setAccessToken(accessToken);
-        authenticationResponse.setRefreshToken(refreshToken);
-        authenticationResponse.setUser(userMapper.toUserDto(user));
-        return authenticationResponse;
+        else {
+            if (!authenticationRequest.getUsername().isBlank()) {
+                // if is staff
+                StaffAccount staffAccount = staffAccountRepository.findByUsername(authenticationRequest.getUsername()).orElseThrow(() -> new AppException(ErrorCode.STAFFACCOUNT_NOTEXISTED));
+                boolean isAuthenticated = passwordEncoder.matches(authenticationRequest.getPassword(), staffAccount.getPassword());
+                if (!isAuthenticated) {
+                    throw new AppException(ErrorCode.UNAUTHENTICATED);
+                }
+                String accessToken = generateAccessToken(staffAccount);
+                String refreshToken = generateRefreshToken(staffAccount, clientIp, userAgent, null);
+                AuthenticationResponse authenticationResponse = new AuthenticationResponse();
+                authenticationResponse.setAccessToken(accessToken);
+                authenticationResponse.setRefreshToken(refreshToken);
+                authenticationResponse.setStaff(staffAccountMapper.toStaffAccountDTO(staffAccount));
+                return authenticationResponse;
+            }
+            else {
+                // if not any
+                throw new AppException(ErrorCode.AUTHENTICATION_INVALID);
+            }
+        }
     }
 
+    // access token for user
     private String generateAccessToken(User user) {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
@@ -103,6 +134,31 @@ public class AuthenticationService {
         }
     }
 
+    // access token for staff account
+    private String generateAccessToken(StaffAccount staffAccount) {
+        JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
+        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
+                                                    .subject(staffAccount.getStaffAccountId().toString())
+                                                    .issuer(issuer)
+                                                    .issueTime(new Date())
+                                                    .expirationTime(new Date(
+                                                        Instant.now().plus(validDuration, ChronoUnit.SECONDS).toEpochMilli()
+                                                    ))
+                                                    .claim("scope", buildScope(staffAccount))
+                                                    .jwtID(UUID.randomUUID().toString())
+                                                    .build();
+        Payload payload = new Payload(jwtClaimsSet.toJSONObject());
+        JWSObject jwsObject = new JWSObject(header, payload); 
+        try {
+            jwsObject.sign(new MACSigner(signerKey.getBytes()));
+            return jwsObject.serialize();
+        } 
+        catch (JOSEException e) {
+            throw new RuntimeException();
+        }
+    }
+
+
     private String generateRefreshToken(User user, String clientIp, String userAgent, RefreshToken parentRefreshToken) {
         String raw = TokenUtils.generateRandomToken(48);
         logger.info("generate raw refresh token: " + raw);
@@ -125,11 +181,40 @@ public class AuthenticationService {
         return raw; 
     }
 
+    private String generateRefreshToken(StaffAccount staffAccount, String clientIp, String userAgent, RefreshToken parentRefreshToken) {
+        String raw = TokenUtils.generateRandomToken(48);
+        logger.info("generate raw refresh token: " + raw);
+        String hashed = TokenUtils.sha256Hex(raw);
+        logger.info("generate hashed refresh token: " + hashed);
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setId(UUID.randomUUID().toString());
+        refreshToken.setTokenHash(hashed);
+        refreshToken.setStaffAccount(staffAccount);
+        refreshToken.setIssuedAt(Instant.now());
+        refreshToken.setExpiresAt(Instant.now().plus(refreshableDuration, ChronoUnit.SECONDS));
+        refreshToken.setRevoked(false);
+        refreshToken.setClientIp(clientIp);
+        refreshToken.setUserAgent(userAgent);
+        // if parentRefreshToken is null -> this refreshToken is generated when login 
+        refreshToken.setParentRefreshToken(parentRefreshToken);
+        refreshTokenRepository.save(refreshToken);
+
+        // return raw token to client
+        return raw; 
+    }
+
     private String buildScope(User user) {
         StringBuilder scope = new StringBuilder("ROLE_");
         scope.append(user.getRole().getName());
         return scope.toString();
     }
+
+    private String buildScope(StaffAccount staffAccount) {
+        StringBuilder scope = new StringBuilder("ROLE_");
+        scope.append(staffAccount.getRole().getName());
+        return scope.toString();
+    }
+
 
     // verify access token
     public SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
@@ -165,7 +250,14 @@ public class AuthenticationService {
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hash).orElseThrow(() -> new AppException(ErrorCode.TOKEN_INVALID));
         if (stored.isRevoked()) {
             // token reused -> token replay attack?
-            refreshTokenRepository.revokeAllByUserId(stored.getUser().getUserId());
+            if (stored.getUser() != null) {
+                // this token belongs to a user
+                refreshTokenRepository.revokeAllByUserId(stored.getUser().getUserId());
+            }
+            else {
+                // this token belongs to a staff
+                refreshTokenRepository.revokeAllByStaffAccountId(stored.getStaffAccount().getStaffAccountId());
+            }
             throw new AppException(ErrorCode.TOKEN_REUSED);
         }
         if (stored.getExpiresAt().isBefore(Instant.now())) {
@@ -173,14 +265,27 @@ public class AuthenticationService {
         }
         // OPTIONAL: check clientIp/userAgent match stored -> additional security
         stored.setRevoked(true);
+        // check refresh token belong to whom
         User user = stored.getUser();
-        String accessToken = generateAccessToken(user);
-        String newRawRefreshToken = generateRefreshToken(user, clientIp, userAgent, stored);
-        refreshTokenRepository.save(stored);
-        RefreshResponse response = new RefreshResponse();
-        response.setAccessToken(accessToken);
-        response.setRefreshToken(newRawRefreshToken);
-        return response;
+        if (user != null) {
+            String accessToken = generateAccessToken(user);
+            String newRawRefreshToken = generateRefreshToken(user, clientIp, userAgent, stored);
+            refreshTokenRepository.save(stored);
+            RefreshResponse response = new RefreshResponse();
+            response.setAccessToken(accessToken);
+            response.setRefreshToken(newRawRefreshToken);
+            return response;
+        }
+        else {
+            StaffAccount staffAccount = stored.getStaffAccount();
+            String accessToken = generateAccessToken(staffAccount);
+            String newRawRefreshToken = generateRefreshToken(staffAccount, clientIp, userAgent, stored);
+            refreshTokenRepository.save(stored);
+            RefreshResponse response = new RefreshResponse();
+            response.setAccessToken(accessToken);
+            response.setRefreshToken(newRawRefreshToken);
+            return response;
+        }
     }
 
     public void logoutByAccessToken(String accessToken) {

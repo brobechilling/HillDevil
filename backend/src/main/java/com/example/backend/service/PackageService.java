@@ -72,4 +72,12 @@ public class PackageService {
         pkg.setAvailable(false);
         packageRepository.save(pkg);
     }
+
+    @Transactional
+    public void activatePackage(UUID packageId) {
+        Package pkg = packageRepository.findById(packageId)
+                .orElseThrow(() -> new AppException(ErrorCode.PACKAGE_NOTEXISTED));
+        pkg.setAvailable(true);
+        packageRepository.save(pkg);
+    }
 }

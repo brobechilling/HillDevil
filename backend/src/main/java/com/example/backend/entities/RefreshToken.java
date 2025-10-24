@@ -21,8 +21,8 @@ public class RefreshToken {
     @Column(name = "token_hash", nullable = false, length = 128)
     private String tokenHash;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @ManyToOne(optional = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     @Column(name = "issued_at", nullable = false)
@@ -43,6 +43,10 @@ public class RefreshToken {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_refresh_token_id")
     private RefreshToken parentRefreshToken;
+
+    @ManyToOne(optional = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "staff_account_id", nullable = true)
+    private StaffAccount staffAccount;
 
     public String getId() {
         return id;
@@ -114,6 +118,14 @@ public class RefreshToken {
 
     public void setParentRefreshToken(RefreshToken parentRefreshToken) {
         this.parentRefreshToken = parentRefreshToken;
+    }
+
+    public StaffAccount getStaffAccount() {
+        return staffAccount;
+    }
+
+    public void setStaffAccount(StaffAccount staffAccount) {
+        this.staffAccount = staffAccount;
     }
 
 }

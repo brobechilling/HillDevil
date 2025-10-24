@@ -1,23 +1,22 @@
 package com.example.backend.dto.request;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-
 public class AuthenticationRequest {
-    
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
-    private String email;
-    
-    @NotBlank(message = "Password is required")
-    private String password;
 
-    public AuthenticationRequest() {
-    }
+    // default to be white space if not pass
+    private String email = "";
+    private String password;
+    // user name is for staffaccount login
+    private String username = "";
 
     public AuthenticationRequest(String email, String password) {
         this.email = email;
         this.password = password;
+    }
+    public String getUsername() {
+        return username;
+    }
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getEmail() {

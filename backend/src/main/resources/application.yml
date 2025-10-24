@@ -40,5 +40,11 @@ payos:
   return-url: https://hilldevil.space/payment/success
   cancel-url: https://hilldevil.space/payment/cancel
 
-frontend:
-  base-url: ${FRONTEND_BASE_URL}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always

@@ -1,5 +1,6 @@
 package com.example.backend.dto.response;
 
+import com.example.backend.dto.StaffAccountDTO;
 import com.example.backend.dto.UserDTO;
 
 public class AuthenticationResponse {
@@ -7,7 +8,8 @@ public class AuthenticationResponse {
     private String accessToken;
     private String refreshToken;
     private UserDTO user;
-    
+    private StaffAccountDTO staff;
+
     public String getAccessToken() {
         return accessToken;
     }
@@ -26,6 +28,12 @@ public class AuthenticationResponse {
     public void setUser(UserDTO user) {
         this.user = user;
     }
-
+    public StaffAccountDTO getStaff() {
+        return staff;
+    }
+    public void setStaff(StaffAccountDTO staff) {
+        this.staff = staff;
+    }
+    
     
 }
