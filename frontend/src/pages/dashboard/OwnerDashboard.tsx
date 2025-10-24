@@ -10,7 +10,6 @@ const OwnerDashboard = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Get user data from localStorage (stored by Login component)
     const storedUser = localStorage.getItem('user');
     if (!storedUser) {
       console.log('OwnerDashboard - No user found, redirecting to login');
@@ -21,14 +20,12 @@ const OwnerDashboard = () => {
     const userData = JSON.parse(storedUser) as UserDTO;
     setUser(userData);
 
-    // Check if user has RESTAURANT_OWNER role
     if (userData.role.name !== 'RESTAURANT_OWNER') {
       console.log('OwnerDashboard - User is not RESTAURANT_OWNER, redirecting to login');
       navigate('/login');
       return;
     }
 
-    // Check if restaurant is selected
     const selectedRestaurant = localStorage.getItem('selected_restaurant');
     if (!selectedRestaurant) {
       console.log('OwnerDashboard - No restaurant selected, redirecting to brand selection');
@@ -43,7 +40,6 @@ const OwnerDashboard = () => {
 
     console.log('OwnerDashboard - User authenticated and restaurant selected');
 
-    // Redirect to overview if on base route
     if (location.pathname === '/dashboard/owner') {
       navigate('/dashboard/owner/overview', { replace: true });
     }

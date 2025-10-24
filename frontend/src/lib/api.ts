@@ -1,11 +1,10 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { toast } from '@/hooks/use-toast';
 import { getMenuItems } from '@/lib/syncData';
-import { 
-  mockUsers, 
-  mockBranches, 
-  mockMenuItems, 
-  mockOrders, 
+import {
+  mockUsers,
+  mockMenuItems,
+  mockOrders,
   mockStaff,
   mockPromotions,
   mockMembers,
@@ -133,92 +132,18 @@ export const authApi = {
   },
 };
 
-// ============= Branch API =============
-export const branchApi = {
-  getAll: async () => {
-    if (USE_MOCK_DATA) {
-      await mockDelay();
-      const branches = JSON.parse(localStorage.getItem('mock_branches') || JSON.stringify(mockBranches));
-      return { data: branches };
-    }
-    return apiClient.get('/branches');
-  },
-
-  getById: async (id: string) => {
-    if (USE_MOCK_DATA) {
-      await mockDelay();
-      const branches = JSON.parse(localStorage.getItem('mock_branches') || JSON.stringify(mockBranches));
-      const branch = branches.find((b: any) => b.id === id);
-      if (!branch) throw new Error('Branch not found');
-      return { data: branch };
-    }
-    return apiClient.get(`/branches/${id}`);
-  },
-
-  getByShortCode: async (shortCode: string) => {
-    if (USE_MOCK_DATA) {
-      await mockDelay();
-      const branches = JSON.parse(localStorage.getItem('mock_branches') || JSON.stringify(mockBranches));
-      const branch = branches.find((b: any) => b.shortCode === shortCode);
-      if (!branch) throw new Error('Branch not found');
-      return { data: branch };
-    }
-    return apiClient.get(`/branches/code/${shortCode}`);
-  },
-
-  create: async (branchData: any) => {
-    if (USE_MOCK_DATA) {
-      await mockDelay();
-      const branches = JSON.parse(localStorage.getItem('mock_branches') || JSON.stringify(mockBranches));
-      const newBranch = {
-        ...branchData,
-        id: String(Date.now()),
-        status: 'active',
-      };
-      branches.push(newBranch);
-      localStorage.setItem('mock_branches', JSON.stringify(branches));
-      return { data: newBranch };
-    }
-    return apiClient.post('/branches', branchData);
-  },
-
-  update: async (id: string, branchData: any) => {
-    if (USE_MOCK_DATA) {
-      await mockDelay();
-      const branches = JSON.parse(localStorage.getItem('mock_branches') || JSON.stringify(mockBranches));
-      const index = branches.findIndex((b: any) => b.id === id);
-      if (index === -1) throw new Error('Branch not found');
-      branches[index] = { ...branches[index], ...branchData };
-      localStorage.setItem('mock_branches', JSON.stringify(branches));
-      return { data: branches[index] };
-    }
-    return apiClient.put(`/branches/${id}`, branchData);
-  },
-
-  delete: async (id: string) => {
-    if (USE_MOCK_DATA) {
-      await mockDelay();
-      const branches = JSON.parse(localStorage.getItem('mock_branches') || JSON.stringify(mockBranches));
-      const filtered = branches.filter((b: any) => b.id !== id);
-      localStorage.setItem('mock_branches', JSON.stringify(filtered));
-      return { data: { success: true } };
-    }
-    return apiClient.delete(`/branches/${id}`);
-  },
-};
-
 // ============= Menu API =============
 export const menuApi = {
   getAll: async (branchId?: string) => {
     if (USE_MOCK_DATA) {
       await mockDelay();
-      
+
       // Use the new sync utility
       const menuItems = getMenuItems(branchId);
-      
+
       console.log('API - Branch ID:', branchId);
       console.log('API - Menu items found:', menuItems);
-      
+
       return { data: menuItems };
     }
     return apiClient.get('/menu', { params: { branchId } });
@@ -346,8 +271,8 @@ export const restaurantApi = {
   getAll: async () => {
     if (USE_MOCK_DATA) {
       await mockDelay();
-      const branches = JSON.parse(localStorage.getItem('mock_branches') || JSON.stringify(mockBranches));
-      return { data: branches };
+      // This is deprecated - use the new restaurantApi from @/api/restaurantApi
+      return { data: [] };
     }
     return apiClient.get('/restaurants');
   },

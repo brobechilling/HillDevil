@@ -6,17 +6,24 @@ import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2, ArrowRight } from 'lucide-react';
+import { useBranches } from '@/hooks/queries/useBranches';
+import { BranchDTO } from '@/dto/branch.dto';
 
 const OwnerStaffPage = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  const [branches, setBranches] = useState<any[]>([]);
-  const [selectedBranch, setSelectedBranch] = useState<any>(null);
+  const [branches, setBranches] = useState<BranchDTO[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<BranchDTO | null>(null);
   const [loading, setLoading] = useState(true);
+  const { data: branchesData, isLoading: isBranchesLoading } = useBranches();
 
   useEffect(() => {
     if (!user || user.role !== 'owner') {
       navigate('/login');
+      return;
+    }
+
+    if (isBranchesLoading) {
       return;
     }
 
@@ -31,10 +38,7 @@ const OwnerStaffPage = () => {
       return;
     }
 
-    const allBranches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
-    const brandBranches = allBranches.filter((b: any) => 
-      b.brandName === selectedBrand && b.ownerId === user.id
-    );
+    const brandBranches = branchesData || [];
 
     if (brandBranches.length === 0) {
       toast({
@@ -48,9 +52,9 @@ const OwnerStaffPage = () => {
 
     setBranches(brandBranches);
     setLoading(false);
-  }, [user, navigate]);
+  }, [user, navigate, branchesData, isBranchesLoading]);
 
-  if (loading) {
+  if (loading || isBranchesLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -70,7 +74,7 @@ const OwnerStaffPage = () => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {branches.map((branch) => (
             <Card
-              key={branch.id}
+              key={String(branch.branchId)}
               className="cursor-pointer hover:border-primary transition-smooth"
               onClick={() => setSelectedBranch(branch)}
             >
@@ -80,8 +84,8 @@ const OwnerStaffPage = () => {
                     <Building2 className="h-6 w-6 text-primary" />
                   </div>
                 </div>
-                <CardTitle className="text-xl">{branch.name}</CardTitle>
-                <CardDescription>{branch.address}</CardDescription>
+                <CardTitle className="text-xl">{branch.address}</CardTitle>
+                <CardDescription>{branch.branchPhone || 'No phone'}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Button className="w-full" variant="outline">
@@ -102,14 +106,14 @@ const OwnerStaffPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold mb-2">Staff Management</h2>
-          <p className="text-muted-foreground">Managing staff for {selectedBranch.name}</p>
+          <p className="text-muted-foreground">Managing staff for {selectedBranch.address}</p>
         </div>
         <Button variant="outline" onClick={() => setSelectedBranch(null)}>
           ← Back to Branch Selection
         </Button>
       </div>
-      
-      <OwnerStaffManagement branchId={selectedBranch.id} />
+
+      <OwnerStaffManagement branchId={String(selectedBranch.branchId)} />
     </div>
   );
 };
