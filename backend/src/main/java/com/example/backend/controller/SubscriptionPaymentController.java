@@ -33,7 +33,7 @@ public class SubscriptionPaymentController {
         SubscriptionPaymentResponse result = subscriptionPaymentService.createPayment(subscriptionId);
 
         ApiResponse<SubscriptionPaymentResponse> response = new ApiResponse<>();
-        response.setMessage("Created Payment successfully");
+        response.setMessage("Created payment successfully");
         response.setResult(result);
 
         return ResponseEntity.ok(response);
@@ -41,7 +41,7 @@ public class SubscriptionPaymentController {
 
     @PostMapping("/webhook")
     public ResponseEntity<ApiResponse<String>> handleWebhook(@RequestBody Webhook webhookBody) {
-        subscriptionPaymentService.handlePaymentSuccess(webhookBody);
+        subscriptionPaymentService.handlePaymentWebhook(webhookBody);
 
         ApiResponse<String> response = new ApiResponse<>();
         response.setMessage("Webhook handled successfully");
@@ -55,7 +55,7 @@ public class SubscriptionPaymentController {
         String verifiedUrl = payOSService.confirmWebhook(webhookUrl);
 
         ApiResponse<String> response = new ApiResponse<>();
-        response.setMessage("Webhook URL verified");
+        response.setMessage("Webhook URL verified successfully");
         response.setResult(verifiedUrl);
 
         return ResponseEntity.ok(response);
@@ -69,7 +69,7 @@ public class SubscriptionPaymentController {
         payOSService.cancelPayment(orderCode, reason);
 
         ApiResponse<String> response = new ApiResponse<>();
-        response.setMessage("Cancel payment success");
+        response.setMessage("Cancel payment successfully");
         response.setResult("CANCELED");
 
         return ResponseEntity.ok(response);
@@ -80,7 +80,7 @@ public class SubscriptionPaymentController {
         PaymentLinkData info = payOSService.getPaymentInfo(orderCode);
 
         ApiResponse<PaymentLinkData> response = new ApiResponse<>();
-        response.setMessage("get payment info success");
+        response.setMessage("Get payment info successfully");
         response.setResult(info);
 
         return ResponseEntity.ok(response);
