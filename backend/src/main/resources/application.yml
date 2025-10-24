@@ -50,4 +50,4 @@ management:
       show-details: always
 
 frontend: 
-  base-url: ${FRONTEND_BASE_URL:http://localhost:5000/}
+  base-url: ${FRONTEND_BASE_URL:http://localhost:5000}
