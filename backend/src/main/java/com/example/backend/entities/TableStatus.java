@@ -16,18 +16,4 @@ public enum TableStatus {
     ACTIVE,
     INACTIVE;
 
-    /**
-     * Kiểm tra xem trạng thái có hợp lệ không
-     */
-    public static boolean isValid(String status) {
-        if (status == null || status.isBlank()) {
-            return false;
-        }
-        try {
-            valueOf(status.toUpperCase());
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
 }

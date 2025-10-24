@@ -19,7 +19,6 @@ public class TableController {
 
     private final TableService tableService;
 
-    // Lấy từ application.yml / .env
     @Value("${frontend.base-url}")
     private String frontendBaseUrl;
 
