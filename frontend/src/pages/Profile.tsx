@@ -28,7 +28,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { statsApi, staffApi, branchApi } from '@/lib/api';
+import { statsApi, staffApi } from '@/lib/api';
+import { getAllBranches } from '@/api/branchApi';
 import {
   Mail,
   Phone,
@@ -93,8 +94,8 @@ const Profile = () => {
 
         // Load branches for relevant roles
         if (user.role === 'owner' || user.role === 'branch_manager') {
-          const branchRes = await branchApi.getAll();
-          setBranches(branchRes.data);
+          const branchesData = await getAllBranches();
+          setBranches(branchesData);
         }
       } catch (error) {
         console.error('Error loading profile data:', error);

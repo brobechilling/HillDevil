@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Save, Building2, Mail, Phone, MapPin } from 'lucide-react';
-import { branchApi } from '@/lib/api';
+import { getBranchById, updateBranch } from '@/api/branchApi';
 
 export default function BranchInfoPage() {
   const { user } = useAuthStore();
@@ -19,14 +19,14 @@ export default function BranchInfoPage() {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
 
-  useState(() => {
+  useEffect(() => {
     const loadBranch = async () => {
       try {
-        const response = await branchApi.getById(branchId);
-        setBranch(response.data);
-        setPhone(response.data.phone || '');
-        setEmail(response.data.email || '');
-        setAddress(response.data.address || '');
+        const branchData = await getBranchById(branchId);
+        setBranch(branchData);
+        setPhone(branchData.branchPhone || '');
+        setEmail(branchData.mail || '');
+        setAddress(branchData.address || '');
       } catch (error) {
         console.error('Failed to load branch:', error);
       } finally {
@@ -34,13 +34,13 @@ export default function BranchInfoPage() {
       }
     };
     loadBranch();
-  });
+  }, [branchId]);
 
   const handleSave = async () => {
     try {
-      await branchApi.update(branchId, {
-        phone,
-        email,
+      await updateBranch(branchId, {
+        branchPhone: phone,
+        mail: email,
         address,
       });
       toast({
@@ -65,7 +65,7 @@ export default function BranchInfoPage() {
       <div>
         <h1 className="text-3xl font-bold">Branch Management</h1>
         <p className="text-muted-foreground mt-2">
-          Manage contact information for {branch?.name}
+          Manage contact information for {branch?.address || 'this branch'}
         </p>
       </div>
 
@@ -82,15 +82,15 @@ export default function BranchInfoPage() {
         <CardContent className="space-y-6">
           <div className="grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Branch Name</Label>
+              <Label htmlFor="branchId">Branch ID</Label>
               <Input
-                id="name"
-                value={branch?.name || ''}
+                id="branchId"
+                value={branch?.branchId || ''}
                 disabled
                 className="bg-muted"
               />
               <p className="text-xs text-muted-foreground">
-                Branch name cannot be changed by managers
+                Branch ID cannot be changed
               </p>
             </div>
 
