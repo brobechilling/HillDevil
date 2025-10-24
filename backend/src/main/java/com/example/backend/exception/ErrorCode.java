@@ -29,6 +29,8 @@ public enum ErrorCode {
     FEATURE_NAME_EMPTY(1020, "Feature name is empty", HttpStatus.BAD_REQUEST),
     // Restaurant error
     RESTAURANT_NOTEXISTED(3000, "Restaurant not existed", HttpStatus.NOT_FOUND),
+    STAFFACCOUNT_NOTEXISTED(4001, "StaffAccount not existed", HttpStatus.NOT_FOUND),
+    AUTHENTICATION_INVALID(9000, "Authentication request invalid, missing email or username", HttpStatus.BAD_REQUEST),
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private int code;
