@@ -2,12 +2,14 @@ package com.example.backend.dto.request;
 
 import java.util.UUID;
 
+import com.example.backend.dto.RoleDTO;
+
 public class CreateStaffAccountRequest {
     
     private String username;
     private String password;
     private UUID branchId;
-    private UUID roleId;
+    private RoleDTO role;
     private boolean status = true;
     
     public String getUsername() {
@@ -28,18 +30,17 @@ public class CreateStaffAccountRequest {
     public void setBranchId(UUID branchId) {
         this.branchId = branchId;
     }
-    public UUID getRoleId() {
-        return roleId;
-    }
-    public void setRoleId(UUID roleId) {
-        this.roleId = roleId;
-    }
     public boolean isStatus() {
         return status;
     }
     public void setStatus(boolean status) {
         this.status = status;
     }
-
+    public RoleDTO getRole() {
+        return role;
+    }
+    public void setRole(RoleDTO role) {
+        this.role = role;
+    }
     
 }
