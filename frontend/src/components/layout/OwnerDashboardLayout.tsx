@@ -1,7 +1,7 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/store/authStore';
+import { UserDTO } from '@/dto/user.dto';
 import {
   UtensilsCrossed,
   LogOut,
@@ -23,61 +23,73 @@ interface OwnerDashboardLayoutProps {
 }
 
 const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
-  const { user, logout } = useAuthStore();
+  const [user, setUser] = useState<UserDTO | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
+  useEffect(() => {
+    // Get user data from localStorage (stored by Login component)
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const userData = JSON.parse(storedUser) as UserDTO;
+      setUser(userData);
+    }
+  }, []);
+
   const handleLogout = () => {
-    logout();
+    // Clear localStorage
+    localStorage.removeItem('user');
+    localStorage.removeItem('selected_restaurant');
+    localStorage.removeItem('user_restaurants');
     navigate('/login');
   };
 
   const menuItems = [
-    { 
-      id: 'overview', 
+    {
+      id: 'overview',
       path: '/dashboard/owner/overview',
-      icon: LayoutDashboard, 
+      icon: LayoutDashboard,
       label: 'Overview',
       description: 'Dashboard summary and KPIs',
       gradient: 'from-blue-500 to-cyan-500'
     },
-    { 
+    {
       id: 'menu',
       path: '/dashboard/owner/menu',
-      icon: MenuIcon, 
+      icon: MenuIcon,
       label: 'Menu Management',
       description: 'Manage menu items',
       gradient: 'from-purple-500 to-pink-500'
     },
-    { 
+    {
       id: 'tables',
       path: '/dashboard/owner/tables',
-      icon: Table, 
+      icon: Table,
       label: 'Table Management',
       description: 'Manage tables and QR codes',
       gradient: 'from-orange-500 to-red-500'
     },
-    { 
+    {
       id: 'staff',
       path: '/dashboard/owner/staff',
-      icon: UsersRound, 
+      icon: UsersRound,
       label: 'Staff Management',
       description: 'Manage staff accounts',
       gradient: 'from-green-500 to-emerald-500'
     },
-    { 
+    {
       id: 'customization',
       path: '/dashboard/owner/customization',
-      icon: Palette, 
+      icon: Palette,
       label: 'Branding',
       description: 'Customize branch appearance',
       gradient: 'from-pink-500 to-rose-500'
     },
-    { 
+    {
       id: 'reports',
       path: '/dashboard/owner/reports',
-      icon: BarChart3, 
+      icon: BarChart3,
       label: 'Reports & Analytics',
       description: 'View performance metrics',
       gradient: 'from-indigo-500 to-purple-500'
@@ -125,10 +137,10 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
           {menuItems.map((item, index) => {
             const isActive = isActiveRoute(item.path);
             const isHovered = hoveredItem === item.id;
-            
+
             return (
-              <Link 
-                key={item.id} 
+              <Link
+                key={item.id}
                 to={item.path}
                 onMouseEnter={() => setHoveredItem(item.id)}
                 onMouseLeave={() => setHoveredItem(null)}
@@ -141,13 +153,13 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
                   {/* Animated background */}
                   <div className={cn(
                     "absolute inset-0 rounded-lg transition-all duration-500",
-                    isActive 
-                      ? `bg-gradient-to-r ${item.gradient} opacity-10` 
-                      : isHovered 
-                        ? "bg-accent opacity-100" 
+                    isActive
+                      ? `bg-gradient-to-r ${item.gradient} opacity-10`
+                      : isHovered
+                        ? "bg-accent opacity-100"
                         : "opacity-0"
                   )} />
-                  
+
                   {/* Active indicator */}
                   {isActive && (
                     <div className={cn(
@@ -184,7 +196,7 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
                           isActive ? "text-primary" : "text-muted-foreground"
                         )} />
                       </div>
-                      
+
                       <div className="flex-1 text-left">
                         <div className={cn(
                           "font-medium text-sm transition-all duration-300",
@@ -219,26 +231,26 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
           <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-card border border-border/50 hover:border-primary/50 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
             {/* Animated background on hover */}
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
+
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-primary to-purple-600 rounded-full blur-md opacity-0 group-hover:opacity-50 transition-opacity duration-300" />
               <Avatar className="h-10 w-10 ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all duration-300 relative">
                 <AvatarFallback className="bg-gradient-to-br from-primary to-purple-600 text-primary-foreground">
-                  {user?.name?.charAt(0) || 'U'}
+                  {user?.username?.charAt(0) || 'U'}
                 </AvatarFallback>
               </Avatar>
             </div>
-            
+
             <div className="flex-1 min-w-0 relative z-10">
               <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                {user?.name || 'User'}
+                {user?.username || 'User'}
               </p>
               <p className="text-xs text-muted-foreground truncate capitalize">
-                {user?.role || 'Owner'}
+                {user?.role?.name || 'Owner'}
               </p>
             </div>
           </div>
-          
+
           <Link to="/" className="block mb-3">
             <Button
               variant="outline"

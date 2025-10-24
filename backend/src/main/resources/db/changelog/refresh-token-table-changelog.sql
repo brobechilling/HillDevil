@@ -23,3 +23,14 @@ ALTER TABLE refresh_token
     ADD COLUMN parent_refresh_token_id VARCHAR(255),
     ADD CONSTRAINT fk_refresh_token_on_parent FOREIGN KEY (parent_refresh_token_id) REFERENCES refresh_token (id) ON DELETE SET NULL;
 
+-- changeset quoc:refresh-token-4
+ALTER TABLE refresh_token
+    ALTER COLUMN user_id DROP NOT NULL;
+
+-- changeset quoc:refresh-token-5
+ALTER TABLE refresh_token
+    ADD COLUMN staff_account_id UUID,
+    ADD CONSTRAINT fk_refresh_token_on_staff_account
+        FOREIGN KEY (staff_account_id)
+        REFERENCES staff_account (staff_account_id)
+        ON DELETE SET NULL;

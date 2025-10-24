@@ -13,3 +13,10 @@ export const getRestaurants = async (page: number = 1, size: number = 2) => {
   );
   return res.data.result;
 };
+
+export const getRestaurantsByOwner = async (userId: string) => {
+  const res = await axiosClient.get<ApiResponse<RestaurantDTO[]>>(
+    `/restaurants/owner/${userId}`
+  );
+  return res.data.result;
+};
