@@ -32,7 +32,7 @@ public class Package {
     private String name;
 
     @Column(name = "price", precision = 10, scale = 2, nullable = false)
-    private BigDecimal price = BigDecimal.ZERO;
+    private Integer price = 0;
 
     @Column(name = "description")
     private String description;
@@ -75,11 +75,11 @@ public class Package {
         this.name = name;
     }
 
-    public BigDecimal getPrice() {
+    public Integer getPrice() {
         return price;
     }
 
-    public void setPrice(BigDecimal price) {
+    public void setPrice(Integer price) {
         this.price = price;
     }
 

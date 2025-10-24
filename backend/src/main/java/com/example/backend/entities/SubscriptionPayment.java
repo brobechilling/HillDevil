@@ -1,10 +1,8 @@
 package com.example.backend.entities;
 
-import java.math.BigDecimal;
+import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
-
-import jakarta.persistence.*;
 
 @Entity
 @Table(name = "subscription_payment")
@@ -19,8 +17,8 @@ public class SubscriptionPayment {
     @JoinColumn(nullable = false, name = "subscription_id")
     private Subscription subscription;
 
-    @Column(name = "amount", precision = 10, scale = 2, nullable = false)
-    private BigDecimal amount = BigDecimal.ZERO;
+    @Column(name = "amount", nullable = false)
+    private Integer amount = 0;
 
     @Column(name = "payos_order_code")
     private Long payOsOrderCode;
@@ -28,11 +26,21 @@ public class SubscriptionPayment {
     @Column(name = "payos_transaction_code")
     private String payOsTransactionCode;
 
-    @Column(name = "checkout_url")
-    private String checkoutUrl;
+    @Column(name = "qr_code_url")
+    private String qrCodeUrl;
 
-    @Column(name = "payment_status")
-    private String paymentStatus;
+    @Column(name = "account_number")
+    private String accountNumber;
+
+    @Column(name = "account_name")
+    private String accountName;
+
+    @Column(name = "expired_at")
+    private Instant expiredAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "subscription_payment_status")
+    private SubscriptionPaymentStatus subscriptionPaymentStatus;;
 
     @Lob
     @Column(name = "response_payload")
@@ -51,6 +59,25 @@ public class SubscriptionPayment {
     @Column(name = "date")
     private Instant date;
 
+    @Column(name = "description")
+    private String description;
+
+    public SubscriptionPaymentStatus getSubscriptionPaymentStatus() {
+        return subscriptionPaymentStatus;
+    }
+
+    public void setSubscriptionPaymentStatus(SubscriptionPaymentStatus subscriptionPaymentStatus) {
+        this.subscriptionPaymentStatus = subscriptionPaymentStatus;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     public UUID getSubscriptionPaymentId() {
         return subscriptionPaymentId;
     }
@@ -67,11 +94,11 @@ public class SubscriptionPayment {
         this.subscription = subscription;
     }
 
-    public BigDecimal getAmount() {
+    public Integer getAmount() {
         return amount;
     }
 
-    public void setAmount(BigDecimal amount) {
+    public void setAmount(Integer amount) {
         this.amount = amount;
     }
 
@@ -91,20 +118,36 @@ public class SubscriptionPayment {
         this.payOsTransactionCode = payOsTransactionCode;
     }
 
-    public String getCheckoutUrl() {
-        return checkoutUrl;
+    public String getQrCodeUrl() {
+        return qrCodeUrl;
     }
 
-    public void setCheckoutUrl(String checkoutUrl) {
-        this.checkoutUrl = checkoutUrl;
+    public void setQrCodeUrl(String qrCodeUrl) {
+        this.qrCodeUrl = qrCodeUrl;
     }
 
-    public String getPaymentStatus() {
-        return paymentStatus;
+    public String getAccountNumber() {
+        return accountNumber;
     }
 
-    public void setPaymentStatus(String paymentStatus) {
-        this.paymentStatus = paymentStatus;
+    public void setAccountNumber(String accountNumber) {
+        this.accountNumber = accountNumber;
+    }
+
+    public String getAccountName() {
+        return accountName;
+    }
+
+    public void setAccountName(String accountName) {
+        this.accountName = accountName;
+    }
+
+    public Instant getExpiredAt() {
+        return expiredAt;
+    }
+
+    public void setExpiredAt(Instant expiredAt) {
+        this.expiredAt = expiredAt;
     }
 
     public String getResponsePayload() {
@@ -146,5 +189,4 @@ public class SubscriptionPayment {
     public void setDate(Instant date) {
         this.date = date;
     }
-
 }
