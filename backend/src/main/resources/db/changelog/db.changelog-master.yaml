@@ -42,4 +42,3 @@ databaseChangeLog:
   - include:
       file: fix-subscription-payment-entity-changelog.sql
       relativeToChangelogFile: true
-

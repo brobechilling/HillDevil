@@ -31,7 +31,7 @@ public class Package {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "price", precision = 10, scale = 2, nullable = false)
+    @Column(name = "price", nullable = false)
     private Integer price = 0;
 
     @Column(name = "description")
