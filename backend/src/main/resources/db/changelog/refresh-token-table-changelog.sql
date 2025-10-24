@@ -27,7 +27,7 @@ ALTER TABLE refresh_token
 ALTER TABLE refresh_token
     ALTER COLUMN user_id DROP NOT NULL;
 
--- changeset quoc:refresh-token-6
+-- changeset quoc:refresh-token-5
 ALTER TABLE refresh_token
     ADD COLUMN staff_account_id UUID,
     ADD CONSTRAINT fk_refresh_token_on_staff_account
