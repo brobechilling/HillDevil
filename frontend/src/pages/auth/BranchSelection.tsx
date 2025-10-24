@@ -4,101 +4,170 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Store, ArrowRight, MapPin } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useAuthStore } from '@/store/authStore';
+import { RestaurantDTO } from '@/dto/restaurant.dto';
+import { UserDTO } from '@/dto/user.dto';
+import { getRestaurantsByOwner } from '@/api/restaurantApi';
 
 const BranchSelection = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const [branches, setBranches] = useState<any[]>([]);
-  const [selectedBrand, setSelectedBrand] = useState<string>('');
+  const [user, setUser] = useState<UserDTO | null>(null);
+  const [restaurants, setRestaurants] = useState<RestaurantDTO[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    // Get user data from localStorage (stored by Login component)
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) {
       navigate('/login');
       return;
     }
 
-    const brandName = localStorage.getItem('selected_brand');
-    if (!brandName) {
-      navigate('/brand-selection');
+    const userData = JSON.parse(storedUser) as UserDTO;
+    setUser(userData);
+
+    // Check if we have restaurants stored from brand selection
+    const storedRestaurants = localStorage.getItem('user_restaurants');
+    if (storedRestaurants) {
+      const restaurantsData = JSON.parse(storedRestaurants);
+      setRestaurants(restaurantsData);
+      setLoading(false);
+    } else {
+      // If no stored restaurants, fetch them from API
+      fetchRestaurants(userData);
+    }
+  }, [navigate]);
+
+  const fetchRestaurants = async (userData: UserDTO) => {
+    try {
+      setLoading(true);
+      const restaurantsData = await getRestaurantsByOwner(userData.userId);
+      setRestaurants(restaurantsData);
+      localStorage.setItem('user_restaurants', JSON.stringify(restaurantsData));
+    } catch (error) {
+      console.error('Error fetching restaurants:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load restaurants. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRestaurantSelect = (restaurantId: string) => {
+    const restaurant = restaurants.find(r => r.restaurantId === restaurantId);
+
+    if (!restaurant) {
+      toast({
+        title: "Error",
+        description: "Restaurant not found.",
+        variant: "destructive",
+      });
       return;
     }
 
-    setSelectedBrand(brandName);
-
-    // Load branches for the selected brand
-    const storedBranches = localStorage.getItem('mock_branches');
-    if (storedBranches) {
-      const allBranches = JSON.parse(storedBranches);
-      const brandBranches = allBranches.filter(
-        (b: any) => b.ownerId === user.id && b.brandName === brandName
-      );
-      setBranches(brandBranches);
-
-      if (brandBranches.length === 0) {
-        navigate('/brand-selection');
-      }
-    } else {
-      navigate('/brand-selection');
+    // Ensure user data is still in localStorage
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) {
+      toast({
+        title: "Error",
+        description: "User session expired. Please login again.",
+        variant: "destructive",
+      });
+      navigate('/login');
+      return;
     }
-  }, [user, navigate]);
 
-  const handleBranchSelect = (branchId: string) => {
-    const branch = branches.find(b => b.id === branchId);
-    
-    localStorage.setItem('selected_branch', branchId);
-    
+    localStorage.setItem('selected_restaurant', JSON.stringify(restaurant));
+
     toast({
-      title: 'Branch Selected',
-      description: `You've selected ${branch?.name}`,
+      title: 'Restaurant Selected',
+      description: `You've selected ${restaurant.name}`,
     });
 
     navigate('/dashboard/owner');
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-muted/30 py-12 px-4">
+        <div className="container max-w-5xl">
+          <div className="text-center">
+            <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading restaurants...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (restaurants.length === 0) {
+    return (
+      <div className="min-h-screen bg-muted/30 py-12 px-4">
+        <div className="container max-w-5xl">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold mb-4">No Restaurants Found</h1>
+            <p className="text-lg text-muted-foreground mb-8">
+              You don't have any restaurants yet. Create your first restaurant to get started.
+            </p>
+            <Button onClick={() => navigate('/register/package')}>
+              Create Restaurant
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-muted/30 py-12 px-4">
       <div className="container max-w-5xl">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Select Branch</h1>
+          <h1 className="text-4xl font-bold mb-4">Select Restaurant</h1>
           <p className="text-lg text-muted-foreground">
-            Choose which branch of <span className="font-semibold">{selectedBrand}</span> you want to manage
+            Choose which restaurant you want to manage
           </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {branches.map((branch) => (
+          {restaurants.map((restaurant) => (
             <Card
-              key={branch.id}
+              key={restaurant.restaurantId}
               className="cursor-pointer transition-smooth hover:shadow-medium hover:border-primary border-border/50"
-              onClick={() => handleBranchSelect(branch.id)}
+              onClick={() => handleRestaurantSelect(restaurant.restaurantId)}
             >
               <CardHeader>
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 rounded-lg bg-primary/10">
                     <Store className="h-8 w-8 text-primary" />
                   </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-500">
-                    Active
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${restaurant.status
+                    ? 'bg-green-500/10 text-green-500'
+                    : 'bg-red-500/10 text-red-500'
+                    }`}>
+                    {restaurant.status ? 'Active' : 'Inactive'}
                   </span>
                 </div>
-                <CardTitle className="text-2xl">{branch.name}</CardTitle>
-                <CardDescription className="text-base">{branch.address}</CardDescription>
+                <CardTitle className="text-2xl">{restaurant.name}</CardTitle>
+                <CardDescription className="text-base">{restaurant.description || 'No description available'}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 mb-6">
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{branch.address}</span>
-                  </div>
-                  {branch.phone && (
+                  {restaurant.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span>{restaurant.email}</span>
+                    </div>
+                  )}
+                  {restaurant.restaurantPhone && (
                     <p className="text-sm text-muted-foreground">
-                      {branch.phone}
+                      {restaurant.restaurantPhone}
                     </p>
                   )}
                 </div>
                 <Button className="w-full" variant="outline">
-                  Manage Branch
+                  Manage Restaurant
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardContent>

@@ -4,86 +4,102 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Building2, ArrowRight, ArrowLeft, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useAuthStore } from '@/store/authStore';
-import { seedBranchData } from '@/lib/mockDataInit';
+import { RestaurantDTO } from '@/dto/restaurant.dto';
+import { UserDTO } from '@/dto/user.dto';
+import { getRestaurantsByOwner } from '@/api/restaurantApi';
 
-interface Brand {
-  name: string;
-  branches: any[];
-  logoUrl?: string;
-  tagline?: string;
-}
-
-// Helper to get brands for a multi-branch owner
-function getOwnerBrands(user: any, allBranches: any[]) {
-  // Get branches owned by this user
-  const userBranches = allBranches.filter((b: any) => b.ownerId === user.id);
-  
-  if (userBranches.length === 0) {
-    return [];
-  }
-
-  // Group branches by brandName
-  const brandMap = new Map<string, any[]>();
-  userBranches.forEach((branch: any) => {
-    const brandName = branch.brandName || 'Unnamed Brand';
-    if (!brandMap.has(brandName)) {
-      brandMap.set(brandName, []);
-    }
-    brandMap.get(brandName)?.push(branch);
-  });
-
-  // Convert to array of brand objects
-  return Array.from(brandMap.entries()).map(([name, branches]) => ({
-    name,
-    branches,
-    logoUrl: branches[0]?.logoUrl,
-    tagline: branches[0]?.tagline,
-  }));
-}
+// Since we're working with restaurants instead of brands, 
+// we'll treat each restaurant as a "brand" for simplicity
 
 const BrandSelection = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const [user, setUser] = useState<UserDTO | null>(null);
+  const [restaurants, setRestaurants] = useState<RestaurantDTO[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    // Get user data from localStorage (stored by Login component)
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) {
       navigate('/login');
       return;
     }
 
-    // Load all branches from localStorage
-    const storedBranches = localStorage.getItem('mock_branches');
-    const allBranches = storedBranches ? JSON.parse(storedBranches) : [];
+    const userData = JSON.parse(storedUser) as UserDTO;
+    setUser(userData);
 
-    // Use helper to get brands for this owner
-    const userBrands = getOwnerBrands(user, allBranches);
-    if (userBrands.length === 0) {
-      navigate('/register/package');
+    // Check if we have restaurants stored from login
+    const storedRestaurants = localStorage.getItem('user_restaurants');
+    if (storedRestaurants) {
+      const restaurantsData = JSON.parse(storedRestaurants);
+      setRestaurants(restaurantsData);
+      setLoading(false);
+    } else {
+      // If no stored restaurants, fetch them from API
+      fetchRestaurants(userData);
+    }
+  }, [navigate]);
+
+  const fetchRestaurants = async (userData: UserDTO) => {
+    try {
+      setLoading(true);
+      const restaurantsData = await getRestaurantsByOwner(userData.userId);
+      setRestaurants(restaurantsData);
+      localStorage.setItem('user_restaurants', JSON.stringify(restaurantsData));
+    } catch (error) {
+      console.error('Error fetching restaurants:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load restaurants. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRestaurantSelect = (restaurantId: string) => {
+    const restaurant = restaurants.find(r => r.restaurantId === restaurantId);
+    if (!restaurant) return;
+
+    // Ensure user data is still in localStorage
+    const storedUser = localStorage.getItem('user');
+    console.log('BrandSelection - Stored user before navigation:', storedUser);
+
+    if (!storedUser) {
+      toast({
+        title: "Error",
+        description: "User session expired. Please login again.",
+        variant: "destructive",
+      });
+      navigate('/login');
       return;
     }
-    setBrands(userBrands);
-  }, [user, navigate]);
 
-  const handleBrandSelect = (brandName: string) => {
-    const brand = brands.find(b => b.name === brandName);
-    if (!brand) return;
-    localStorage.setItem('selected_brand', brandName);
-    // Seed all branches for this brand
-    brand.branches.forEach((branch: any) => {
-      seedBranchData(branch.id);
-    });
-    // Remove old mock_* keys to avoid confusion
-    localStorage.removeItem('mock_menu_items');
-    localStorage.removeItem('mock_tables');
-    localStorage.removeItem('mock_staff');
+    localStorage.setItem('selected_restaurant', JSON.stringify(restaurant));
+    console.log('BrandSelection - Selected restaurant:', restaurant);
+    console.log('BrandSelection - Navigating to /dashboard/owner');
+
     toast({
-      title: 'Brand Selected',
-      description: `You've selected ${brandName}`,
+      title: 'Restaurant Selected',
+      description: `You've selected ${restaurant.name}`,
     });
+
     navigate('/dashboard/owner');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-muted/30 py-12 px-4">
+        <div className="container max-w-5xl">
+          <div className="text-center">
+            <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading restaurants...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30 py-12 px-4">
@@ -100,18 +116,18 @@ const BrandSelection = () => {
           </Button>
         </div>
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Select Your Brand</h1>
+          <h1 className="text-4xl font-bold mb-4">Select Your Restaurant</h1>
           <p className="text-lg text-muted-foreground">
-            Choose which restaurant brand you want to manage
+            Choose which restaurant you want to manage
           </p>
         </div>
 
-        {brands.length === 0 ? (
+        {restaurants.length === 0 ? (
           <Card className="max-w-md mx-auto">
             <CardHeader>
-              <CardTitle>No Brands Yet</CardTitle>
+              <CardTitle>No Restaurants Yet</CardTitle>
               <CardDescription>
-                You haven't created any restaurant brands yet. Create your first one to get started!
+                You haven't created any restaurants yet. Create your first one to get started!
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -124,38 +140,44 @@ const BrandSelection = () => {
         ) : (
           <>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {brands.map((brand) => (
+              {restaurants.map((restaurant) => (
                 <Card
-                  key={brand.name}
+                  key={restaurant.restaurantId}
                   className="cursor-pointer transition-smooth hover:shadow-medium hover:border-primary border-border/50"
-                  onClick={() => handleBrandSelect(brand.name)}
+                  onClick={() => handleRestaurantSelect(restaurant.restaurantId)}
                 >
                   <CardHeader>
                     <div className="flex items-center justify-between mb-4">
                       <div className="p-3 rounded-lg bg-primary/10">
-                        {brand.logoUrl ? (
-                          <img src={brand.logoUrl} alt={brand.name} className="h-8 w-8 object-contain" />
-                        ) : (
-                          <Building2 className="h-8 w-8 text-primary" />
-                        )}
+                        <Building2 className="h-8 w-8 text-primary" />
                       </div>
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-500">
-                        Active
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${restaurant.status
+                        ? 'bg-green-500/10 text-green-500'
+                        : 'bg-red-500/10 text-red-500'
+                        }`}>
+                        {restaurant.status ? 'Active' : 'Inactive'}
                       </span>
                     </div>
-                    <CardTitle className="text-2xl">{brand.name}</CardTitle>
+                    <CardTitle className="text-2xl">{restaurant.name}</CardTitle>
                     <CardDescription className="text-base">
-                      {brand.branches.length} {brand.branches.length === 1 ? 'Branch' : 'Branches'}
+                      {restaurant.description || 'No description available'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {brand.tagline && (
-                      <p className="text-sm text-muted-foreground italic mb-6">
-                        {brand.tagline}
-                      </p>
-                    )}
+                    <div className="space-y-3 mb-6">
+                      {restaurant.email && (
+                        <p className="text-sm text-muted-foreground">
+                          {restaurant.email}
+                        </p>
+                      )}
+                      {restaurant.restaurantPhone && (
+                        <p className="text-sm text-muted-foreground">
+                          {restaurant.restaurantPhone}
+                        </p>
+                      )}
+                    </div>
                     <Button className="w-full" variant="outline">
-                      Manage Brand
+                      Manage Restaurant
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </CardContent>
@@ -164,9 +186,13 @@ const BrandSelection = () => {
             </div>
 
             <div className="mt-8 text-center">
-              <Button variant="ghost" onClick={() => navigate('/register/package')}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create New Restaurant
+              <Button
+                onClick={() => navigate('/register/package')}
+                variant="outline"
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Create Another Restaurant
               </Button>
             </div>
           </>
