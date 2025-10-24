@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/authStore';
+import { UserDTO } from '@/dto/user.dto';
 import { OverviewDashboard } from '@/components/owner/OverviewDashboard';
 import { useEffect, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
@@ -7,53 +7,59 @@ import { RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const OwnerOverviewPage = () => {
-  const { user } = useAuthStore();
+  const [user, setUser] = useState<UserDTO | null>(null);
   const navigate = useNavigate();
   const [userBranches, setUserBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || user.role !== 'owner') {
+    // Get user data from localStorage (stored by Login component)
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) {
+      console.log('OwnerOverviewPage - No user found, redirecting to login');
       navigate('/login');
       return;
     }
 
-    const selectedBrand = localStorage.getItem('selected_brand');
-    if (!selectedBrand) {
+    const userData = JSON.parse(storedUser) as UserDTO;
+    setUser(userData);
+
+    // Check if user has RESTAURANT_OWNER role
+    if (userData.role.name !== 'RESTAURANT_OWNER') {
+      console.log('OwnerOverviewPage - User is not RESTAURANT_OWNER, redirecting to login');
+      navigate('/login');
+      return;
+    }
+
+    // Check if restaurant is selected
+    const selectedRestaurant = localStorage.getItem('selected_restaurant');
+    if (!selectedRestaurant) {
+      console.log('OwnerOverviewPage - No restaurant selected, redirecting to brand selection');
       toast({
         variant: 'destructive',
-        title: 'No brand selected',
-        description: 'Please select a brand first.',
+        title: 'No restaurant selected',
+        description: 'Please select a restaurant first.',
       });
       navigate('/brand-selection');
       return;
     }
 
-    const allBranches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
-    const brandBranches = allBranches.filter((b: any) =>
-      b.brandName === selectedBrand && b.ownerId === user.id
-    );
+    console.log('OwnerOverviewPage - User authenticated and restaurant selected');
 
-    // It's valid for a brand to have no branches yet. Allow the page to render
-    // with an empty branches array so the owner can create the first branch from
-    // the OverviewDashboard.
-    setUserBranches(brandBranches);
+    // For now, set empty branches array since we're using restaurant data
+    // TODO: Implement branch management when backend supports it
+    setUserBranches([]);
     setLoading(false);
-  }, [user, navigate]);
+  }, [navigate]);
 
   const handleChooseBrand = () => {
-    localStorage.removeItem('selected_brand');
+    localStorage.removeItem('selected_restaurant');
     navigate('/brand-selection');
   };
 
   const handleBranchUpdate = () => {
-    // Reload branches after update
-    const selectedBrand = localStorage.getItem('selected_brand');
-    const allBranches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
-    const brandBranches = allBranches.filter((b: any) =>
-      b.brandName === selectedBrand && b.ownerId === user?.id
-    );
-    setUserBranches(brandBranches);
+    // TODO: Implement branch update when backend supports it
+    console.log('Branch update requested');
   };
 
   if (loading) {

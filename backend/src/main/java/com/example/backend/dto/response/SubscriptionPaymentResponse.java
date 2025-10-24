@@ -9,8 +9,12 @@ public class SubscriptionPaymentResponse {
     private BigDecimal amount;
     private String payOsOrderCode;
     private String payOsTransactionCode;
-    private String checkoutUrl;
-    private String paymentStatus;
+    private String qrCodeUrl;
+    private String accountNumber;
+    private String accountName;
+    private Instant expiredAt;
+    private String description;
+    private String subscriptionPaymentStatus;
     private Instant date;
 
     public UUID getSubscriptionPaymentId() {
@@ -45,20 +49,52 @@ public class SubscriptionPaymentResponse {
         this.payOsTransactionCode = payOsTransactionCode;
     }
 
-    public String getCheckoutUrl() {
-        return checkoutUrl;
+    public String getQrCodeUrl() {
+        return qrCodeUrl;
     }
 
-    public void setCheckoutUrl(String checkoutUrl) {
-        this.checkoutUrl = checkoutUrl;
+    public void setQrCodeUrl(String qrCodeUrl) {
+        this.qrCodeUrl = qrCodeUrl;
     }
 
-    public String getPaymentStatus() {
-        return paymentStatus;
+    public String getAccountNumber() {
+        return accountNumber;
     }
 
-    public void setPaymentStatus(String paymentStatus) {
-        this.paymentStatus = paymentStatus;
+    public void setAccountNumber(String accountNumber) {
+        this.accountNumber = accountNumber;
+    }
+
+    public String getAccountName() {
+        return accountName;
+    }
+
+    public void setAccountName(String accountName) {
+        this.accountName = accountName;
+    }
+
+    public Instant getExpiredAt() {
+        return expiredAt;
+    }
+
+    public void setExpiredAt(Instant expiredAt) {
+        this.expiredAt = expiredAt;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getSubscriptionPaymentStatus() {
+        return subscriptionPaymentStatus;
+    }
+
+    public void setSubscriptionPaymentStatus(String subscriptionPaymentStatus) {
+        this.subscriptionPaymentStatus = subscriptionPaymentStatus;
     }
 
     public Instant getDate() {

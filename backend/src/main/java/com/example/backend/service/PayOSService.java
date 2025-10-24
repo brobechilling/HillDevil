@@ -12,7 +12,6 @@ import vn.payos.type.PaymentLinkData;
 import vn.payos.type.Webhook;
 import vn.payos.type.WebhookData;
 
-import java.math.BigDecimal;
 import java.util.Collections;
 
 @Service
@@ -26,34 +25,24 @@ public class PayOSService {
         this.payOS = new PayOS(config.getClientId(), config.getApiKey(), config.getChecksumKey());
     }
 
-    public CheckoutResponseData createPaymentLink(
-            BigDecimal amount,
-            long orderCode,
-            String itemName,
-            int quantity,
-            String description
-    ) {
+    public CheckoutResponseData createVQRPayment(Integer amount, long orderCode, String itemName, String description) {
         try {
-            ItemData itemData = ItemData.builder()
+            ItemData item = ItemData.builder()
                     .name(itemName)
-                    .quantity(quantity)
-                    .price(amount.intValueExact())
+                    .quantity(1)
+                    .price(amount)
                     .build();
 
             PaymentData paymentData = PaymentData.builder()
                     .orderCode(orderCode)
-                    .amount(amount.intValueExact())
+                    .amount(amount)
                     .description(description)
                     .returnUrl(config.getReturnUrl())
                     .cancelUrl(config.getCancelUrl())
-                    .items(Collections.singletonList(itemData))
+                    .items(Collections.singletonList(item))
                     .build();
 
-            System.out.println("[PayOS] Creating payment link with orderCode=" + orderCode);
-            CheckoutResponseData response = payOS.createPaymentLink(paymentData);
-            System.out.println("[PayOS] Checkout URL: " + response.getCheckoutUrl());
-            return response;
-
+            return payOS.createPaymentLink(paymentData);
         } catch (Exception e) {
             e.printStackTrace();
             throw new AppException(ErrorCode.PAYMENT_GATEWAY_ERROR);
@@ -63,22 +52,6 @@ public class PayOSService {
     public PaymentLinkData getPaymentInfo(long orderCode) {
         try {
             return payOS.getPaymentLinkInformation(orderCode);
-        } catch (Exception e) {
-            throw new AppException(ErrorCode.PAYMENT_GATEWAY_ERROR);
-        }
-    }
-
-    public void cancelPayment(long orderCode, String reason) {
-        try {
-            payOS.cancelPaymentLink(orderCode, reason != null ? reason : "User canceled");
-        } catch (Exception e) {
-            throw new AppException(ErrorCode.PAYMENT_GATEWAY_ERROR);
-        }
-    }
-
-    public String confirmWebhook(String webhookUrl) {
-        try {
-            return payOS.confirmWebhook(webhookUrl);
         } catch (Exception e) {
             throw new AppException(ErrorCode.PAYMENT_GATEWAY_ERROR);
         }

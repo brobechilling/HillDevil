@@ -8,7 +8,7 @@ public class PackageFeatureDTO {
     private UUID packageId;
     private String name;
     private String description;
-    private BigDecimal price;
+    private Integer price;
     private boolean available;
     private int billingPeriod;
     private List<FeatureValueDTO> features;
@@ -38,11 +38,11 @@ public class PackageFeatureDTO {
         this.description = description;
     }
 
-    public BigDecimal getPrice() {
+    public Integer getPrice() {
         return price;
     }
 
-    public void setPrice(BigDecimal price) {
+    public void setPrice(Integer price) {
         this.price = price;
     }
 

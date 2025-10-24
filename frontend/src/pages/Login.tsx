@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { AuthenticationRequest } from '@/dto/auth.dto';
 import { useMutation } from '@tanstack/react-query';
 import { login } from '@/api/authApi';
+import { getRestaurantsByOwner } from '@/api/restaurantApi';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -21,10 +22,39 @@ const Login = () => {
 
   const loginMutation = useMutation({
     mutationFn: login,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      console.log('Login success - User data:', data.user);
       localStorage.setItem("user", JSON.stringify(data.user));
-      switch(data.user.role.name) {
+
+      switch (data.user.role.name) {
         case "RESTAURANT_OWNER":
+          try {
+            // Get restaurants owned by this user
+            const restaurants = await getRestaurantsByOwner(data.user.userId);
+            console.log('Login success - Restaurants:', restaurants);
+
+            if (restaurants.length === 0) {
+              // No restaurants found, redirect to package registration
+              navigate('/register/package');
+            } else if (restaurants.length === 1) {
+              // Only one restaurant, store it and go to owner dashboard
+              localStorage.setItem('selected_restaurant', JSON.stringify(restaurants[0]));
+              console.log('Login success - Single restaurant, navigating to owner dashboard');
+              navigate('/dashboard/owner');
+            } else {
+              // Multiple restaurants, store them and redirect to brand selection
+              localStorage.setItem('user_restaurants', JSON.stringify(restaurants));
+              console.log('Login success - Multiple restaurants, navigating to brand selection');
+              navigate('/brand-selection');
+            }
+          } catch (error) {
+            console.error('Error fetching restaurants:', error);
+            toast({
+              title: "Error",
+              description: "Failed to load restaurant information. Please try again.",
+              variant: "destructive",
+            });
+          }
           return;
         case "BRANCH_MANAGER":
           navigate('/dashboard/manager');
@@ -43,7 +73,14 @@ const Login = () => {
           return;
       }
     },
-  });  
+    onError: (error) => {
+      toast({
+        title: "Login Failed",
+        description: "Invalid email or password. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,57 +91,6 @@ const Login = () => {
     loginMutation.mutate(authenticationRequest);
   };
 
-      // Smart routing based on user role
-      // if (user.role.name === "RESTAURANT_OWNER") {
-      //   const storedBranches = localStorage.getItem('mock_branches');
-      //   if (storedBranches) {
-      //     const allBranches = JSON.parse(storedBranches);
-      //     const userBranches = allBranches.filter((b: any) => b.ownerId === 100);
-          
-      //     if (userBranches.length === 0) {
-      //       navigate('/register/package');
-      //     } else {
-      //       // Get unique brands
-      //       const uniqueBrands = Array.from(
-      //         new Map(userBranches.map((b: any) => [b.brandName || 'Default Brand', b])).values()
-      //       );
-            
-      //       if (uniqueBrands.length === 1) {
-      //         // Only one brand
-      //         const firstBrand = uniqueBrands[0] as any;
-      //         const brandBranches = userBranches.filter(
-      //           (b: any) => (b.brandName || 'Default Brand') === (firstBrand.brandName || 'Default Brand')
-      //         );
-              
-      //         if (brandBranches.length === 1) {
-      //           // Only one branch, select automatically
-      //           localStorage.setItem('selected_brand', firstBrand.brandName || 'Default Brand');
-      //           localStorage.setItem('selected_branch', brandBranches[0].id);
-      //           navigate('/dashboard/owner');
-      //         } else {
-      //           // Multiple branches in brand, show branch selection
-      //           localStorage.setItem('selected_brand', firstBrand.brandName || 'Default Brand');
-      //           navigate('/branch-selection');
-      //         }
-      //       } else {
-      //         // Multiple brands, show brand selection first
-      //         navigate('/brand-selection');
-      //       }
-      //     }
-      //   } else {
-      //     navigate('/register/package');
-      //   }
-      // } else if (user.role.name === "BRANCH_MANAGER") {
-      //   navigate('/dashboard/manager');
-      // } else if (user.role.name === "WAITER") {
-      //   navigate('/dashboard/waiter');
-      // } else if (user.role.name === "RECEPTIONIST") {
-      //   navigate('/dashboard/receptionist');
-      // } else if (user.role.name === "ADMIN") {
-      //   navigate('/dashboard/admin');
-      // } else {
-      //   navigate('/dashboard');
-      // }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4 relative overflow-hidden">
@@ -118,13 +104,13 @@ const Login = () => {
       <Card className="w-full max-w-md shadow-2xl backdrop-blur-xl bg-card/95 border-2 relative z-10 animate-scale-in">
         {/* Decorative top border */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-purple-500 to-pink-500 rounded-t-lg" />
-        
+
         <CardHeader className="space-y-4 text-center relative">
           {/* Animated logo container */}
           <div className="mx-auto relative group">
             {/* Glow effect */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary to-purple-600 rounded-xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 animate-pulse" />
-            
+
             {/* Logo */}
             <div className="relative flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-purple-600 transform transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 animate-bounce-in">
               <UtensilsCrossed className="h-8 w-8 text-primary-foreground" />
@@ -177,15 +163,15 @@ const Login = () => {
                 )} /> */}
               </div>
             </div>
-            
+
             {/* Password Field */}
             <div className="space-y-2 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
               <div className="flex items-center justify-between">
                 <Label htmlFor="password" className="text-sm font-medium">
                   Password
                 </Label>
-                <Link 
-                  to="/forgot-password" 
+                <Link
+                  to="/forgot-password"
                   className="text-sm text-primary hover:underline transition-all hover:translate-x-0.5 inline-flex items-center gap-1 group"
                 >
                   Forgot password?
@@ -219,15 +205,15 @@ const Login = () => {
             </div>
 
             {/* Sign In Button */}
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full h-11 bg-gradient-to-r from-primary via-purple-600 to-primary bg-size-200 bg-pos-0 hover:bg-pos-100 transition-all duration-500 relative group overflow-hidden animate-fade-in-up"
               style={{ animationDelay: '400ms' }}
               disabled={loginMutation.isPending}
             >
               {/* Button glow effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
-              
+
               <span className="relative z-10 font-semibold">
                 {loginMutation.isPending ? (
                   <span className="flex items-center gap-2">
@@ -251,15 +237,15 @@ const Login = () => {
             </div>
 
             {/* Google Sign In */}
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               className="w-full h-11 hover:bg-accent hover:border-primary/50 transition-all duration-300 group relative overflow-hidden animate-fade-in-up"
               style={{ animationDelay: '600ms' }}
               disabled={loginMutation.isPending}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              
+
               <svg className="mr-2 h-4 w-4 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -301,7 +287,7 @@ const Login = () => {
                 <span className="bg-card px-2 text-muted-foreground">Staff Access</span>
               </div>
             </div>
-            
+
             <Button
               type="button"
               variant="secondary"
