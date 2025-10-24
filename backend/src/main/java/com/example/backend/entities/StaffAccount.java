@@ -1,6 +1,8 @@
 package com.example.backend.entities;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import org.hibernate.annotations.CreationTimestamp;
@@ -14,6 +16,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -49,6 +52,9 @@ public class StaffAccount {
 
     @Column(name = "status")
     private boolean status;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "staffAccount")
+    private Set<RefreshToken> refreshTokens = new LinkedHashSet<>();
 
     public UUID getStaffAccountId() {
         return staffAccountId;
@@ -112,6 +118,14 @@ public class StaffAccount {
 
     public void setStatus(boolean status) {
         this.status = status;
+    }
+
+    public Set<RefreshToken> getRefreshTokens() {
+        return refreshTokens;
+    }
+
+    public void setRefreshTokens(Set<RefreshToken> refreshTokens) {
+        this.refreshTokens = refreshTokens;
     }
 
 }

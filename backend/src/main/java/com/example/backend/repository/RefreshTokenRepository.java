@@ -23,6 +23,13 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Stri
     )
     int revokeAllByUserId(@Param("userId") UUID userId);
 
+    @Modifying
+    @Transactional
+    @Query(
+        value = "UPDATE refresh_token SET revoked = TRUE WHERE staff_account_id = :staffAccountId",
+        nativeQuery = true
+    )
+    int revokeAllByStaffAccountId(@Param("staffAccountId") UUID staffAccountId);
 
 }
 
