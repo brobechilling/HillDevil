@@ -39,3 +39,6 @@ payos:
   # test first, will put this in env
   return-url: https://hilldevil.space/payment/success
   cancel-url: https://hilldevil.space/payment/cancel
+
+frontend:
+  base-url: ${FRONTEND_BASE_URL}
