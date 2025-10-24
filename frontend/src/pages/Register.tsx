@@ -4,28 +4,49 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuthStore } from '@/store/authStore';
 import { UtensilsCrossed, Mail, Lock, User, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { SignupRequest } from '@/dto/user.dto';
+import { useMutation } from '@tanstack/react-query';
+import { register } from '@/api/userApi';
+import { ApiResponse } from '@/dto/apiResponse';
+import { AxiosError } from 'axios';
 
 const Register = () => {
-  const [formData, setFormData] = useState({
-    name: '',
+  const [formData, setFormData] = useState<SignupRequest>({
+    username: '',
     email: '',
     phone: '',
     password: '',
-    confirmPassword: '',
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
-  const { register: registerUser } = useAuthStore();
+
+  const registerMutation = useMutation({
+     mutationFn: register,
+     onSuccess: () => {
+      toast({
+        variant: "default",
+        title: "Success",
+        description: "You have registered successfully.",
+      });
+      navigate('/login');
+     },
+     onError(error: AxiosError<ApiResponse<null>>) {
+      const message = error.response?.data?.message || "Unexpected error occured. Please try again";
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: message,
+      });
+     },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.password !== formData.confirmPassword) {
+    if (formData.password !== confirmPassword) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -33,25 +54,7 @@ const Register = () => {
       });
       return;
     }
-
-    setIsLoading(true);
-    
-    try {
-      await registerUser(formData.email, formData.password, formData.name);
-      // After registration, auto-login happens in the auth store. Redirect to landing page
-      // unless a returnUrl query param was provided (e.g. from selecting package on landing).
-      const params = new URLSearchParams(location.search);
-      const returnUrl = params.get('returnUrl');
-      if (returnUrl) {
-        navigate(returnUrl);
-      } else {
-        navigate('/');
-      }
-    } catch (error) {
-      // Error handling is done in the auth store
-    } finally {
-      setIsLoading(false);
-    }
+    registerMutation.mutate(formData);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,10 +83,10 @@ const Register = () => {
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="name"
+                  id="username"
                   type="text"
-                  placeholder="John Doe"
-                  value={formData.name}
+                  value={formData.username}
+                  placeholder='pizza pho mai'
                   onChange={handleChange}
                   className="pl-10"
                   required
@@ -98,8 +101,8 @@ const Register = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
                   value={formData.email}
+                  placeholder='sushicahoi@gmail.com'
                   onChange={handleChange}
                   className="pl-10"
                   required
@@ -114,7 +117,7 @@ const Register = () => {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+1 (555) 123-4567"
+                  placeholder="0909123456"
                   value={formData.phone}
                   onChange={handleChange}
                   className="pl-10"
@@ -129,7 +132,7 @@ const Register = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder='password'
                   value={formData.password}
                   onChange={handleChange}
                   className="pl-10"
@@ -145,17 +148,17 @@ const Register = () => {
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
+                  placeholder='password'
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   className="pl-10"
                   required
                 />
               </div>
             </div>
 
-            <Button type="submit" className="w-full" variant="hero" disabled={isLoading}>
-              {isLoading ? 'Creating account...' : 'Create Account'}
+            <Button type="submit" className="w-full" variant="hero" disabled={registerMutation.isPending}>
+              {registerMutation.isPending ? 'Creating account...' : 'Create Account'}
             </Button>
 
             <div className="relative">
@@ -167,7 +170,7 @@ const Register = () => {
               </div>
             </div>
 
-            <Button type="button" variant="outline" className="w-full" disabled={isLoading}>
+            <Button type="button" variant="outline" className="w-full" disabled={registerMutation.isPending} >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

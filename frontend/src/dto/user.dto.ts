@@ -14,3 +14,17 @@ export interface RoleDTO {
     description: string;
 }
 
+export enum ROLE_NAME {
+    ADMIN = "ADMIN",
+    BRANCH_MANAGER = "BRANCH_MANAGER",
+    RESTAURANT_OWNER = "RESTAURANT_OWNER",
+    WAITER = "WAITER",
+    RECEPTIONIST = "RECEPTIONIST"
+}
+
+export interface SignupRequest {
+    email: string;
+    password: string;
+    username: string;
+    phone: string;
+}

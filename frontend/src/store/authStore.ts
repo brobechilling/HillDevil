@@ -10,7 +10,7 @@ interface User {
   name: string;
   role: UserRole;
   avatar?: string;
-   branchId?: string; // For staff and branch_manager
+  branchId?: string; // For staff and branch_manager
 }
 
 interface AuthState {

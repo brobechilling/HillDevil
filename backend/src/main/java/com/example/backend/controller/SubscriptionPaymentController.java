@@ -4,12 +4,11 @@ import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.response.SubscriptionPaymentResponse;
 import com.example.backend.service.PayOSService;
 import com.example.backend.service.SubscriptionPaymentService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import vn.payos.type.PaymentLinkData;
+import vn.payos.type.Webhook;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @RestController
@@ -18,66 +17,72 @@ public class SubscriptionPaymentController {
 
     private final SubscriptionPaymentService subscriptionPaymentService;
     private final PayOSService payOSService;
-    private final ObjectMapper objectMapper;
 
     public SubscriptionPaymentController(
             SubscriptionPaymentService subscriptionPaymentService,
-            PayOSService payOSService,
-            ObjectMapper objectMapper
+            PayOSService payOSService
     ) {
         this.subscriptionPaymentService = subscriptionPaymentService;
         this.payOSService = payOSService;
-        this.objectMapper = objectMapper;
     }
 
     @PostMapping("/create")
-    public ApiResponse<SubscriptionPaymentResponse> createPayment(
-            @RequestParam UUID subscriptionId,
-            @RequestParam BigDecimal amount
+    public ResponseEntity<ApiResponse<SubscriptionPaymentResponse>> createPayment(
+            @RequestParam UUID subscriptionId
     ) {
-        SubscriptionPaymentResponse result =
-                subscriptionPaymentService.createPayment(subscriptionId, amount);
+        SubscriptionPaymentResponse result = subscriptionPaymentService.createPayment(subscriptionId);
 
         ApiResponse<SubscriptionPaymentResponse> response = new ApiResponse<>();
+        response.setMessage("Created Payment successfully");
         response.setResult(result);
-        response.setMessage("Tạo yêu cầu thanh toán thành công");
-        return response;
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/webhook")
-    public ResponseEntity<ApiResponse<String>> handleWebhook(
-            @RequestHeader("x-signature") String signature,
-            @RequestBody String rawPayload
-    ) {
+    public ResponseEntity<ApiResponse<String>> handleWebhook(@RequestBody Webhook webhookBody) {
+        subscriptionPaymentService.handlePaymentSuccess(webhookBody);
+
         ApiResponse<String> response = new ApiResponse<>();
+        response.setMessage("Webhook handled successfully");
+        response.setResult("OK");
 
-        //verify signature
-        if (!payOSService.verifySignature(rawPayload, signature)) {
-            response.setMessage("Chữ ký không hợp lệ");
-            return ResponseEntity.badRequest().body(response);
-        }
+        return ResponseEntity.ok(response);
+    }
 
-        try {
-            // Parse payload JSON
-            JsonNode root = objectMapper.readTree(rawPayload);
-            JsonNode data = root.path("data");
+    @GetMapping("/confirm-webhook")
+    public ResponseEntity<ApiResponse<String>> confirmWebhook(@RequestParam String webhookUrl) {
+        String verifiedUrl = payOSService.confirmWebhook(webhookUrl);
 
-            long orderCode = data.path("orderCode").asLong(0);
-            String status = data.path("status").asText("");
+        ApiResponse<String> response = new ApiResponse<>();
+        response.setMessage("Webhook URL verified");
+        response.setResult(verifiedUrl);
 
-            if ("PAID".equalsIgnoreCase(status) && orderCode > 0) {
-                subscriptionPaymentService.handlePaymentSuccess(orderCode);
-                response.setMessage("Thanh toán thành công, đã kích hoạt subscription");
-            } else {
-                response.setMessage("Thanh toán không thành công hoặc đang chờ xử lý");
-            }
+        return ResponseEntity.ok(response);
+    }
 
-            response.setResult("Webhook processed");
-            return ResponseEntity.ok(response);
+    @PostMapping("/{orderCode}/cancel")
+    public ResponseEntity<ApiResponse<String>> cancelPayment(
+            @PathVariable long orderCode,
+            @RequestParam(required = false) String reason
+    ) {
+        payOSService.cancelPayment(orderCode, reason);
 
-        } catch (Exception e) {
-            response.setMessage("Lỗi xử lý webhook: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(response);
-        }
+        ApiResponse<String> response = new ApiResponse<>();
+        response.setMessage("Cancel payment success");
+        response.setResult("CANCELED");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{orderCode}")
+    public ResponseEntity<ApiResponse<PaymentLinkData>> getPaymentInfo(@PathVariable long orderCode) {
+        PaymentLinkData info = payOSService.getPaymentInfo(orderCode);
+
+        ApiResponse<PaymentLinkData> response = new ApiResponse<>();
+        response.setMessage("get payment info success");
+        response.setResult(info);
+
+        return ResponseEntity.ok(response);
     }
 }
