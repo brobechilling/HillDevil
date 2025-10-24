@@ -8,10 +8,6 @@ public class AuthenticationRequest {
     // user name is for staffaccount login
     private String username = "";
 
-    public AuthenticationRequest(String email, String password) {
-        this.email = email;
-        this.password = password;
-    }
     public String getUsername() {
         return username;
     }
