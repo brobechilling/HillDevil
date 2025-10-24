@@ -49,11 +49,7 @@ public class PayOSService {
                     .items(Collections.singletonList(itemData))
                     .build();
 
-            System.out.println("[PayOS] Creating payment link with orderCode=" + orderCode);
-            CheckoutResponseData response = payOS.createPaymentLink(paymentData);
-            System.out.println("[PayOS] Checkout URL: " + response.getCheckoutUrl());
-            return response;
-
+            return payOS.createPaymentLink(paymentData);
         } catch (Exception e) {
             e.printStackTrace();
             throw new AppException(ErrorCode.PAYMENT_GATEWAY_ERROR);

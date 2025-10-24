@@ -59,7 +59,6 @@ public class SubscriptionPaymentService {
         String itemName = pkg.getName();
         String description = ("Pay " + pkg.getName());
         if (description.length() > 25) description = description.substring(0, 25);
-        int quantity = 1;
 
         long orderCode = System.currentTimeMillis() % 100_000_000;
 
@@ -67,7 +66,7 @@ public class SubscriptionPaymentService {
                 amount,
                 orderCode,
                 itemName,
-                quantity,
+                1,
                 description
         );
 
@@ -93,38 +92,61 @@ public class SubscriptionPaymentService {
     }
 
     @Transactional
-    public void handlePaymentSuccess(Webhook webhookBody) {
+    public void handlePaymentWebhook(Webhook webhookBody) {
         try {
             WebhookData webhookData = payOSService.verifyWebhook(webhookBody);
-            SubscriptionPayment payment = updatePaymentFromWebhook(webhookBody, webhookData);
-            if ("PAID".equalsIgnoreCase(webhookData.getCode())) {
-                activateSubscription(payment.getSubscription());
+
+            long orderCode = webhookData.getOrderCode();
+            String code = webhookData.getCode();
+
+            if (orderCode == 0) {
+                System.out.println("⚙️ Received test webhook from PayOS, skipping DB lookup.");
+                return;
             }
+
+            SubscriptionPayment payment = subscriptionPaymentRepository
+                    .findByPayOsOrderCode(orderCode)
+                    .orElse(null);
+
+            if (payment == null) {
+                System.out.println("⚠️ Webhook received for unknown orderCode: " + orderCode);
+                return;
+            }
+
+            payment.setWebhookPayload(webhookBody.toString());
+            payment.setSignatureVerified(true);
+            payment.setPayOsTransactionCode(webhookData.getReference());
+
+            if ("00".equals(code)) {
+                payment.setPaymentStatus("SUCCESS");
+                activateSubscription(payment.getSubscription());
+            } else {
+                payment.setPaymentStatus("FAILED");
+                cancelSubscription(payment.getSubscription());
+            }
+
+            subscriptionPaymentRepository.save(payment);
+
         } catch (Exception e) {
             e.printStackTrace();
             throw new AppException(ErrorCode.PAYMENT_WEBHOOK_FAILED);
         }
     }
 
-    private SubscriptionPayment updatePaymentFromWebhook(Webhook webhookBody, WebhookData webhookData) {
-        SubscriptionPayment payment = subscriptionPaymentRepository
-                .findByPayOsOrderCode(webhookData.getOrderCode())
-                .orElseThrow(() -> new AppException(ErrorCode.PAYMENT_NOT_FOUND));
-
-        payment.setWebhookPayload(webhookBody.toString());
-        payment.setSignatureVerified(true);
-        payment.setPayOsTransactionCode(webhookData.getReference());
-        payment.setPaymentStatus("PAID".equalsIgnoreCase(webhookData.getCode()) ? "SUCCESS" : "FAILED");
-
-        return subscriptionPaymentRepository.save(payment);
-    }
-
     private void activateSubscription(Subscription subscription) {
         if (subscription.getStatus() != SubscriptionStatus.ACTIVE) {
             subscription.setStatus(SubscriptionStatus.ACTIVE);
             subscription.setStartDate(LocalDate.now());
-            subscription.setEndDate(subscription.getStartDate()
-                    .plusMonths(subscription.getaPackage().getBillingPeriod()));
+            subscription.setEndDate(
+                    subscription.getStartDate().plusMonths(subscription.getaPackage().getBillingPeriod())
+            );
+            subscriptionRepository.save(subscription);
+        }
+    }
+
+    private void cancelSubscription(Subscription subscription) {
+        if (subscription.getStatus() != SubscriptionStatus.CANCELED) {
+            subscription.setStatus(SubscriptionStatus.CANCELED);
             subscriptionRepository.save(subscription);
         }
     }
