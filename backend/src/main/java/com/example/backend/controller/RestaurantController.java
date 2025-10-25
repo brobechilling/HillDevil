@@ -43,13 +43,6 @@ public class RestaurantController {
         return res;
     }
 
-    @PostMapping("")
-    public ApiResponse<RestaurantDTO> create(@RequestBody RestaurantDTO dto) {
-        ApiResponse<RestaurantDTO> res = new ApiResponse<>();
-        res.setResult(restaurantService.create(dto));
-        return res;
-    }
-
     @PutMapping("/{id}")
     public ApiResponse<RestaurantDTO> update(@PathVariable UUID id, @RequestBody RestaurantDTO dto) {
         ApiResponse<RestaurantDTO> res = new ApiResponse<>();

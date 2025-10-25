@@ -40,7 +40,7 @@ public class SubscriptionPayment {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "subscription_payment_status")
-    private SubscriptionPaymentStatus subscriptionPaymentStatus;;
+    private SubscriptionPaymentStatus subscriptionPaymentStatus;
 
     @Lob
     @Column(name = "response_payload")

@@ -8,7 +8,6 @@ import vn.payos.PayOS;
 import vn.payos.type.CheckoutResponseData;
 import vn.payos.type.ItemData;
 import vn.payos.type.PaymentData;
-import vn.payos.type.PaymentLinkData;
 import vn.payos.type.Webhook;
 import vn.payos.type.WebhookData;
 
@@ -25,7 +24,11 @@ public class PayOSService {
         this.payOS = new PayOS(config.getClientId(), config.getApiKey(), config.getChecksumKey());
     }
 
-    public CheckoutResponseData createVQRPayment(Integer amount, long orderCode, String itemName, String description) {
+    public String buildReturnUrl(long orderCode) {
+        return config.getReturnUrl() + "?orderCode=" + orderCode;
+    }
+
+    public CheckoutResponseData createVQRPayment(Integer amount, long orderCode, String itemName, String description, String returnUrl) {
         try {
             ItemData item = ItemData.builder()
                     .name(itemName)
@@ -37,7 +40,7 @@ public class PayOSService {
                     .orderCode(orderCode)
                     .amount(amount)
                     .description(description)
-                    .returnUrl(config.getReturnUrl())
+                    .returnUrl(returnUrl)
                     .cancelUrl(config.getCancelUrl())
                     .items(Collections.singletonList(item))
                     .build();
@@ -45,14 +48,6 @@ public class PayOSService {
             return payOS.createPaymentLink(paymentData);
         } catch (Exception e) {
             e.printStackTrace();
-            throw new AppException(ErrorCode.PAYMENT_GATEWAY_ERROR);
-        }
-    }
-
-    public PaymentLinkData getPaymentInfo(long orderCode) {
-        try {
-            return payOS.getPaymentLinkInformation(orderCode);
-        } catch (Exception e) {
             throw new AppException(ErrorCode.PAYMENT_GATEWAY_ERROR);
         }
     }

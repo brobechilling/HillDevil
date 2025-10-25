@@ -1,20 +1,18 @@
 package com.example.backend.service;
 
-import com.example.backend.dto.request.SubscriptionRequest;
+import com.example.backend.dto.response.SubscriptionPaymentResponse;
 import com.example.backend.dto.response.SubscriptionResponse;
+import com.example.backend.entities.*;
 import com.example.backend.entities.Package;
-import com.example.backend.entities.Restaurant;
-import com.example.backend.entities.Subscription;
-import com.example.backend.entities.SubscriptionStatus;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
-import com.example.backend.mapper.SubscriptionMapper;
 import com.example.backend.repository.PackageRepository;
 import com.example.backend.repository.RestaurantRepository;
 import com.example.backend.repository.SubscriptionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -23,40 +21,30 @@ import java.util.UUID;
 public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
-    private final RestaurantRepository restaurantRepository;
     private final PackageRepository packageRepository;
-    private final SubscriptionMapper subscriptionMapper;
 
     public SubscriptionService(
             SubscriptionRepository subscriptionRepository,
-            RestaurantRepository restaurantRepository,
-            PackageRepository packageRepository,
-            SubscriptionMapper subscriptionMapper
+            PackageRepository packageRepository
     ) {
         this.subscriptionRepository = subscriptionRepository;
-        this.restaurantRepository = restaurantRepository;
         this.packageRepository = packageRepository;
-        this.subscriptionMapper = subscriptionMapper;
     }
 
     @Transactional
-    public SubscriptionResponse createSubscriptionBeforePayment(SubscriptionRequest request) {
-        Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
-
-        Package pack = packageRepository.findById(request.getPackageId())
+    public Subscription createEntitySubscription(Restaurant restaurant, UUID packageId) {
+        Package pack = packageRepository.findById(packageId)
                 .orElseThrow(() -> new AppException(ErrorCode.PACKAGE_NOTEXISTED));
 
-        Subscription subscription = subscriptionMapper.toSubscription(request);
+        Subscription subscription = new Subscription();
         subscription.setRestaurant(restaurant);
         subscription.setaPackage(pack);
         subscription.setStatus(SubscriptionStatus.PENDING_PAYMENT);
         subscription.setCreatedAt(Instant.now());
 
-        Subscription saved = subscriptionRepository.save(subscription);
-        return subscriptionMapper.toSubscriptionResponse(saved);
+        return subscriptionRepository.save(subscription);
     }
-    // active subscription after payment success
+
     @Transactional
     public SubscriptionResponse activateSubscription(UUID subscriptionId, int durationMonths) {
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
@@ -71,7 +59,7 @@ public class SubscriptionService {
         subscription.setUpdatedAt(Instant.now());
 
         Subscription updated = subscriptionRepository.save(subscription);
-        return subscriptionMapper.toSubscriptionResponse(updated);
+        return mapToResponse(updated);
     }
 
     @Transactional
@@ -92,12 +80,49 @@ public class SubscriptionService {
         subscription.setUpdatedAt(Instant.now());
 
         Subscription updated = subscriptionRepository.save(subscription);
-        return subscriptionMapper.toSubscriptionResponse(updated);
+        return mapToResponse(updated);
     }
 
     public SubscriptionResponse getById(UUID id) {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
-        return subscriptionMapper.toSubscriptionResponse(subscription);
+        return mapToResponse(subscription);
+    }
+
+    // Helper method: map Subscription -> SubscriptionResponse
+    private SubscriptionResponse mapToResponse(Subscription subscription) {
+        SubscriptionResponse response = new SubscriptionResponse();
+        response.setSubscriptionId(subscription.getSubscriptionId());
+        response.setRestaurantId(subscription.getRestaurant() != null ? subscription.getRestaurant().getRestaurantId() : null);
+        response.setPackageId(subscription.getaPackage() != null ? subscription.getaPackage().getPackageId() : null);
+        response.setStatus(subscription.getStatus());
+        response.setStartDate(subscription.getStartDate());
+        response.setEndDate(subscription.getEndDate());
+
+        // get lastest payment by using helper from entity, so cannot use default mapstruct
+        SubscriptionPayment latestPayment = subscription.getLatestPayment();
+        if (latestPayment != null) {
+            SubscriptionPaymentResponse paymentInfo = new SubscriptionPaymentResponse();
+            paymentInfo.setSubscriptionPaymentId(latestPayment.getSubscriptionPaymentId());
+            paymentInfo.setAmount(BigDecimal.valueOf(latestPayment.getAmount()));
+            paymentInfo.setPayOsOrderCode(String.valueOf(latestPayment.getPayOsOrderCode()));
+            paymentInfo.setPayOsTransactionCode(latestPayment.getPayOsTransactionCode());
+            paymentInfo.setQrCodeUrl(latestPayment.getQrCodeUrl());
+            paymentInfo.setAccountNumber(latestPayment.getAccountNumber());
+            paymentInfo.setAccountName(latestPayment.getAccountName());
+            paymentInfo.setExpiredAt(latestPayment.getExpiredAt());
+            paymentInfo.setDescription(latestPayment.getDescription());
+            paymentInfo.setSubscriptionPaymentStatus(
+                    latestPayment.getSubscriptionPaymentStatus() != null
+                            ? latestPayment.getSubscriptionPaymentStatus().name()
+                            : null
+            );
+            paymentInfo.setDate(latestPayment.getDate());
+            response.setPaymentInfo(paymentInfo);
+            response.setPaymentStatus(paymentInfo.getSubscriptionPaymentStatus());
+            response.setAmount(paymentInfo.getAmount());
+        }
+
+        return response;
     }
 }

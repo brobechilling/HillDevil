@@ -16,6 +16,7 @@ public class SubscriptionResponse {
     private BigDecimal amount;
     private String checkoutUrl;
     private String paymentStatus;
+    private SubscriptionPaymentResponse paymentInfo;
 
     public UUID getSubscriptionId() {
         return subscriptionId;
@@ -87,5 +88,13 @@ public class SubscriptionResponse {
 
     public void setPaymentStatus(String paymentStatus) {
         this.paymentStatus = paymentStatus;
+    }
+
+    public SubscriptionPaymentResponse getPaymentInfo() {
+        return paymentInfo;
+    }
+
+    public void setPaymentInfo(SubscriptionPaymentResponse paymentInfo) {
+        this.paymentInfo = paymentInfo;
     }
 }

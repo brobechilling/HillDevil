@@ -1,11 +1,8 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.response.SubscriptionPaymentResponse;
+import com.example.backend.entities.*;
 import com.example.backend.entities.Package;
-import com.example.backend.entities.Subscription;
-import com.example.backend.entities.SubscriptionPayment;
-import com.example.backend.entities.SubscriptionPaymentStatus;
-import com.example.backend.entities.SubscriptionStatus;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.SubscriptionPaymentMapper;
@@ -55,12 +52,21 @@ public class SubscriptionPaymentService {
 
         Integer amount = pkg.getPrice();
         String itemName = pkg.getName();
-        String description = ("Pay " + pkg.getName());
-        if (description.length() > 25) description = description.substring(0, 25);
+        String description = "Pay " + pkg.getName();
+
+        // ✅ Giới hạn 25 ký tự + thêm suffix "..."
+        if (description.length() > 25) {
+            description = description.substring(0, 22) + "...";
+        }
 
         long orderCode = Math.abs(UUID.randomUUID().getMostSignificantBits() % 1_000_000_000L);
+        if (subscriptionPaymentRepository.existsByPayOsOrderCode(orderCode)) {
+            throw new AppException(ErrorCode.ORDER_CODE_EXISTS);
+        }
 
-        CheckoutResponseData payResponse = payOSService.createVQRPayment(amount, orderCode, itemName, description);
+        String dynamicReturnUrl = payOSService.buildReturnUrl(orderCode);
+
+        CheckoutResponseData payResponse = payOSService.createVQRPayment(amount, orderCode, itemName, description, dynamicReturnUrl);
 
         SubscriptionPayment payment = new SubscriptionPayment();
         payment.setSubscription(subscription);
@@ -69,7 +75,12 @@ public class SubscriptionPaymentService {
         payment.setQrCodeUrl(payResponse.getQrCode());
         payment.setAccountNumber(payResponse.getAccountNumber());
         payment.setAccountName(payResponse.getAccountName());
-        payment.setExpiredAt(Instant.ofEpochMilli(payResponse.getExpiredAt()));
+        Long expiredAt = payResponse.getExpiredAt();
+        if (expiredAt != null) {
+            payment.setExpiredAt(Instant.ofEpochMilli(expiredAt * 1000)); // PayOS trả seconds → convert millis
+        } else {
+            payment.setExpiredAt(Instant.now().plusSeconds(30 * 60));
+        }
         payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.PENDING);
         payment.setDate(Instant.now());
         payment.setDescription(description);
@@ -83,6 +94,12 @@ public class SubscriptionPaymentService {
         subscriptionPaymentRepository.save(payment);
         subscription.setStatus(SubscriptionStatus.PENDING_PAYMENT);
         subscriptionRepository.save(subscription);
+
+        // ✅ Đảm bảo nhà hàng bị khóa cho đến khi thanh toán xong
+        Restaurant restaurant = subscription.getRestaurant();
+        if (restaurant != null) {
+            restaurant.setStatus(false);
+        }
 
         return subscriptionPaymentMapper.toSubscriptionPaymentResponse(payment);
     }
@@ -103,14 +120,19 @@ public class SubscriptionPaymentService {
             payment.setPayOsTransactionCode(data.getReference());
             payment.setWebhookPayload(objectMapper.writeValueAsString(webhookBody));
 
+            Subscription subscription = payment.getSubscription();
+            Restaurant restaurant = subscription.getRestaurant();
+
             if ("00".equals(data.getCode())) {
-                // success
+                // ✅ success
                 payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.SUCCESS);
-                activateSubscription(payment.getSubscription());
+                activateSubscription(subscription);
+                if (restaurant != null) restaurant.setStatus(true);
             } else {
-                // failed
+                // ✅ failed
                 payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.FAILED);
-                cancelSubscription(payment.getSubscription());
+                cancelSubscription(subscription);
+                if (restaurant != null) restaurant.setStatus(false);
             }
 
             subscriptionPaymentRepository.save(payment);
