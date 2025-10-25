@@ -13,7 +13,6 @@ const OwnerOverviewPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get user data from localStorage (stored by Login component)
     const storedUser = localStorage.getItem('user');
     if (!storedUser) {
       console.log('OwnerOverviewPage - No user found, redirecting to login');
@@ -24,14 +23,12 @@ const OwnerOverviewPage = () => {
     const userData = JSON.parse(storedUser) as UserDTO;
     setUser(userData);
 
-    // Check if user has RESTAURANT_OWNER role
     if (userData.role.name !== 'RESTAURANT_OWNER') {
       console.log('OwnerOverviewPage - User is not RESTAURANT_OWNER, redirecting to login');
       navigate('/login');
       return;
     }
 
-    // Check if restaurant is selected
     const selectedRestaurant = localStorage.getItem('selected_restaurant');
     if (!selectedRestaurant) {
       console.log('OwnerOverviewPage - No restaurant selected, redirecting to brand selection');
@@ -46,8 +43,6 @@ const OwnerOverviewPage = () => {
 
     console.log('OwnerOverviewPage - User authenticated and restaurant selected');
 
-    // For now, set empty branches array since we're using restaurant data
-    // TODO: Implement branch management when backend supports it
     setUserBranches([]);
     setLoading(false);
   }, [navigate]);
@@ -58,7 +53,6 @@ const OwnerOverviewPage = () => {
   };
 
   const handleBranchUpdate = () => {
-    // TODO: Implement branch update when backend supports it
     console.log('Branch update requested');
   };
 

@@ -20,8 +20,9 @@ import {
   Globe
 } from 'lucide-react';
 import heroImage from '@/assets/hero-restaurant.jpg';
-import { useAuthStore } from '@/store/authStore';
-import { useEffect, useRef, useState } from 'react';
+import { useSessionStore } from '@/store/sessionStore';
+import { usePackages } from '@/hooks/queries/usePackages';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, useInView, useScroll, useTransform } from 'framer-motion';
 
@@ -77,34 +78,9 @@ const prBrands = [
   },
 ];
 
-const packagesData = [
-  {
-    id: 'basic',
-    name: 'Basic',
-    price: '$49/month',
-    icon: Store,
-    features: ['1-3 Branches', 'Basic Analytics', 'Email Support', 'QR Ordering'],
-  },
-  {
-    id: 'pro',
-    name: 'Professional',
-    price: '$99/month',
-    icon: Building2,
-    features: ['Up to 10 Branches', 'Advanced Analytics', 'Priority Support', 'Custom Branding'],
-    popular: true,
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 'Custom',
-    icon: Building2,
-    features: ['Unlimited Branches', 'Real-time Analytics', '24/7 Support', 'White Label', 'API Access'],
-  },
-];
-
 const Index = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, isAuthenticated, initialize } = useSessionStore();
   const location = useLocation();
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({
@@ -114,18 +90,25 @@ const Index = () => {
   const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
   const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
 
+  // Lấy danh sách gói từ API
+  const { data: packages, isLoading, error } = usePackages();
+
+  // Khởi tạo phiên
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  // Xử lý điều hướng gói đăng ký dựa trên URL query
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const selectedPackage = params.get('selectedPackage');
-    if (selectedPackage && user) {
+    if (selectedPackage && isAuthenticated) {
       navigate(`/register/package?packageId=${selectedPackage}`);
     }
-  }, [location.search, user, navigate]);
+  }, [location.search, isAuthenticated, navigate]);
 
   const handleRegisterPackage = (packageId: string) => {
-    if (!user) {
-      // Redirect guests to signup first. After signup, return them to the landing
-      // page and include the selected package so the landing can highlight it.
+    if (!isAuthenticated) {
       const returnUrl = `/?selectedPackage=${packageId}`;
       navigate(`/register?returnUrl=${encodeURIComponent(returnUrl)}`);
     } else {
@@ -198,11 +181,14 @@ const Index = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.8 }}
               >
-                <Link to="/register">
-                  <Button variant="hero" size="lg" className="hover-scale">
-                    Start Free Trial
-                  </Button>
-                </Link>
+                <Button
+                  variant="hero"
+                  size="lg"
+                  className="hover-scale"
+                  onClick={() => navigate(isAuthenticated ? '/register/package' : '/register')}
+                >
+                  Start Free Trial
+                </Button>
               </motion.div>
             </motion.div>
 
@@ -233,15 +219,18 @@ const Index = () => {
       <RolesSection roles={roles} />
 
       {/* Packages Section */}
-      <PackagesSection packagesData={packagesData} handleRegisterPackage={handleRegisterPackage} />
+      <PackagesSection
+        packages={packages}
+        isLoading={isLoading}
+        error={error}
+        handleRegisterPackage={handleRegisterPackage}
+      />
 
       {/* PR Brands Section */}
       <BrandsSection prBrands={prBrands} />
 
-      {/* CTA Section */}
       <CTASection />
 
-      {/* Footer */}
       <FooterSection />
     </div>
   );
@@ -316,6 +305,194 @@ const FeaturesSection = ({ features }: { features: Array<{ icon: any; title: str
   );
 };
 
+const PackagesSection = ({ packages, isLoading, error, handleRegisterPackage }: {
+  packages?: Array<{
+    packageId: string;
+    name: string;
+    description: string;
+    price: number;
+    available: boolean;
+    billingPeriod: number | string;
+    features: Array<{ featureId: string; featureName: string; description: string; value: number }>;
+  }>;
+  isLoading: boolean;
+  error: any;
+  handleRegisterPackage: (packageId: string) => void;
+}) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.2 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6 }
+    }
+  };
+
+  // Ánh xạ icon và popular dựa trên tên gói
+  const getPackageIcon = (name: string) => {
+    if (name.toLowerCase().includes('basic')) return Store;
+    if (name.toLowerCase().includes('professional')) return Building2;
+    if (name.toLowerCase().includes('enterprise')) return Building2;
+    return Store; // Mặc định
+  };
+
+  const isPopular = (name: string) => {
+    return name.toLowerCase().includes('professional');
+  };
+
+  // Định dạng giá
+  const formatPrice = (price: number, billingPeriod: number | string) => {
+    if (typeof billingPeriod === 'string') {
+      return `$${price}VND/${billingPeriod.toLowerCase()}`;
+    }
+    return `${price}VND/month`;
+  };
+
+  if (isLoading) {
+    return (
+      <section className="py-20" id="pricing">
+        <div className="container">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl font-bold sm:text-4xl mb-4">Choose Your Plan</h2>
+            <p className="text-lg text-muted-foreground">Select the perfect package for your restaurant business</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto items-stretch">
+            <div className="h-96 bg-muted rounded animate-pulse"></div>
+            <div className="h-96 bg-muted rounded animate-pulse"></div>
+            <div className="h-96 bg-muted rounded animate-pulse"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="py-20" id="pricing">
+        <div className="container">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl font-bold sm:text-4xl mb-4">Choose Your Plan</h2>
+            <p className="text-lg text-muted-foreground">Select the perfect package for your restaurant business</p>
+          </div>
+          <p className="text-center text-destructive">Error loading packages. Please try again later.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (!packages || packages.length === 0) {
+    return (
+      <section className="py-20" id="pricing">
+        <div className="container">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl font-bold sm:text-4xl mb-4">Choose Your Plan</h2>
+            <p className="text-lg text-muted-foreground">Select the perfect package for your restaurant business</p>
+          </div>
+          <p className="text-center text-muted-foreground">No packages available at the moment.</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section ref={ref} className="py-20" id="pricing">
+      <div className="container">
+        <motion.div
+          className="text-center max-w-3xl mx-auto mb-16"
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="text-3xl font-bold sm:text-4xl mb-4">Choose Your Plan</h2>
+          <p className="text-lg text-muted-foreground">
+            Select the perfect package for your restaurant business
+          </p>
+        </motion.div>
+
+        <motion.div
+          className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto items-stretch"
+          variants={containerVariants}
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+        >
+          {packages.map((pkg) => {
+            const PackageIcon = getPackageIcon(pkg.name);
+            return (
+              <motion.div key={pkg.packageId} variants={itemVariants} className="flex">
+                <Card
+                  className={`relative transition-smooth hover:shadow-large hover-scale flex flex-col justify-between h-full w-full min-h-[480px] ${isPopular(pkg.name) ? 'border-primary shadow-medium ring-2 ring-primary' : 'border-border/50'
+                    }`}
+                >
+                  {isPopular(pkg.name) && (
+                    <motion.div
+                      className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-primary-foreground text-sm font-medium rounded-full"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.5, delay: 0.3 }}
+                    >
+                      Most Popular
+                    </motion.div>
+                  )}
+                  <CardHeader className="flex flex-col items-center">
+                    <motion.div
+                      className="p-3 rounded-lg bg-primary/10 mb-3"
+                      whileHover={{ scale: 1.1, rotate: 10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <PackageIcon className="h-10 w-10 text-primary" />
+                    </motion.div>
+                    <CardTitle className="text-2xl text-center">{pkg.name}</CardTitle>
+                    <CardDescription className="text-lg font-semibold text-foreground text-center">
+                      {formatPrice(pkg.price, pkg.billingPeriod)}
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="flex flex-col flex-1 justify-between">
+                    <ul className="space-y-3 flex-1">
+                      {pkg.features.map((feature, index) => (
+                        <motion.li
+                          key={index}
+                          className="flex items-start gap-2"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={isInView ? { opacity: 1, x: 0 } : {}}
+                          transition={{ duration: 0.3, delay: index * 0.1 }}
+                        >
+                          <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                          <span className="text-sm">{feature.featureName}</span>
+                        </motion.li>
+                      ))}
+                    </ul>
+                    <div className="mt-6">
+                      <Button
+                        className="w-full hover-scale"
+                        variant={isPopular(pkg.name) ? 'default' : 'outline'}
+                        onClick={() => handleRegisterPackage(pkg.packageId)}
+                      >
+                        Register Restaurant
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
 const RolesSection = ({ roles }: { roles: Array<{ title: string; description: string; icon: any; color: string }> }) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
@@ -376,115 +553,6 @@ const RolesSection = ({ roles }: { roles: Array<{ title: string; description: st
                   <CardTitle className="text-xl">{role.title}</CardTitle>
                   <CardDescription className="text-base leading-relaxed">{role.description}</CardDescription>
                 </CardHeader>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-    </section>
-  );
-};
-
-const PackagesSection = ({ packagesData, handleRegisterPackage }: {
-  packagesData: Array<{ id: string; name: string; price: string; icon: any; features: string[]; popular?: boolean }>;
-  handleRegisterPackage: (packageId: string) => void;
-}) => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.2 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.6 }
-    }
-  };
-
-  return (
-    <section ref={ref} className="py-20" id="pricing">
-      <div className="container">
-        <motion.div
-          className="text-center max-w-3xl mx-auto mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-        >
-          <h2 className="text-3xl font-bold sm:text-4xl mb-4">Choose Your Plan</h2>
-          <p className="text-lg text-muted-foreground">
-            Select the perfect package for your restaurant business
-          </p>
-        </motion.div>
-
-        <motion.div
-          className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto items-stretch"
-          variants={containerVariants}
-          initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
-        >
-          {packagesData.map((pkg) => (
-            <motion.div key={pkg.id} variants={itemVariants} className="flex">
-              <Card
-                className={`relative transition-smooth hover:shadow-large hover-scale flex flex-col justify-between h-full w-full min-h-[480px] ${pkg.popular ? 'border-primary shadow-medium ring-2 ring-primary' : 'border-border/50'
-                  }`}
-              >
-                {pkg.popular && (
-                  <motion.div
-                    className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-primary-foreground text-sm font-medium rounded-full"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.5, delay: 0.3 }}
-                  >
-                    Most Popular
-                  </motion.div>
-                )}
-                <CardHeader className="flex flex-col items-center">
-                  <motion.div
-                    className="p-3 rounded-lg bg-primary/10 mb-3"
-                    whileHover={{ scale: 1.1, rotate: 10 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <pkg.icon className="h-10 w-10 text-primary" />
-                  </motion.div>
-                  <CardTitle className="text-2xl text-center">{pkg.name}</CardTitle>
-                  <CardDescription className="text-lg font-semibold text-foreground text-center">
-                    {pkg.price}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="flex flex-col flex-1 justify-between">
-                  <ul className="space-y-3 flex-1">
-                    {pkg.features.map((feature, index) => (
-                      <motion.li
-                        key={index}
-                        className="flex items-start gap-2"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={isInView ? { opacity: 1, x: 0 } : {}}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                      >
-                        <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                        <span className="text-sm">{feature}</span>
-                      </motion.li>
-                    ))}
-                  </ul>
-                  <div className="mt-6">
-                    <Button
-                      className="w-full hover-scale"
-                      variant={pkg.popular ? 'default' : 'outline'}
-                      onClick={() => handleRegisterPackage(pkg.id)}
-                    >
-                      Register Restaurant
-                    </Button>
-                  </div>
-                </CardContent>
               </Card>
             </motion.div>
           ))}
@@ -596,7 +664,6 @@ const FooterSection = () => {
       <div className="container">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
 
-          {/* Brand Section */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-primary">
@@ -628,7 +695,6 @@ const FooterSection = () => {
             </div>
           </div>
 
-          {/* Quick Links */}
           <div>
             <h3 className="font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
@@ -639,7 +705,6 @@ const FooterSection = () => {
             </ul>
           </div>
 
-          {/* Contact Info */}
           <div>
             <h3 className="font-semibold mb-4">Contact</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">

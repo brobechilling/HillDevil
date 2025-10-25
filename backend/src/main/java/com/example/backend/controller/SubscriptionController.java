@@ -1,7 +1,6 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.ApiResponse;
-import com.example.backend.dto.request.SubscriptionRequest;
 import com.example.backend.dto.response.SubscriptionResponse;
 import com.example.backend.service.SubscriptionService;
 import org.springframework.web.bind.annotation.*;
@@ -18,12 +17,6 @@ public class SubscriptionController {
         this.subscriptionService = subscriptionService;
     }
 
-    @PostMapping("")
-    public ApiResponse<SubscriptionResponse> createSubscriptionBeforePayment(@RequestBody SubscriptionRequest request) {
-        ApiResponse<SubscriptionResponse> res = new ApiResponse<>();
-        res.setResult(subscriptionService.createSubscriptionBeforePayment(request));
-        return res;
-    }
 
     @PutMapping("/{subscriptionId}/activate")
     public ApiResponse<SubscriptionResponse> activateSubscription(

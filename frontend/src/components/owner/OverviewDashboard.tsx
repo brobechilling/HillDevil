@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  TrendingUp, 
-  DollarSign, 
-  Users, 
+import {
+  TrendingUp,
+  DollarSign,
+  Users,
   ShoppingCart,
   ArrowUp,
   ArrowDown,
@@ -12,7 +12,7 @@ import {
   ExternalLink,
   Plus
 } from 'lucide-react';
-import { branchApi, statsApi, menuApi } from '@/lib/api';
+import { statsApi, menuApi } from '@/lib/api';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from '@/hooks/use-toast';
 import { BranchManagementCard } from './BranchManagementCard';
@@ -220,9 +220,9 @@ export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDash
       </Card>
 
       {/* Branch Performance */}
-      <BranchManagementCard 
-        branches={userBranches} 
-        onUpdate={() => onBranchUpdate?.()} 
+      <BranchManagementCard
+        branches={userBranches}
+        onUpdate={() => onBranchUpdate?.()}
       />
 
       <Card>

@@ -4,7 +4,7 @@ import { seedReservations } from './seedReservations';
 export function seedBranchData(branchId: string) {
   // Seed reservations
   seedReservations(branchId);
-  
+
   // Seed menu items
   const menuKey = 'menu_items';
   let menu = JSON.parse(localStorage.getItem(menuKey) || '[]');
@@ -48,11 +48,10 @@ export function seedBranchData(branchId: string) {
   }
 }
 // Initialize localStorage with mock data on app load
-import { 
-  mockBranches, 
-  mockMenuItems, 
-  mockTables, 
-  mockOrders, 
+import {
+  mockMenuItems,
+  mockTables,
+  mockOrders,
   mockStaff,
   mockBrands,
   mockUsers,
@@ -60,26 +59,27 @@ import {
 } from '@/data/mockData';
 
 export const initializeMockData = () => {
-  // Always initialize to ensure consistency
-  localStorage.setItem('mock_branches', JSON.stringify(mockBranches));
+  // Note: Branches are now fetched from backend API, not mock data
+  // Removed: localStorage.setItem('mock_branches', JSON.stringify(mockBranches));
+
   localStorage.setItem('mock_menu_items', JSON.stringify(mockMenuItems));
   localStorage.setItem('mock_tables', JSON.stringify(mockTables));
   localStorage.setItem('mock_orders', JSON.stringify(mockOrders));
   localStorage.setItem('mock_staff', JSON.stringify(mockStaff));
   localStorage.setItem('mock_brands', JSON.stringify(mockBrands));
   localStorage.setItem('mock_users', JSON.stringify(mockUsers));
-  
+
   // Initialize Zustand store data
   localStorage.setItem('tables', JSON.stringify(mockTables));
   localStorage.setItem('menu_items', JSON.stringify(mockMenuItems));
   localStorage.setItem('staff_members', JSON.stringify(mockStaff));
   localStorage.setItem('customizations', JSON.stringify(mockCustomizations));
-  
+
   // Initialize reservations if not present (will be created by users)
   if (!localStorage.getItem('reservations')) {
     localStorage.setItem('reservations', JSON.stringify([]));
   }
-  
+
   // Always initialize areas to ensure consistency
   const defaultAreas = [
     { id: 'area-1', branchId: '1', name: 'Main Dining', floor: 1, status: 'active', createdAt: new Date().toISOString() },
@@ -94,13 +94,13 @@ export const initializeMockData = () => {
 export const getBranchData = (branchId: string) => {
   const menuItems = JSON.parse(localStorage.getItem('mock_menu_items') || '[]')
     .filter((item: any) => item.branchId === branchId);
-  
+
   const tables = JSON.parse(localStorage.getItem('mock_tables') || '[]')
     .filter((table: any) => table.branchId === branchId);
-  
+
   const orders = JSON.parse(localStorage.getItem('mock_orders') || '[]')
     .filter((order: any) => order.branchId === branchId);
-  
+
   const staff = JSON.parse(localStorage.getItem('mock_staff') || '[]')
     .filter((s: any) => s.branchId === branchId);
 

@@ -7,7 +7,6 @@ import RegisterConfirm from './pages/auth/RegisterConfirm';
 import BrandSelection from './pages/auth/BrandSelection';
 import Dashboard from './pages/Dashboard';
 import OwnerDashboard from './pages/dashboard/OwnerDashboard';
-import StaffDashboard from './pages/dashboard/StaffDashboard';
 import ManagerDashboard from './pages/dashboard/ManagerDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import WaiterDashboard from './pages/dashboard/WaiterDashboard';
@@ -17,6 +16,7 @@ import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import StaffManagerLoginPage from './pages/auth/StaffManagerLogin';
 import RestaurantLoginPage from './pages/auth/RestaurantLoginPage';
+import PaymentPage from "./pages/auth/PaymentPage"; 
 
 // Manager nested pages
 import ManagerOverviewPage from './pages/dashboard/manager/OverviewPage';
@@ -78,6 +78,10 @@ export const routes: RouteObject[] = [
     path: '/register/confirm',
     element: <RegisterConfirm />,
   },
+  {
+  path: "/payment/:orderCode",
+  element: <PaymentPage />,
+},
   {
     path: '/branch/:shortCode',
     element: <GuestLanding />,

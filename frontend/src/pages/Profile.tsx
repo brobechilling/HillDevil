@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/authStore';
+import { useSessionStore } from '@/store/sessionStore';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +28,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { statsApi, staffApi, branchApi } from '@/lib/api';
+import { statsApi } from '@/lib/api';
+import { getAllBranches } from '@/api/branchApi';
 import {
   Mail,
   Phone,
@@ -42,20 +43,17 @@ import {
   Shield,
   User,
   BarChart3,
-  Users,
   Building,
-  Check,
-  X,
 } from 'lucide-react';
 
 interface ProfileFormData {
-  name: string;
+  username: string; // Thay name thành username
   email: string;
   phone?: string;
 }
 
 const Profile = () => {
-  const { user, logout } = useAuthStore();
+  const { user, isAuthenticated, isLoading, initialize, clearSession } = useSessionStore();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -67,9 +65,9 @@ const Profile = () => {
   const [stats, setStats] = useState<any>(null);
   const [branches, setBranches] = useState<any[]>([]);
   const [formData, setFormData] = useState<ProfileFormData>({
-    name: user?.name || '',
+    username: user?.username || '',
     email: user?.email || '',
-    phone: '',
+    phone: user?.phone || '',
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -77,24 +75,29 @@ const Profile = () => {
     confirmPassword: '',
   });
 
-  // Load stats on component mount
+  // Khởi tạo phiên
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  // Tải dữ liệu stats và branches
   useEffect(() => {
     const loadData = async () => {
-      if (!user) return;
+      if (!user || !isAuthenticated) return;
 
       try {
         setIsLoadingStats(true);
 
-        // Load stats
-        if (user.role === 'owner' || user.role === 'branch_manager') {
+        // Tải stats cho owner hoặc branch_manager
+        if (user.role.name === 'RESTAURANT_OWNER' || user.role.name === 'BRANCH_MANAGER') {
           const statsRes = await statsApi.getOwnerStats();
           setStats(statsRes.data);
         }
 
-        // Load branches for relevant roles
-        if (user.role === 'owner' || user.role === 'branch_manager') {
-          const branchRes = await branchApi.getAll();
-          setBranches(branchRes.data);
+        // Tải branches cho owner hoặc branch_manager
+        if (user.role.name === 'RESTAURANT_OWNER' || user.role.name === 'BRANCH_MANAGER') {
+          const branchesData = await getAllBranches();
+          setBranches(branchesData);
         }
       } catch (error) {
         console.error('Error loading profile data:', error);
@@ -104,9 +107,24 @@ const Profile = () => {
     };
 
     loadData();
-  }, [user]);
+  }, [user, isAuthenticated]);
 
-  if (!user) {
+  // Xử lý trạng thái đang tải
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Loading...</CardTitle>
+            <CardDescription>Please wait while loading your profile information</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  // Xử lý khi chưa xác thực
+  if (!isAuthenticated || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="w-full max-w-md">
@@ -126,19 +144,19 @@ const Profile = () => {
 
   const handleEditProfile = () => {
     setFormData({
-      name: user.name || '',
+      username: user.username || '',
       email: user.email || '',
-      phone: '',
+      phone: user.phone || '',
     });
     setIsEditDialogOpen(true);
   };
 
   const handleSaveProfile = () => {
-    if (!formData.name || !formData.email) {
+    if (!formData.username || !formData.email) {
       toast({
         variant: 'destructive',
         title: 'Validation Error',
-        description: 'Name and email are required.',
+        description: 'Username and email are required.',
       });
       return;
     }
@@ -195,40 +213,39 @@ const Profile = () => {
   };
 
   const handleLogout = async () => {
-    await logout();
+    await clearSession();
     navigate('/');
   };
 
   const getRoleBadgeVariant = (role: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      owner: 'default',
-      admin: 'destructive',
-      branch_manager: 'secondary',
-      waiter: 'outline',
-      receptionist: 'outline',
+      RESTAURANT_OWNER: 'default',
+      ADMIN: 'destructive',
+      BRANCH_MANAGER: 'secondary',
+      WAITER: 'outline',
+      RECEPTIONIST: 'outline',
     };
     return variants[role] || 'secondary';
   };
 
   const getRoleName = (role: string) => {
     const names: Record<string, string> = {
-      owner: 'Restaurant Owner',
-      admin: 'Administrator',
-      branch_manager: 'Branch Manager',
-      waiter: 'Waiter',
-      receptionist: 'Receptionist',
-      customer: 'Customer',
+      RESTAURANT_OWNER: 'Restaurant Owner',
+      ADMIN: 'Administrator',
+      BRANCH_MANAGER: 'Branch Manager',
+      WAITER: 'Waiter',
+      RECEPTIONIST: 'Receptionist',
     };
     return names[role] || role;
   };
 
   const getDashboardLink = (role: string) => {
     const links: Record<string, string> = {
-      owner: '/dashboard/owner',
-      admin: '/dashboard/admin',
-      branch_manager: '/dashboard/manager',
-      waiter: '/dashboard/waiter',
-      receptionist: '/dashboard/receptionist',
+      RESTAURANT_OWNER: '/dashboard/owner',
+      ADMIN: '/dashboard/admin',
+      BRANCH_MANAGER: '/dashboard/manager',
+      WAITER: '/dashboard/waiter',
+      RECEPTIONIST: '/dashboard/receptionist',
     };
     return links[role] || '/dashboard';
   };
@@ -242,20 +259,20 @@ const Profile = () => {
           <CardContent className="pt-0">
             <div className="flex flex-col md:flex-row gap-6 -mt-12 relative z-10">
               <Avatar className="h-24 w-24 border-4 border-background ring-2 ring-primary/20">
-                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarImage src="https://via.placeholder.com/150" alt={user.username} />
                 <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground text-2xl font-bold">
-                  {user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                  {user.username?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 pt-2">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div className="space-y-2">
-                    <h1 className="text-3xl font-bold">{user.name}</h1>
+                    <h1 className="text-3xl font-bold">{user.username}</h1>
                     <div className="flex items-center gap-2">
-                      <Badge variant={getRoleBadgeVariant(user.role)} className="text-sm">
-                        {getRoleName(user.role)}
+                      <Badge variant={getRoleBadgeVariant(user.role.name)} className="text-sm">
+                        {getRoleName(user.role.name)}
                       </Badge>
-                      <span className="text-sm text-muted-foreground">ID: {user.id}</span>
+                      <span className="text-sm text-muted-foreground">ID: {user.userId}</span>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -280,13 +297,13 @@ const Profile = () => {
                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="name">Full Name</Label>
+                            <Label htmlFor="username">Username</Label>
                             <Input
-                              id="name"
-                              placeholder="Enter your full name"
-                              value={formData.name}
+                              id="username"
+                              placeholder="Enter your username"
+                              value={formData.username}
                               onChange={(e) =>
-                                setFormData({ ...formData, name: e.target.value })
+                                setFormData({ ...formData, username: e.target.value })
                               }
                             />
                           </div>
@@ -338,7 +355,10 @@ const Profile = () => {
                         </AlertDialogHeader>
                         <div className="flex gap-2 justify-end">
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleLogout} className="bg-destructive hover:bg-destructive/90">
+                          <AlertDialogAction
+                            onClick={handleLogout}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
                             Logout
                           </AlertDialogAction>
                         </div>
@@ -362,13 +382,13 @@ const Profile = () => {
               <Shield className="w-4 h-4" />
               <span className="hidden sm:inline">Security</span>
             </TabsTrigger>
-            {(user.role === 'owner' || user.role === 'branch_manager') && (
+            {(user.role.name === 'RESTAURANT_OWNER' || user.role.name === 'BRANCH_MANAGER') && (
               <TabsTrigger value="stats" className="gap-2">
                 <BarChart3 className="w-4 h-4" />
                 <span className="hidden sm:inline">Stats</span>
               </TabsTrigger>
             )}
-            {user.role === 'owner' && (
+            {user.role.name === 'RESTAURANT_OWNER' && (
               <TabsTrigger value="branches" className="gap-2">
                 <Building className="w-4 h-4" />
                 <span className="hidden sm:inline">Branches</span>
@@ -400,7 +420,7 @@ const Profile = () => {
                     <Label className="text-xs uppercase text-muted-foreground">
                       User ID
                     </Label>
-                    <p className="font-medium">{user.id}</p>
+                    <p className="font-medium">{user.userId}</p>
                   </div>
                 </div>
               </CardContent>
@@ -415,7 +435,7 @@ const Profile = () => {
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button
-                  onClick={() => navigate(getDashboardLink(user.role))}
+                  onClick={() => navigate(getDashboardLink(user.role.name))}
                   variant="default"
                   className="w-full justify-start gap-2"
                 >
@@ -569,7 +589,7 @@ const Profile = () => {
           </TabsContent>
 
           {/* Stats Tab */}
-          {(user.role === 'owner' || user.role === 'branch_manager') && (
+          {(user.role.name === 'RESTAURANT_OWNER' || user.role.name === 'BRANCH_MANAGER') && (
             <TabsContent value="stats" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -617,7 +637,7 @@ const Profile = () => {
           )}
 
           {/* Branches Tab */}
-          {user.role === 'owner' && (
+          {user.role.name === 'RESTAURANT_OWNER' && (
             <TabsContent value="branches" className="space-y-6">
               <Card>
                 <CardHeader>

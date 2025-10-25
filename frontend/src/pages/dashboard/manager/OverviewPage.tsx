@@ -2,17 +2,19 @@ import { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, Table2, Tag, DollarSign } from 'lucide-react';
-import { mockBranches, mockTables, mockPromotions } from '@/data/mockData';
+import { mockTables, mockPromotions } from '@/data/mockData';
 import { useAuthStore } from '@/store/authStore';
 import { useStaffStore } from '@/store/staffStore';
 import { useAreaStore } from '@/store/areaStore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useBranches } from '@/hooks/queries/useBranches';
 
 export default function OverviewPage() {
   const { user } = useAuthStore();
   const branchId = user?.branchId || '1';
-  
-  const activeBranch = mockBranches.find(b => b.id === branchId) || mockBranches[0];
+  const { data: branches, isLoading } = useBranches();
+
+  const activeBranch = branches?.find(b => String(b.branchId) === branchId) || branches?.[0];
   const { getStaffByBranch } = useStaffStore();
   const { getAreasByBranch } = useAreaStore();
   const branchStaff = getStaffByBranch(branchId);
@@ -41,7 +43,7 @@ export default function OverviewPage() {
       <div>
         <h1 className="text-3xl font-bold">Manager Overview</h1>
         <p className="text-muted-foreground mt-2">
-          {activeBranch.name} - Branch Operations
+          {activeBranch?.address || 'Branch'} - Branch Operations
         </p>
       </div>
 
@@ -110,7 +112,7 @@ export default function OverviewPage() {
                 <CardDescription>Current table availability by floor</CardDescription>
               </div>
               <div className="flex items-center gap-3">
-              {/* <Select value={selectedAreaId} onValueChange={setSelectedAreaId}>
+                {/* <Select value={selectedAreaId} onValueChange={setSelectedAreaId}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Select area" />
                 </SelectTrigger>
@@ -124,19 +126,19 @@ export default function OverviewPage() {
                 </SelectContent>
               </Select> */}
 
-              <Select value={selectedAreaId} onValueChange={setSelectedAreaId}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select area" />
-                </SelectTrigger>
-                <SelectContent className="bg-background">
-                  <SelectItem value="all">All Areas</SelectItem>
-                  {branchAreas.map((area) => (
-                    <SelectItem key={area.id} value={area.id}>
-                      {area.name || `Area ${area.floor}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <Select value={selectedAreaId} onValueChange={setSelectedAreaId}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select area" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    <SelectItem value="all">All Areas</SelectItem>
+                    {branchAreas.map((area) => (
+                      <SelectItem key={area.id} value={area.id}>
+                        {area.name || `Area ${area.floor}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardHeader>
@@ -156,8 +158,8 @@ export default function OverviewPage() {
                           <div className="font-medium">Area {area.name || area.floor}</div>
                           <div className="text-xs text-muted-foreground">Floor {area.floor}</div>
                         </div>
-                        <Select 
-                          value={area.status} 
+                        <Select
+                          value={area.status}
                           onValueChange={(value) => {
                             const { updateArea } = useAreaStore.getState();
                             updateArea(area.id, { status: value as 'active' | 'inactive' | 'unavailable' });
@@ -176,18 +178,17 @@ export default function OverviewPage() {
                     ))}
                   </div>
                 )}
-                
+
                 <div className="grid grid-cols-3 gap-3">
                   {filteredTables.map((table) => (
                     <Card
                       key={table.id}
-                      className={`border-2 ${
-                        table.status === 'available'
+                      className={`border-2 ${table.status === 'available'
                           ? 'border-green-500 bg-green-500/10'
                           : table.status === 'occupied'
-                          ? 'border-red-500 bg-red-500/10'
-                          : 'border-yellow-500 bg-yellow-500/10'
-                      }`}
+                            ? 'border-red-500 bg-red-500/10'
+                            : 'border-yellow-500 bg-yellow-500/10'
+                        }`}
                     >
                       <CardContent className="p-4 text-center">
                         <div className="font-bold text-lg">#{table.number}</div>
