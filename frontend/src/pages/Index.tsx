@@ -90,15 +90,12 @@ const Index = () => {
   const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
   const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
 
-  // Lấy danh sách gói từ API
   const { data: packages, isLoading, error } = usePackages();
 
-  // Khởi tạo phiên
   useEffect(() => {
     initialize();
   }, [initialize]);
 
-  // Xử lý điều hướng gói đăng ký dựa trên URL query
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const selectedPackage = params.get('selectedPackage');

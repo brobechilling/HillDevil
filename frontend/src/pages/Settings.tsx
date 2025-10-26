@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuthStore } from '@/store/authStore';
+import { useSessionStore } from "@/store/sessionStore";
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,7 +53,7 @@ type ThemeOption = keyof typeof THEME_LABELS;
 type LanguageOption = keyof typeof LANGUAGE_LABELS;
 
 const Settings = () => {
-  const { user, logout } = useAuthStore();
+  const { user, clearSession } = useSessionStore();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { theme: activeTheme = 'system', setTheme } = useTheme();
@@ -62,7 +63,7 @@ const Settings = () => {
 
   // Account settings state
   const [accountData, setAccountData] = useState({
-    name: user?.name || '',
+    name: user?.username || '',
     email: user?.email || '',
     phone: '',
   });
@@ -169,10 +170,14 @@ const Settings = () => {
     });
   };
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
-  };
+    const handleLogout = useCallback(async () => {
+    await clearSession();
+    toast({
+      title: "Successfully logged out",
+      description: "Your login session has been ended.",
+    });
+    navigate("/");
+  }, [clearSession, navigate, toast]);
 
   if (!user) {
     return (
@@ -203,7 +208,7 @@ const Settings = () => {
               <p className="text-muted-foreground mt-1">Manage your account and application preferences</p>
             </div>
             <Badge variant="secondary" className="text-base px-3 py-1">
-              {user.role.replace('_', ' ').toUpperCase()}
+              {user.role.name.replace('_', ' ').toUpperCase()}
             </Badge>
           </div>
         </div>
@@ -281,7 +286,7 @@ const Settings = () => {
 
                   <div className="space-y-2">
                     <Label>User ID</Label>
-                    <Input value={user.id} disabled />
+                    <Input value={user.userId} disabled />
                   </div>
                 </div>
 
