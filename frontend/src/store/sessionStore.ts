@@ -2,14 +2,15 @@ import { create } from "zustand";
 import { UserDTO } from "@/dto/user.dto";
 import { logout } from "@/api/authApi";
 import { setAccessToken } from "@/api/axiosClient";
+import { StaffAccountDTO } from "@/dto/staff.dto";
 
 interface SessionState {
-  user: UserDTO | null;
+  user: UserDTO | StaffAccountDTO | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   initialize: () => void;
-  setSession: (user: UserDTO, token: string) => void;
+  setSession: (user: UserDTO | StaffAccountDTO, token: string) => void;
   clearSession: () => void;
 }
 
@@ -37,7 +38,6 @@ export const useSessionStore = create<SessionState>((set) => ({
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
         localStorage.removeItem("user");
-        localStorage.removeItem("accessToken");
         set({
           user: null,
           token: null,
@@ -74,7 +74,6 @@ export const useSessionStore = create<SessionState>((set) => ({
       console.warn("Logout API failed:", err);
     }
     localStorage.removeItem("user");
-    localStorage.removeItem("accessToken");
     setAccessToken(null);
     set({
       user: null,

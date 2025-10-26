@@ -1,6 +1,5 @@
 package com.example.backend.dto;
 
-import java.time.Instant;
 import java.time.LocalTime;
 import java.util.UUID;
 

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import com.example.backend.dto.request.AuthenticationRequest;
 import com.example.backend.dto.response.AuthenticationResponse;
 import com.example.backend.dto.response.RefreshResponse;
+import com.example.backend.entities.Branch;
 import com.example.backend.entities.InvalidJwtToken;
 import com.example.backend.entities.RefreshToken;
 import com.example.backend.entities.StaffAccount;
@@ -22,6 +23,7 @@ import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.StaffAccountMapper;
 import com.example.backend.mapper.UserMapper;
+import com.example.backend.repository.BranchRepository;
 import com.example.backend.repository.InvalidJwtTokenRepository;
 import com.example.backend.repository.RefreshTokenRepository;
 import com.example.backend.repository.StaffAccountRepository;
@@ -50,6 +52,7 @@ public class AuthenticationService {
     private Logger logger = LoggerFactory.getLogger(getClass());
     private final StaffAccountRepository staffAccountRepository;
     private final StaffAccountMapper staffAccountMapper;
+    private final BranchRepository branchRepository;
 
     @Value("${jwt.signer-key}")
     private String signerKey;
@@ -61,7 +64,7 @@ public class AuthenticationService {
     private String issuer;
     
     
-    public AuthenticationService(UserRepository userRepository, InvalidJwtTokenRepository invalidJwtTokenRepository, PasswordEncoder passwordEncoder, RefreshTokenRepository refreshTokenRepository, UserMapper userMapper, StaffAccountRepository staffAccountRepository, StaffAccountMapper staffAccountMapper) {
+    public AuthenticationService(UserRepository userRepository, InvalidJwtTokenRepository invalidJwtTokenRepository, PasswordEncoder passwordEncoder, RefreshTokenRepository refreshTokenRepository, UserMapper userMapper, StaffAccountRepository staffAccountRepository, StaffAccountMapper staffAccountMapper, BranchRepository branchRepository) {
         this.userRepository = userRepository;
         this.invalidJwtTokenRepository = invalidJwtTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -69,6 +72,7 @@ public class AuthenticationService {
         this.userMapper = userMapper;
         this.staffAccountRepository = staffAccountRepository;
         this.staffAccountMapper = staffAccountMapper;
+        this.branchRepository = branchRepository;
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest authenticationRequest, String clientIp, String userAgent) {
@@ -90,7 +94,10 @@ public class AuthenticationService {
         else {
             if (!authenticationRequest.getUsername().isBlank()) {
                 // if is staff
-                StaffAccount staffAccount = staffAccountRepository.findByUsername(authenticationRequest.getUsername()).orElseThrow(() -> new AppException(ErrorCode.STAFFACCOUNT_NOTEXISTED));
+                if (authenticationRequest.getBranchId() == null)
+                    throw new AppException(ErrorCode.MISSING_BRANCHID);
+                Branch branch = branchRepository.findById(authenticationRequest.getBranchId()).orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
+                StaffAccount staffAccount = staffAccountRepository.findByUsernameAndBranch(authenticationRequest.getUsername(), branch).orElseThrow(() -> new AppException(ErrorCode.STAFFACCOUNT_NOTEXISTED));
                 boolean isAuthenticated = passwordEncoder.matches(authenticationRequest.getPassword(), staffAccount.getPassword());
                 if (!isAuthenticated) {
                     throw new AppException(ErrorCode.UNAUTHENTICATED);

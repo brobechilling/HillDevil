@@ -53,15 +53,15 @@ const Login = () => {
           });
         }
         return;
-      case "BRANCH_MANAGER":
-        navigate('/dashboard/manager');
-        return;
-      case "WAITER":
-        navigate('/dashboard/waiter');
-        return;
-      case "RECEPTIONIST":
-        navigate('/dashboard/receptionist');
-        return;
+      // case "BRANCH_MANAGER":
+      //   navigate('/dashboard/manager');
+      //   return;
+      // case "WAITER":
+      //   navigate('/dashboard/waiter');
+      //   return;
+      // case "RECEPTIONIST":
+      //   navigate('/dashboard/receptionist');
+      //   return;
       case "ADMIN":
         navigate('/dashboard/admin');
         return;
@@ -183,6 +183,7 @@ const Login = () => {
                 <Input
                   id="password"
                   type="password"
+                  placeholder="sieumatkhauvippro"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onFocus={() => setFocusedField('password')}
