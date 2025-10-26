@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { createBranch, updateBranch } from '@/api/branchApi';
+import { Clock } from 'lucide-react';
 
 interface BranchManagementDialogProps {
   open: boolean;
@@ -15,85 +17,129 @@ interface BranchManagementDialogProps {
 
 export const BranchManagementDialog = ({ open, onOpenChange, branch, onSave }: BranchManagementDialogProps) => {
   const [formData, setFormData] = useState({
-    name: '',
-    shortCode: '',
     address: '',
-    phone: '',
-    email: '',
-    tagline: '',
-    description: '',
+    branchPhone: '',
+    mail: '',
+    openingHour: '',
+    openingMinute: '',
+    closingHour: '',
+    closingMinute: '',
   });
 
   useEffect(() => {
     if (branch) {
+      const parseTime = (time: string | undefined) => {
+        if (!time) return { hour: '', minute: '' };
+        const [h, m] = time.split(':');
+        return { hour: h || '', minute: m || '' };
+      };
+
+      const open = parseTime(branch.openingTime);
+      const close = parseTime(branch.closingTime);
+
       setFormData({
-        name: branch.name || '',
-        shortCode: branch.shortCode || '',
         address: branch.address || '',
-        phone: branch.phone || '',
-        email: branch.email || '',
-        tagline: branch.tagline || '',
-        description: branch.description || '',
+        branchPhone: branch.branchPhone || branch.phone || '',
+        mail: branch.mail || branch.email || '',
+        openingHour: open.hour,
+        openingMinute: open.minute,
+        closingHour: close.hour,
+        closingMinute: close.minute,
       });
     } else {
       setFormData({
-        name: '',
-        shortCode: '',
         address: '',
-        phone: '',
-        email: '',
-        tagline: '',
-        description: '',
+        branchPhone: '',
+        mail: '',
+        openingHour: '',
+        openingMinute: '',
+        closingHour: '',
+        closingMinute: '',
       });
     }
   }, [branch]);
 
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+  const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.shortCode) {
+    if (!formData.address || !formData.mail) {
       toast({
         variant: 'destructive',
         title: 'Missing fields',
-        description: 'Branch name and short code are required.',
+        description: 'Address and email (mail) are required.',
       });
       return;
     }
 
-    const branches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
-    const selectedBrand = localStorage.getItem('selected_brand');
-    const user = JSON.parse(localStorage.getItem('mock_auth_user') || '{}');
+    const openingTime = formData.openingHour && formData.openingMinute
+      ? `${formData.openingHour}:${formData.openingMinute}`
+      : undefined;
 
-    if (branch) {
-      // Update existing branch
-      const updatedBranches = branches.map((b: any) =>
-        b.id === branch.id ? { ...b, ...formData } : b
-      );
-      localStorage.setItem('mock_branches', JSON.stringify(updatedBranches));
-      toast({
-        title: 'Branch updated',
-        description: 'Branch information has been updated successfully.',
-      });
-    } else {
-      // Create new branch
-      const newBranch = {
-        ...formData,
-        id: `branch_${Date.now()}`,
-        brandName: selectedBrand,
-        ownerId: user.id,
-        status: 'active',
-        createdAt: new Date().toISOString(),
+    const closingTime = formData.closingHour && formData.closingMinute
+      ? `${formData.closingHour}:${formData.closingMinute}`
+      : undefined;
+
+    if (openingTime && closingTime) {
+      const toMinutes = (t: string) => {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
       };
-      branches.push(newBranch);
-      localStorage.setItem('mock_branches', JSON.stringify(branches));
-      toast({
-        title: 'Branch created',
-        description: `${formData.name} has been added successfully.`,
-      });
+      if (toMinutes(closingTime) <= toMinutes(openingTime)) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid hours',
+          description: 'Closing time must be after opening time.',
+        });
+        return;
+      }
     }
 
-    onSave();
-    onOpenChange(false);
+    const selectedRestaurantRaw = localStorage.getItem('selected_restaurant');
+    const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
+    const restaurantId = selectedRestaurant?.restaurantId;
+
+    if (!restaurantId) {
+      toast({ variant: 'destructive', title: 'No restaurant selected', description: 'Please select a restaurant first.' });
+      return;
+    }
+
+    const payload: any = {
+      restaurantId,
+      address: formData.address,
+      branchPhone: formData.branchPhone || undefined,
+      mail: formData.mail,
+      openingTime,
+      closingTime,
+      isActive: true,
+    };
+
+    (async () => {
+      try {
+        if (branch) {
+          const updatePayload = {
+            restaurantId,
+            address: formData.address,
+            branchPhone: formData.branchPhone || undefined,
+            mail: formData.mail,
+            openingTime,
+            closingTime,
+          };
+          await updateBranch(branch.branchId, updatePayload);
+          toast({ title: 'Branch updated', description: 'Branch information has been updated successfully.' });
+        } else {
+          await createBranch(payload);
+          toast({ title: 'Branch created', description: 'Branch has been added successfully.' });
+        }
+        onSave();
+        onOpenChange(false);
+      } catch (err: any) {
+        console.error('Branch save error', err);
+        toast({ variant: 'destructive', title: 'Error', description: err?.response?.data?.message || 'Failed to save branch.' });
+      }
+    })();
   };
 
   return (
@@ -106,32 +152,12 @@ export const BranchManagementDialog = ({ open, onOpenChange, branch, onSave }: B
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Branch Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Downtown Branch"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="shortCode">Short Code *</Label>
-              <Input
-                id="shortCode"
-                value={formData.shortCode}
-                onChange={(e) => setFormData({ ...formData, shortCode: e.target.value })}
-                placeholder="downtown"
-                disabled={!!branch}
-              />
-            </div>
-          </div>
-
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Address */}
           <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
+            <Label htmlFor="address" className="flex items-center gap-1">
+              <span className="text-red-500">*</span> Address
+            </Label>
             <Input
               id="address"
               value={formData.address}
@@ -140,55 +166,112 @@ export const BranchManagementDialog = ({ open, onOpenChange, branch, onSave }: B
             />
           </div>
 
+          {/* Phone & Email */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="branchPhone">Phone</Label>
               <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                id="branchPhone"
+                value={formData.branchPhone}
+                onChange={(e) => setFormData({ ...formData, branchPhone: e.target.value })}
                 placeholder="+1234567890"
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="mail" className="flex items-center gap-1">
+                <span className="text-red-500">*</span> Email (mail)
+              </Label>
               <Input
-                id="email"
+                id="mail"
                 type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                value={formData.mail}
+                onChange={(e) => setFormData({ ...formData, mail: e.target.value })}
                 placeholder="branch@restaurant.com"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="tagline">Tagline</Label>
-            <Input
-              id="tagline"
-              value={formData.tagline}
-              onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-              placeholder="Fine dining experience"
-            />
+          {/* Opening & Closing Time – CÙNG 1 DÒNG, GỌN GÀNG */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span>Business Hours</span>
+            </div>
+
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* Opening */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">Open:</span>
+                <div className="flex gap-1">
+                  <Select value={formData.openingHour} onValueChange={(val) => setFormData({ ...formData, openingHour: val })}>
+                    <SelectTrigger className="w-16">
+                      <SelectValue placeholder="HH" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {hours.map((h) => (
+                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm">:</span>
+                  <Select value={formData.openingMinute} onValueChange={(val) => setFormData({ ...formData, openingMinute: val })}>
+                    <SelectTrigger className="w-16">
+                      <SelectValue placeholder="MM" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {minutes.map((m) => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="hidden sm:block w-8 h-px bg-border" />
+
+              {/* Closing */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">Close:</span>
+                <div className="flex gap-1">
+                  <Select value={formData.closingHour} onValueChange={(val) => setFormData({ ...formData, closingHour: val })}>
+                    <SelectTrigger className="w-16">
+                      <SelectValue placeholder="HH" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {hours.map((h) => (
+                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm">:</span>
+                  <Select value={formData.closingMinute} onValueChange={(val) => setFormData({ ...formData, closingMinute: val })}>
+                    <SelectTrigger className="w-16">
+                      <SelectValue placeholder="MM" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {minutes.map((m) => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Times are in 5-minute increments. Closing time must be after opening time.
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Welcome to our restaurant..."
-              rows={3}
-            />
-          </div>
-
-          <div className="flex gap-2 justify-end pt-4">
+          {/* Buttons */}
+          <div className="flex gap-3 justify-end pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">{branch ? 'Update' : 'Create'} Branch</Button>
+            <Button type="submit" className="min-w-32">
+              {branch ? 'Update' : 'Create'} Branch
+            </Button>
           </div>
         </form>
       </DialogContent>

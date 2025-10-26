@@ -1,49 +1,66 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { UtensilsCrossed } from 'lucide-react';
-import { useAuthStore } from '@/store/authStore';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { UtensilsCrossed } from "lucide-react";
+import { useSessionStore } from "@/store/sessionStore";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useEffect } from 'react';
+} from "@/components/ui/dropdown-menu";
+import { useCallback } from "react";
 
 export const Navbar = () => {
-  const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
-  useEffect(() => {}, []);
+  // ✅ Lấy user thật từ sessionStore (API backend)
+  const { user, isAuthenticated, clearSession } = useSessionStore();
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
-  };
+  const handleLogout = useCallback(async () => {
+    await clearSession();
+    navigate("/");
+  }, [clearSession, navigate]);
 
   const getRoleBadgeVariant = (role?: string) => {
-    switch (role) {
-      case 'owner': return 'default';
-      case 'branch_manager': return 'secondary';
-      case 'waiter': return 'outline';
-      case 'receptionist': return 'outline';
-      default: return 'outline';
+    switch (role?.toUpperCase()) {
+      case "RESTAURANT_OWNER":
+        return "default";
+      case "BRANCH_MANAGER":
+        return "secondary";
+      case "WAITER":
+      case "RECEPTIONIST":
+        return "outline";
+      case "ADMIN":
+        return "destructive";
+      default:
+        return "outline";
     }
   };
 
   const getRoleLabel = (role?: string) => {
-    switch (role) {
-      case 'branch_manager': return 'Manager';
-      case 'owner': return 'Owner';
-      case 'waiter': return 'Waiter';
-      case 'receptionist': return 'Receptionist';
-      case 'admin': return 'Admin';
-      default: return role;
+    switch (role?.toUpperCase()) {
+      case "RESTAURANT_OWNER":
+        return "Owner";
+      case "BRANCH_MANAGER":
+        return "Manager";
+      case "WAITER":
+        return "Waiter";
+      case "RECEPTIONIST":
+        return "Receptionist";
+      case "ADMIN":
+        return "Admin";
+      default:
+        return "User";
     }
   };
+
+  const displayName =
+    user?.username || user?.email?.split("@")[0] || "User";
+  const displayInitial = displayName.charAt(0).toUpperCase();
+  const displayRole = user?.role?.name || "";
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -56,7 +73,7 @@ export const Navbar = () => {
         </Link>
 
         <div className="flex items-center gap-4">
-          {!user ? (
+          {!isAuthenticated || !user ? (
             <>
               <Link to="/login">
                 <Button variant="ghost">Sign In</Button>
@@ -67,48 +84,60 @@ export const Navbar = () => {
             </>
           ) : (
             <DropdownMenu>
-              <DropdownMenuTrigger asChild> 
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   className="flex items-center gap-3 rounded-xl px-3 py-2 h-auto border-muted-foreground/20 hover:bg-muted transition-all"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                      {user.name?.charAt(0).toUpperCase() || 'U'}
+                      {displayInitial || "U"}
                     </AvatarFallback>
                   </Avatar>
 
                   <div className="hidden md:flex flex-col items-start leading-tight">
-                    <span className="text-sm font-semibold">{user.name}</span>
+                    <span className="text-sm font-semibold">{displayName}</span>
                     <Badge
-                      variant={getRoleBadgeVariant(user.role)}
+                      variant={getRoleBadgeVariant(displayRole)}
                       className="text-[10px] font-normal mt-0.5 px-1.5 py-0"
                     >
-                      {getRoleLabel(user.role)}
+                      {getRoleLabel(displayRole)}
                     </Badge>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
+
               <DropdownMenuContent align="end" className="w-56">
                 <div className="px-2 py-2">
-                  <div className="font-medium">{user.name}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{user.email}</div>
-                  <Badge variant={getRoleBadgeVariant(user.role)} className="text-xs mt-2">
-                    {getRoleLabel(user.role)}
+                  <div className="font-medium">{displayName}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {user.email}
+                  </div>
+                  <Badge
+                    variant={getRoleBadgeVariant(displayRole)}
+                    className="text-xs mt-2"
+                  >
+                    {getRoleLabel(displayRole)}
                   </Badge>
                 </div>
+
                 <DropdownMenuSeparator />
-                {user.role === 'owner' && (
-                  <DropdownMenuItem onSelect={() => navigate('/brand-selection')}>
+
+                {displayRole?.toUpperCase() === "RESTAURANT_OWNER" && (
+                  <DropdownMenuItem
+                    onSelect={() => navigate("/brand-selection")}
+                  >
                     Dashboard
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onSelect={() => navigate('/profile')}>
+
+                <DropdownMenuItem onSelect={() => navigate("/profile")}>
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => navigate('/settings')}>
+                <DropdownMenuItem onSelect={() => navigate("/settings")}>
                   Settings
                 </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={handleLogout}>
                   Logout

@@ -16,7 +16,7 @@ const StaffDashboard = () => {
           <h1 className="text-3xl font-bold">Staff Dashboard</h1>
           <p className="text-muted-foreground mt-2">
             Manage tables, orders, and menu items
-            {branchId && <span className="ml-2 text-sm">(Branch ID: {branchId})</span>}
+            {/* Branch ID intentionally hidden in UI */}
           </p>
         </div>
 

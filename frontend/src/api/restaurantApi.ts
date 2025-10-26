@@ -2,6 +2,8 @@ import { ApiResponse } from "@/dto/apiResponse"
 import { axiosClient } from "./axiosClient"
 import { RestaurantDTO } from "@/dto/restaurant.dto"
 import { PageResponse } from "@/dto/pageResponse";
+import { RestaurantCreateRequest } from "@/dto/restaurant.dto";
+
 
 export const getAllRestaurants = async () => {
   const res = await axiosClient.get<ApiResponse<RestaurantDTO[]>>("/restaurants");
@@ -30,8 +32,13 @@ export const getRestaurantsByOwner = async (userId: string) => {
   return res.data.result;
 };
 
-export const createRestaurant = async (data: Partial<RestaurantDTO>) => {
-  const res = await axiosClient.post<ApiResponse<RestaurantDTO>>("/restaurants", data);
+export const createRestaurant = async (
+  data: RestaurantCreateRequest
+): Promise<RestaurantDTO> => {
+  const res = await axiosClient.post<ApiResponse<RestaurantDTO>>(
+    "/restaurants",
+    data
+  );
   return res.data.result;
 };
 

@@ -120,4 +120,11 @@ public class Subscription {
         this.subscriptionPayments = subscriptionPayments;
     }
 
+    @Transient
+    public SubscriptionPayment getLatestPayment() {
+        return subscriptionPayments.stream()
+                .filter(p -> p.getDate() != null)
+                .max((p1, p2) -> p1.getDate().compareTo(p2.getDate()))
+                .orElse(null);
+    }
 }
