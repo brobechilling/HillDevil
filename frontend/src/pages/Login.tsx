@@ -65,9 +65,9 @@ const Login = () => {
       case "ADMIN":
         navigate('/dashboard/admin');
         return;
-      default:
-        navigate('/dashboard');
-        return;
+      // default:
+      //   navigate('/dashboard');
+      //   return;
     }
   },
   onError: () => {

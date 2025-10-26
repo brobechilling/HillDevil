@@ -12,7 +12,6 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   const userStr = localStorage.getItem('user');
   const user: UserDTO | StaffAccountDTO | null = userStr ? JSON.parse(userStr) : null;
-  const { toast } = useToast();
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -24,7 +23,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
 
     // need implmenting sth here
     if (!hasPermission) {
-      return <Navigate to="/" replace />;
+      return <Navigate to="/*" replace />;
     }
   }
 
