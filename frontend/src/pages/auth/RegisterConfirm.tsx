@@ -40,8 +40,8 @@ type BrandFormData = z.infer<typeof brandSchema>;
 const RegisterConfirm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, isAuthenticated, initialize } = useSessionStore();
-  const { data: packages, isLoading } = usePackages();
+  const { user, isAuthenticated, isLoading: isSessionLoading, initialize } = useSessionStore();
+  const { data: packages, isLoading: isPackagesLoading } = usePackages();
   const [submitting, setSubmitting] = useState(false);
   const packageId = searchParams.get("packageId") || "";
 
@@ -58,11 +58,12 @@ const RegisterConfirm = () => {
   }, [initialize]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      const returnUrl = `/register/confirm?packageId=${packageId}`;
-      navigate(`/register?returnUrl=${encodeURIComponent(returnUrl)}`);
-    }
-  }, [isAuthenticated, navigate, packageId]);
+  if (isSessionLoading) return;
+  if (!isAuthenticated) {
+    const returnUrl = `/register/confirm?packageId=${packageId}`;
+    navigate(`/register?returnUrl=${encodeURIComponent(returnUrl)}`);
+  }
+}, [isAuthenticated, isSessionLoading, navigate, packageId]);
 
   const selectedPackage =
     packages?.find((p) => p.packageId === packageId) || packages?.[0];
@@ -117,7 +118,7 @@ const RegisterConfirm = () => {
     }
   };
 
-  if (isLoading) return <div className="flex justify-center p-10">Loading...</div>;
+  if (isPackagesLoading) return <div className="flex justify-center p-10">Loading...</div>;
   if (!selectedPackage) return <p>No package selected.</p>;
 
   return (

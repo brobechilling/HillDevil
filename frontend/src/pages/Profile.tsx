@@ -47,7 +47,7 @@ import {
 } from 'lucide-react';
 
 interface ProfileFormData {
-  username: string; // Thay name thành username
+  username: string;
   email: string;
   phone?: string;
 }
