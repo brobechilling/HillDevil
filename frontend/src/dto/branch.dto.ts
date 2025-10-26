@@ -7,8 +7,6 @@ export interface BranchDTO {
     branchPhone?: string;
     openingTime?: string;
     closingTime?: string;
-    createdAt?: string;
-    updatedAt?: string;
     isActive: boolean;
     mail?: string;
 }

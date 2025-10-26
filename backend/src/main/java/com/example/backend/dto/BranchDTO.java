@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class BranchDTO {
     private UUID branchId;
     private UUID restaurantId;
@@ -11,9 +13,8 @@ public class BranchDTO {
     private String branchPhone;
     private LocalTime openingTime;
     private LocalTime closingTime;
-    private Instant createdAt;
-    private Instant updatedAt;
-    private boolean isActive;
+    @JsonProperty("isActive")
+    private boolean active = true;
     private String mail;
 
     public UUID getBranchId() {
@@ -64,28 +65,13 @@ public class BranchDTO {
         this.closingTime = closingTime;
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
     public boolean isActive() {
-        return isActive;
+        return active;
     }
 
-    public void setActive(boolean isActive) {
-        this.isActive = isActive;
+    @JsonProperty("isActive")
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public String getMail() {

@@ -8,20 +8,16 @@ import {
   ShoppingCart,
   ArrowUp,
   ArrowDown,
-  Copy,
-  ExternalLink,
   Plus
 } from 'lucide-react';
 import { statsApi, menuApi } from '@/lib/api';
-import { QRCodeSVG } from 'qrcode.react';
 import { toast } from '@/hooks/use-toast';
 import { BranchManagementCard } from './BranchManagementCard';
 import { BranchManagementDialog } from './BranchManagementDialog';
-import { RestaurantCreationDialog } from './RestaurantCreationDialog';
 
 interface OverviewDashboardProps {
   userBranches: any[];
-  onBranchUpdate?: () => void;
+  onBranchUpdate: () => void;
 }
 
 export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDashboardProps) => {
@@ -29,7 +25,6 @@ export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDash
   const [bestSellers, setBestSellers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [branchDialogOpen, setBranchDialogOpen] = useState(false);
-  const [restaurantDialogOpen, setRestaurantDialogOpen] = useState(false);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -53,18 +48,6 @@ export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDash
     loadDashboardData();
   }, []);
 
-  const getBranchUrl = (branch: any) => {
-    return `${window.location.origin}/branch/${branch.shortCode}`;
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copied!',
-      description: 'URL copied to clipboard',
-    });
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -83,10 +66,6 @@ export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDash
           </p>
         </div>
         <div className="flex gap-2">
-          {/* <Button variant="outline" onClick={() => setRestaurantDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Restaurant
-          </Button> */}
           <Button onClick={() => setBranchDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Create Branch
@@ -94,40 +73,7 @@ export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDash
         </div>
       </div>
 
-      {/* Branch QR Code Section */}
-      {userBranches && userBranches.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Branch Public Links & QR Codes</CardTitle>
-            <CardDescription>
-              Share these links or QR codes with your customers to access your branch menus
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-4 w-full">
-              {userBranches.map((branch: any) => (
-                <div key={branch.id} className="flex flex-row items-center gap-4 w-full p-4 border rounded-lg bg-muted/50 min-h-[100px]">
-                  <div className="flex-shrink-0 flex items-center justify-center">
-                    <QRCodeSVG value={getBranchUrl(branch)} size={80} className="border bg-white rounded-md p-1" />
-                  </div>
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <div className="flex items-center gap-2 w-full">
-                      <span className="font-mono text-sm break-all bg-white px-2 py-1 rounded border flex-1 min-w-0 max-w-full">{getBranchUrl(branch)}</span>
-                      <Button size="icon" variant="ghost" className="ml-1" title="Open in new tab" onClick={() => window.open(getBranchUrl(branch), '_blank')}>
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="ml-1" title="Copy URL" onClick={() => copyToClipboard(getBranchUrl(branch))}>
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1 truncate">{branch.name} - {branch.address}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      
 
       {/* KPI Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -251,21 +197,11 @@ export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDash
           </div>
         </CardContent>
       </Card>
-
+      
       <BranchManagementDialog
         open={branchDialogOpen}
         onOpenChange={setBranchDialogOpen}
-        onSave={() => {
-          onBranchUpdate?.();
-        }}
-      />
-
-      <RestaurantCreationDialog
-        open={restaurantDialogOpen}
-        onOpenChange={setRestaurantDialogOpen}
-        onSave={() => {
-          onBranchUpdate?.();
-        }}
+        onSave={onBranchUpdate}
       />
     </div>
   );
