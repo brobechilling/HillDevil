@@ -44,6 +44,7 @@ public enum ErrorCode {
     STAFFACCOUNT_NOTEXISTED(4001, "StaffAccount not existed", HttpStatus.NOT_FOUND),
     BRANCH_NOTEXISTED(3001, "Branch not existed", HttpStatus.NOT_FOUND),
     AUTHENTICATION_INVALID(9000, "Authentication request invalid, missing email or username", HttpStatus.BAD_REQUEST),
+    MISSING_BRANCHID(9001, "Missing branchId when login as staff", HttpStatus.BAD_REQUEST),
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private int code;

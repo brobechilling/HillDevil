@@ -19,7 +19,7 @@ function AppWrapper() {
     initializeMockData();
     initializeMock();
     initializeSession();
-  }, [initializeMock, initializeSession]);
+  }, [initializeSession]);
 
   return <App />;
 }

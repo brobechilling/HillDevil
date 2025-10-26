@@ -5,6 +5,7 @@ export interface AuthenticationRequest {
     email?: string;
     password: string;
     username?: string;
+    branchId?: string;
 }
 
 export interface AuthenticationResponse {

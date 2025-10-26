@@ -34,14 +34,14 @@ public class BranchService {
     }
 
     public BranchDTO getById(UUID id) {
-        Branch b = branchRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
+        Branch b = branchRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
         return branchMapper.toDto(b);
     }
 
     @Transactional
     public BranchDTO create(BranchDTO dto) {
         Restaurant restaurant = restaurantRepository.findById(dto.getRestaurantId())
-                .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
+                .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
         Branch entity = branchMapper.toEntity(dto);
         entity.setRestaurant(restaurant);
         entity.setActive(true);
