@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -19,28 +19,18 @@ import { QRCodeCanvas } from "qrcode.react";
 
 const PaymentPage = () => {
   const navigate = useNavigate();
+  const { orderCode } = useParams(); // ✅ Lấy từ URL path: /payment/:orderCode
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const { user, isAuthenticated, initialize } = useSessionStore();
   const [loading, setLoading] = useState(true);
   const [payment, setPayment] = useState<SubscriptionPaymentResponse | null>(null);
 
-  const orderCode = searchParams.get("orderCode");
   const restaurantName = searchParams.get("restaurantName") || "";
   const initialPayment = location.state as SubscriptionPaymentResponse | null;
 
   // ✅ Sử dụng hook để polling
-  const { data: polledPayment, isLoading: isPolling, status, error: pollingError } = usePaymentStatus(orderCode || "");
-  
-  // Debug logging
-  console.log("🔍 PaymentPage Debug:", { 
-    orderCode, 
-    isAuthenticated, 
-    hasUser: !!user,
-    enabled: !!orderCode,
-    pollingError: pollingError?.message 
-  });
-  console.log("📊 usePaymentStatus:", { polledPayment, isPolling, status });
+  const { data: polledPayment, isLoading: isPolling } = usePaymentStatus(orderCode || "");
 
   useEffect(() => {
     initialize();
@@ -59,7 +49,6 @@ const PaymentPage = () => {
   // ✅ Update payment from polling hook (priority)
   useEffect(() => {
     if (polledPayment) {
-      console.log("🔄 Polling data received:", polledPayment);
       setPayment(polledPayment);
     }
   }, [polledPayment]);
@@ -67,7 +56,6 @@ const PaymentPage = () => {
   // ✅ Set initial payment on mount (will be overridden by polling)
   useEffect(() => {
     if (initialPayment && !polledPayment) {
-      console.log("📦 Using initial payment:", initialPayment);
       setPayment(initialPayment);
     }
     setLoading(false);
