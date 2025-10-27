@@ -12,7 +12,7 @@ interface RestaurantListProps {
 export const RestaurantList = ({ onSelectRestaurant }: RestaurantListProps) => {
   const [page, setPage] = useState<number>(1);
   const size: number = 2;
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   const { data, isLoading, isError, isFetching } = useRestaurantsPaginatedQuery(page, size);
 

@@ -79,12 +79,13 @@ public class UserService {
         user.setPhone(userDTO.getPhone());
         user.setUsername(userDTO.getUsername());
         user.setRole(roleRepository.findByName(userDTO.getRole().getName()).orElseThrow(() -> new AppException(ErrorCode.ROLE_NOTEXISTED)));
+        user.setStatus(userDTO.isStatus());
         return userMapper.toUserDto(userRepository.save(user));
     }
     
     public PageResponse<UserDTO> getUserPaginated(int page, int size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
-        Page<User> pageData = userRepository.findAll(pageable);
+        Page<User> pageData = userRepository.findByRole_NameNot(RoleName.ADMIN, pageable);
         PageResponse<UserDTO> pageResponse = new PageResponse<>();
         pageResponse.setItems(pageData.map(user -> userMapper.toUserDto(user)).toList());
         pageResponse.setTotalElements(pageData.getTotalElements());

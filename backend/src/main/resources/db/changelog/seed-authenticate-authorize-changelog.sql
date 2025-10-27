@@ -19,4 +19,6 @@ VALUES
     ('c3333333-cccc-cccc-cccc-cccccccccccc', 'owner2@example.com', 'owner', 'rest_owner2', NOW(), NOW(), TRUE, '22222222-2222-2222-2222-222222222222'),
     ('d4444444-dddd-dddd-dddd-dddddddddddd', 'owner3@example.com', 'owner', 'rest_owner3', NOW(), NOW(), TRUE, '22222222-2222-2222-2222-222222222222');
 
-
+-- changeset quoc:add-phone-1
+UPDATE public.users
+SET phone = '0909123456';

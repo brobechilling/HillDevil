@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAdminStore } from '@/store/adminStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,40 +11,50 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { UserDialog } from './UserDialog';
-import { Edit, Plus, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { Search, HandMetal, Angry, Laugh } from 'lucide-react';
+import { useUpdateUserMutation, useUsersPaginatedQuery } from '@/hooks/queries/useUsers';
+import { UserDTO } from '@/dto/user.dto';
+import { Input } from '../ui/input';
 
 export const UserTab = () => {
-  const { users, deleteUser, toggleUserStatus } = useAdminStore();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserDTO>();
 
-  const handleEdit = (userId: string) => {
-    setSelectedUser(userId);
-    setDialogOpen(true);
+  const [page, setPage] = useState<number>(1);
+  const size: number = 2;
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const { data, isLoading, isError, isFetching } = useUsersPaginatedQuery(page,size);
+
+  const filteredUsers: UserDTO[] = (data?.items ?? []).filter((user) =>
+    user.username?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const updateUserMutation = useUpdateUserMutation(page, size); 
+
+  const handleStatusUpdate = (user: UserDTO) => {
+    const updatedUser = { ...user, status: !user.status };
+    updateUserMutation.mutate(updatedUser);
   };
 
-  const handleCreate = () => {
-    setSelectedUser(null);
+  const handleUserRestaurantInfo = (user: UserDTO) => {
+    setSelectedUser(user);
     setDialogOpen(true);
-  };
-
-  const handleDelete = (userId: string) => {
-    if (confirm('Are you sure you want to delete this user?')) {
-      deleteUser(userId);
-    }
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">User Management</h2>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
       </div>
-
+      <div className="relative">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by user name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Registered Users</CardTitle>
@@ -56,45 +65,57 @@ export const UserTab = () => {
               <TableRow>
                 <TableHead>Username</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Registration Date</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Total Spent</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-center">Restaurant detail</TableHead>
+                <TableHead className="text-right">Set status</TableHead>
               </TableRow>
             </TableHeader>
+            {isLoading && (
+              <div className="text-center py-8">Loading registerd users...</div>
+            )}
+
+            {isError && (
+              <div className="text-center py-8 text-red-500">Failed to load registerd users</div>
+            )}
+            {!isLoading && !isError && filteredUsers.length === 0 && (
+              <div className="text-center py-8">No users found.</div>
+            )}
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
+              {filteredUsers.map((user) => (
+                <TableRow key={user.userId}>
                   <TableCell className="font-medium">{user.username}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    {format(new Date(user.registrationDate), 'MMM dd, yyyy')}
-                  </TableCell>
+                  <TableCell>{user.phone}</TableCell>
+                  <TableCell>{user.role.name}</TableCell>
                   <TableCell>
                     <Badge
-                      variant={user.status === 'active' ? 'default' : 'secondary'}
+                      variant={user.status === true ? 'default' : 'secondary'}
                       className="cursor-pointer"
-                      onClick={() => toggleUserStatus(user.id)}
                     >
-                      {user.status}
+                      {user.status === true ? 'Active' : 'Inactive'}
                     </Badge>
                   </TableCell>
-                  <TableCell>${user.totalSpent.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell>
+                    <div className="flex justify-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleUserRestaurantInfo(user)}
+                      >
+                        <HandMetal className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     <div className="flex justify-end gap-2">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleEdit(user.id)}
+                        onClick={() => handleStatusUpdate(user)}
                       >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(user.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
+                        {user.status === true ? (<Laugh className="h-4 w-4" />) : (<Angry className="h-4 w-4" />)}
                       </Button>
                     </div>
                   </TableCell>
@@ -105,10 +126,34 @@ export const UserTab = () => {
         </CardContent>
       </Card>
 
+      {data && data.totalPages > 1 && (
+        <div className="flex justify-between items-center pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page === 1 || isFetching}
+            onClick={() => setPage((p) => Math.max(p - 1, 1))}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} / {data.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page === data.totalPages || isFetching}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
       <UserDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        userId={selectedUser}
+        user={selectedUser ?? null}
       />
     </div>
   );
