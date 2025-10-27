@@ -20,6 +20,7 @@ import { usePackages } from "@/hooks/queries/usePackages";
 import { Building2, Store, Warehouse } from "lucide-react";
 import { registrationApi } from "@/api/registrationApi";
 import { RestaurantCreateRequest } from "@/dto/restaurant.dto";
+import { UserDTO } from "@/dto/user.dto";
 
 const brandSchema = z.object({
   name: z
@@ -58,12 +59,22 @@ const RegisterConfirm = () => {
   }, [initialize]);
 
   useEffect(() => {
-  if (isSessionLoading) return;
-  if (!isAuthenticated) {
-    const returnUrl = `/register/confirm?packageId=${packageId}`;
-    navigate(`/register?returnUrl=${encodeURIComponent(returnUrl)}`);
-  }
-}, [isAuthenticated, isSessionLoading, navigate, packageId]);
+    if (isSessionLoading) return;
+    if (!isAuthenticated) {
+      const returnUrl = `/register/confirm?packageId=${packageId}`;
+      navigate(`/register?returnUrl=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
+
+    if (user && !(user as UserDTO).userId) {
+      toast({
+        variant: "destructive",
+        title: "Permission denied",
+        description: "Only owner accounts can access this page.",
+      });
+      navigate("/");
+    }
+  }, [isAuthenticated, isSessionLoading, navigate, packageId, user]);
 
   const selectedPackage =
     packages?.find((p) => p.packageId === packageId) || packages?.[0];
@@ -87,12 +98,14 @@ const RegisterConfirm = () => {
     setSubmitting(true);
 
     try {
+      const owner = user as UserDTO;
+
       const restaurantDto: RestaurantCreateRequest = {
         name: data.name,
         description: data.description,
         email: data.email,
         restaurantPhone: data.phone,
-        userId: user.userId,
+        userId: owner.userId,
       };
 
       const payment = await registrationApi.registerRestaurant(
@@ -136,12 +149,12 @@ const RegisterConfirm = () => {
           <CardContent className="flex items-center gap-4">
             <Avatar className="h-16 w-16">
               <AvatarFallback>
-                {user?.username?.charAt(0).toUpperCase()}
+                {user && (user as UserDTO).username?.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-medium">{user?.username}</p>
-              <p className="text-muted-foreground">{user?.email}</p>
+              <p className="font-medium">{(user as UserDTO)?.username}</p>
+              <p className="text-muted-foreground">{(user as UserDTO)?.email}</p>
             </div>
           </CardContent>
         </Card>

@@ -1,15 +1,17 @@
 import { create } from "zustand";
 import { UserDTO } from "@/dto/user.dto";
 import { logout } from "@/api/authApi";
-import { setAccessToken } from "@/api/axiosClient";
+import { setAccessToken, axiosClient } from "@/api/axiosClient";
 import { StaffAccountDTO } from "@/dto/staff.dto";
+import { ApiResponse } from "@/dto/apiResponse";
+import { RefreshResponse } from "@/dto/auth.dto"; 
 
 interface SessionState {
   user: UserDTO | StaffAccountDTO | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  initialize: () => void;
+  initialize: () => Promise<void>;
   setSession: (user: UserDTO | StaffAccountDTO, token: string) => void;
   clearSession: () => void;
 }
@@ -18,16 +20,40 @@ export const useSessionStore = create<SessionState>((set) => ({
   user: null,
   token: null,
   isAuthenticated: false,
-  isLoading: true, // ✅ Đánh dấu đang loading session
+  isLoading: true,
 
-  initialize: () => {
+  initialize: async () => {
     const storedToken = localStorage.getItem("accessToken");
     const userJson = localStorage.getItem("user");
 
+    // ✅ Nếu không có accessToken, thử refresh ngay
+    if (!storedToken && userJson) {
+      try {
+        const res = await axiosClient.post<ApiResponse<RefreshResponse>>(
+          "/auth/refresh",
+          {},
+          { withCredentials: true }
+        );
+        const newToken = res.data.result.accessToken;
+        setAccessToken(newToken);
+        const parsedUser = JSON.parse(userJson);
+        set({
+          user: parsedUser,
+          token: newToken,
+          isAuthenticated: true,
+          isLoading: false,
+        });
+        return;
+      } catch (err) {
+        console.warn("Refresh token failed:", err);
+        localStorage.removeItem("user");
+      }
+    }
+
+    // ✅ Nếu có accessToken, kiểm tra hợp lệ & mount
     if (storedToken && userJson && storedToken !== "") {
       try {
         const parsedUser = JSON.parse(userJson);
-        // ✅ Gán token ngay cho axios client
         setAccessToken(storedToken);
         set({
           user: parsedUser,
@@ -36,7 +62,7 @@ export const useSessionStore = create<SessionState>((set) => ({
           isLoading: false,
         });
       } catch (e) {
-        console.error("Failed to parse user from localStorage", e);
+        console.error("Failed to parse user:", e);
         localStorage.removeItem("user");
         set({
           user: null,
