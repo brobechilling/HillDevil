@@ -7,6 +7,9 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      auto-commit: false
+
   liquibase:
     enabled: false
   jpa:
@@ -51,3 +54,4 @@ management:
 
 frontend: 
   base-url: ${FRONTEND_BASE_URL:http://localhost:5000}
+
