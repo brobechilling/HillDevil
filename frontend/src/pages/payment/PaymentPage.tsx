@@ -65,11 +65,14 @@ const PaymentPage = () => {
   // Redirect if payment is successful, failed, or canceled
   useEffect(() => {
     if (payment?.subscriptionPaymentStatus === "SUCCESS") {
-      toast({
-        title: "Payment successful!",
-        description: "Your subscription is now active.",
+      // ✅ Redirect to success page instead of dashboard directly
+      navigate("/payment/success", {
+        state: {
+          restaurantName,
+          orderCode,
+          amount: payment.amount
+        }
       });
-      navigate("/dashboard/owner/overview");
     } else if (payment?.subscriptionPaymentStatus === "FAILED" || payment?.subscriptionPaymentStatus === "CANCELED") {
       toast({
         variant: "destructive",
@@ -85,7 +88,7 @@ const PaymentPage = () => {
       });
       navigate(-1);
     }
-  }, [payment, navigate]);
+  }, [payment, navigate, restaurantName, orderCode]);
 
   const handleCancel = async () => {
     if (!payment?.payOsOrderCode) return;
@@ -95,7 +98,7 @@ const PaymentPage = () => {
         title: "Payment canceled",
         description: "You can start over if needed.",
       });
-      navigate(-1);
+      navigate("/payment/cancel", { replace: true }); // ✅ chuyển sang trang cancel
     } catch {
       toast({
         variant: "destructive",
@@ -104,6 +107,7 @@ const PaymentPage = () => {
       });
     }
   };
+
 
   if (loading) {
     return (
@@ -160,13 +164,12 @@ const PaymentPage = () => {
 
                 <p className="text-sm text-muted-foreground mt-4 mb-2">Status</p>
                 <p
-                  className={`font-medium ${
-                    payment.subscriptionPaymentStatus === "SUCCESS"
+                  className={`font-medium ${payment.subscriptionPaymentStatus === "SUCCESS"
                       ? "text-green-600"
                       : payment.subscriptionPaymentStatus === "FAILED" || payment.subscriptionPaymentStatus === "CANCELED"
-                      ? "text-red-600"
-                      : "text-yellow-600"
-                  }`}
+                        ? "text-red-600"
+                        : "text-yellow-600"
+                    }`}
                 >
                   {payment.subscriptionPaymentStatus || "PENDING"}
                 </p>

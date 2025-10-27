@@ -34,7 +34,7 @@ const PaymentCancelPage = () => {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/")}
             >
               Back to Dashboard
             </Button>
