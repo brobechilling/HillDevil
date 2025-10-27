@@ -36,7 +36,7 @@ databaseChangeLog:
       relativeToChangelogFile: true
 
   - include:
-      file: db.changelog-seed-owner-tables-v2.sql
+      file: seed-area-table-changelog.sql
       relativeToChangelogFile: true
 
   - include:
