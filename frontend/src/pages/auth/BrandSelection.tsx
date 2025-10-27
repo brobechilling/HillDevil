@@ -8,8 +8,6 @@ import { RestaurantDTO } from '@/dto/restaurant.dto';
 import { UserDTO } from '@/dto/user.dto';
 import { getRestaurantsByOwner } from '@/api/restaurantApi';
 
-// Since we're working with restaurants instead of brands, 
-// we'll treat each restaurant as a "brand" for simplicity
 
 const BrandSelection = () => {
   const navigate = useNavigate();

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuthStore } from '@/store/authStore';
+import { useSessionStore } from "@/store/sessionStore";
 import { UtensilsCrossed, Mail, Lock, Sparkles, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -19,68 +19,65 @@ const Login = () => {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { setSession } = useSessionStore.getState();
 
   const loginMutation = useMutation({
-    mutationFn: login,
-    onSuccess: async (data) => {
-      console.log('Login success - User data:', data.user);
-      localStorage.setItem("user", JSON.stringify(data.user));
+  mutationFn: login,
+  onSuccess: async (data) => {
+    console.log('Login success - User data:', data.user);
 
-      switch (data.user.role.name) {
-        case "RESTAURANT_OWNER":
-          try {
-            // Get restaurants owned by this user
-            const restaurants = await getRestaurantsByOwner(data.user.userId);
-            console.log('Login success - Restaurants:', restaurants);
+    // ✅ Lưu vào sessionStore zustand
+    setSession(data.user, data.accessToken);
 
-            if (restaurants.length === 0) {
-              // No restaurants found, redirect to package registration
-              navigate('/register/package');
-            } else if (restaurants.length === 1) {
-              // Only one restaurant, store it and go to owner dashboard
-              localStorage.setItem('selected_restaurant', JSON.stringify(restaurants[0]));
-              console.log('Login success - Single restaurant, navigating to owner dashboard');
-              navigate('/dashboard/owner');
-            } else {
-              // Multiple restaurants, store them and redirect to brand selection
-              localStorage.setItem('user_restaurants', JSON.stringify(restaurants));
-              console.log('Login success - Multiple restaurants, navigating to brand selection');
-              navigate('/brand-selection');
-            }
-          } catch (error) {
-            console.error('Error fetching restaurants:', error);
-            toast({
-              title: "Error",
-              description: "Failed to load restaurant information. Please try again.",
-              variant: "destructive",
-            });
+    switch (data.user.role.name) {
+      case "RESTAURANT_OWNER":
+        try {
+          const restaurants = await getRestaurantsByOwner(data.user.userId);
+          console.log('Login success - Restaurants:', restaurants);
+
+          if (restaurants.length === 0) {
+            navigate('/register/package');
+          } else if (restaurants.length === 1) {
+            localStorage.setItem('selected_restaurant', JSON.stringify(restaurants[0]));
+            navigate('/dashboard/owner');
+          } else {
+            localStorage.setItem('user_restaurants', JSON.stringify(restaurants));
+            navigate('/brand-selection');
           }
-          return;
-        case "BRANCH_MANAGER":
-          navigate('/dashboard/manager');
-          return;
-        case "WAITER":
-          navigate('/dashboard/waiter');
-          return;
-        case "RECEPTIONIST":
-          navigate('/dashboard/receptionist');
-          return;
-        case "ADMIN":
-          navigate('/dashboard/admin');
-          return;
-        default:
-          navigate('/dashboard');
-          return;
-      }
-    },
-    onError: (error) => {
-      toast({
-        title: "Login Failed",
-        description: "Invalid email or password. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+        } catch (error) {
+          console.error('Error fetching restaurants:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load restaurant information. Please try again.",
+            variant: "destructive",
+          });
+        }
+        return;
+      // case "BRANCH_MANAGER":
+      //   navigate('/dashboard/manager');
+      //   return;
+      // case "WAITER":
+      //   navigate('/dashboard/waiter');
+      //   return;
+      // case "RECEPTIONIST":
+      //   navigate('/dashboard/receptionist');
+      //   return;
+      case "ADMIN":
+        navigate('/dashboard/admin');
+        return;
+      default:
+        navigate('/dashboard');
+        return;
+    }
+  },
+  onError: () => {
+    toast({
+      title: "Login Failed",
+      description: "Invalid email or password. Please try again.",
+      variant: "destructive",
+    });
+  },
+});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,6 +183,7 @@ const Login = () => {
                 <Input
                   id="password"
                   type="password"
+                  placeholder="sieumatkhauvippro"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onFocus={() => setFocusedField('password')}

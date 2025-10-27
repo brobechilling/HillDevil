@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useBranchesByRestaurant } from '@/hooks/queries/useBranches';
 
 const OwnerOverviewPage = () => {
   const [user, setUser] = useState<UserDTO | null>(null);
@@ -13,7 +14,6 @@ const OwnerOverviewPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get user data from localStorage (stored by Login component)
     const storedUser = localStorage.getItem('user');
     if (!storedUser) {
       console.log('OwnerOverviewPage - No user found, redirecting to login');
@@ -24,14 +24,12 @@ const OwnerOverviewPage = () => {
     const userData = JSON.parse(storedUser) as UserDTO;
     setUser(userData);
 
-    // Check if user has RESTAURANT_OWNER role
     if (userData.role.name !== 'RESTAURANT_OWNER') {
       console.log('OwnerOverviewPage - User is not RESTAURANT_OWNER, redirecting to login');
       navigate('/login');
       return;
     }
 
-    // Check if restaurant is selected
     const selectedRestaurant = localStorage.getItem('selected_restaurant');
     if (!selectedRestaurant) {
       console.log('OwnerOverviewPage - No restaurant selected, redirecting to brand selection');
@@ -46,20 +44,25 @@ const OwnerOverviewPage = () => {
 
     console.log('OwnerOverviewPage - User authenticated and restaurant selected');
 
-    // For now, set empty branches array since we're using restaurant data
-    // TODO: Implement branch management when backend supports it
     setUserBranches([]);
     setLoading(false);
   }, [navigate]);
 
+  const selectedRestaurantRaw = localStorage.getItem('selected_restaurant');
+  const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
+  const restaurantId = selectedRestaurant?.restaurantId;
+
+  const branchesQuery = useBranchesByRestaurant(restaurantId);
+  const activeUiBranches = (branchesQuery.data ?? [])
+  .filter(b => b.isActive); 
+
+  const handleBranchUpdate = () => {
+    branchesQuery.refetch();
+  };
+
   const handleChooseBrand = () => {
     localStorage.removeItem('selected_restaurant');
     navigate('/brand-selection');
-  };
-
-  const handleBranchUpdate = () => {
-    // TODO: Implement branch update when backend supports it
-    console.log('Branch update requested');
   };
 
   if (loading) {
@@ -81,7 +84,7 @@ const OwnerOverviewPage = () => {
         </Button>
       </div>
       <OverviewDashboard
-        userBranches={userBranches}
+        userBranches={activeUiBranches}
         onBranchUpdate={handleBranchUpdate}
       />
     </div>

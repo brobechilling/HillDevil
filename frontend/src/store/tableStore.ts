@@ -1,18 +1,13 @@
 import { create } from 'zustand';
 import { useMemo } from 'react';
+import { BranchDTO } from '@/dto/branch.dto';
 
 export type TableStatus = 'available' | 'occupied' | 'out_of_service';
 
-export interface Branch {
-  branch_id: string;
-  restaurant_id: string;
-  address: string;
-  branch_phone?: string;
-  opening_time?: string;
-  closing_time?: string;
-  is_active?: boolean;
-  mail?: string;
+export interface Branch extends BranchDTO {
+  // Extend BranchDTO if needed with additional client-side properties
 }
+
 export interface Table {
   id: string;
   branchId: string;

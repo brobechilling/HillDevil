@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface SubscriptionPaymentRepository extends JpaRepository<SubscriptionPayment, UUID> {
     Optional<SubscriptionPayment> findByPayOsOrderCode(Long payOsOrderCode);
+
+    boolean existsByPayOsOrderCode(long orderCode);
 }

@@ -25,6 +25,8 @@ public enum ErrorCode {
     PAYMENT_SIGNATURE_VERIFY_FAILED(1016, "Payment Signature Verification Failed", HttpStatus.BAD_REQUEST),
     SUBSCRIPTION_NOT_FOUND(1017, "Subscription not found", HttpStatus.NOT_FOUND),
     SUBSCRIPTION_NOT_ACTIVE(1018, "Subscription not active", HttpStatus.BAD_REQUEST),
+    ORDER_CODE_EXISTS(1019, "Order code already exists", HttpStatus.BAD_REQUEST),
+    PAYMENT_CREATION_FAILED(1020, "Payment creation failed", HttpStatus.BAD_REQUEST),
     INVALID_REQUEST(4000, "Invalid request", HttpStatus.BAD_REQUEST),
     
     // Table handling errors
@@ -40,7 +42,9 @@ public enum ErrorCode {
     // Restaurant error
     RESTAURANT_NOTEXISTED(3000, "Restaurant not existed", HttpStatus.NOT_FOUND),
     STAFFACCOUNT_NOTEXISTED(4001, "StaffAccount not existed", HttpStatus.NOT_FOUND),
+    BRANCH_NOTEXISTED(3001, "Branch not existed", HttpStatus.NOT_FOUND),
     AUTHENTICATION_INVALID(9000, "Authentication request invalid, missing email or username", HttpStatus.BAD_REQUEST),
+    MISSING_BRANCHID(9001, "Missing branchId when login as staff", HttpStatus.BAD_REQUEST),
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private int code;

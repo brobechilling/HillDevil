@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.UserDTO;
 import com.example.backend.dto.request.SignupRequest;
+import com.example.backend.dto.response.PageResponse;
 import com.example.backend.service.UserService;
 
 import jakarta.validation.Valid;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 
 @RestController
@@ -81,5 +84,12 @@ public class UserController {
         return apiResponse;
     }
 
+    @GetMapping("/paginated")
+    public ApiResponse<PageResponse<UserDTO>> getUserPaginated(@RequestParam( required = false, defaultValue = "1") int page, @RequestParam( required = false, defaultValue = "1") int size) {
+        ApiResponse<PageResponse<UserDTO>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(userService.getUserPaginated(page, size));
+        return apiResponse;
+    }
+    
 
 }

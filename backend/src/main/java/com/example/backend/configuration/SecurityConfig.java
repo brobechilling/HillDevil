@@ -24,7 +24,7 @@ import com.example.backend.entities.RoleName;
 public class SecurityConfig {
 
 
-    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated"};
+    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated", "/api/staff",  "/api/packages/**", "/api/branches/**"};
     private final String[] ADMIN_ENDPOINTS = {"/api/users/**", "/api/roles/**"};
     private final String[] RESTAURANT_OWNER_ENDPOINTS = {};
     private final String[] BRANCH_MANAGER_ENDPOINTS = {};

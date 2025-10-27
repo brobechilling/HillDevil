@@ -1,5 +1,7 @@
 package com.example.backend.dto.request;
 
+import java.util.UUID;
+
 public class AuthenticationRequest {
 
     // default to be white space if not pass
@@ -7,6 +9,7 @@ public class AuthenticationRequest {
     private String password;
     // user name is for staffaccount login
     private String username = "";
+    private UUID branchId = null;
 
     public String getUsername() {
         return username;
@@ -30,4 +33,11 @@ public class AuthenticationRequest {
     public void setPassword(String password) {
         this.password = password;
     }
+    public UUID getBranchId() {
+        return branchId;
+    }
+    public void setBranchId(UUID branchId) {
+        this.branchId = branchId;
+    }
+    
 }

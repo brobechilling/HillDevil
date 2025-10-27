@@ -2,11 +2,10 @@ import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { ApiResponse } from "@/dto/apiResponse";
 import { RefreshResponse } from "@/dto/auth.dto";
 
-let accessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;
 
 export const setAccessToken = (token: string | null) => {
-    accessToken = token;
+    localStorage.setItem("accessToken", token ?? "");
 };
 
 const PUBLIC_ENDPOINTS = [
@@ -15,7 +14,9 @@ const PUBLIC_ENDPOINTS = [
     "/auth/refresh",
     "/users/signup",
     "/payments/webhook",
-    "/restaurants/paginated"
+    "/restaurants/paginated",
+    "/packages",
+    "/branches",
 ];
 
 const isPublicEndpoint = (url: string = "") =>
@@ -29,8 +30,9 @@ export const axiosClient = axios.create({
 });
 
 axiosClient.interceptors.request.use((config) => {
-    if (accessToken && !isPublicEndpoint(config.url)) {
-        config.headers.Authorization = `Bearer ${accessToken}`;
+    const token = localStorage.getItem("accessToken");
+    if (token != "" && !isPublicEndpoint(config.url)) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });

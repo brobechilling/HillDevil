@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { branchApi, menuApi } from '@/lib/api';
+import { menuApi } from '@/lib/api';
+// Note: GuestLanding still uses mock data for branches until backend supports getByShortCode
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, MapPin, Phone, Mail, Clock, Plus, Minus, Loader2, Calendar } from 'lucide-react';
@@ -86,8 +87,11 @@ const GuestLanding = () => {
         setLoading(true);
         if (!shortCode) throw new Error('Branch code not provided');
 
-        const branchResponse = await branchApi.getByShortCode(shortCode);
-        setBranch(branchResponse.data);
+        // Temporarily use localStorage until backend supports getByShortCode
+        const branches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
+        const branchData = branches.find((b: any) => b.shortCode === shortCode);
+        if (!branchData) throw new Error('Branch not found');
+        setBranch(branchData);
 
         if (tableId) {
           const tables = JSON.parse(localStorage.getItem('mock_tables') || '[]') as Array<{ id: string; number: string }>;
@@ -97,8 +101,8 @@ const GuestLanding = () => {
           }
         }
 
-        const menuResponse = await menuApi.getAll(branchResponse.data.id);
-        console.log('Branch ID:', branchResponse.data.id);
+        const menuResponse = await menuApi.getAll(branchData.id);
+        console.log('Branch ID:', branchData.id);
         console.log('Menu items loaded:', menuResponse.data);
         console.log('Menu items from localStorage:', JSON.parse(localStorage.getItem('menu_items') || '[]'));
         console.log('Mock menu items from localStorage:', JSON.parse(localStorage.getItem('mock_menu_items') || '[]'));

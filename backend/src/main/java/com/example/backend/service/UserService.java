@@ -3,11 +3,18 @@ package com.example.backend.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.backend.dto.RestaurantDTO;
 import com.example.backend.dto.UserDTO;
 import com.example.backend.dto.request.SignupRequest;
+import com.example.backend.dto.response.PageResponse;
+import com.example.backend.entities.Restaurant;
 import com.example.backend.entities.Role;
 import com.example.backend.entities.RoleName;
 import com.example.backend.entities.User;
@@ -75,5 +82,14 @@ public class UserService {
         return userMapper.toUserDto(userRepository.save(user));
     }
     
+    public PageResponse<UserDTO> getUserPaginated(int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
+        Page<User> pageData = userRepository.findAll(pageable);
+        PageResponse<UserDTO> pageResponse = new PageResponse<>();
+        pageResponse.setItems(pageData.map(user -> userMapper.toUserDto(user)).toList());
+        pageResponse.setTotalElements(pageData.getTotalElements());
+        pageResponse.setTotalPages(pageData.getTotalPages());
+        return pageResponse;
+    }
 
 }
