@@ -71,6 +71,21 @@ const PaymentPage = () => {
     }
   }, [isAuthenticated, user, orderCode, initialPayment, navigate]);
 
+  useEffect(() => {
+    if (!orderCode || !isAuthenticated || !user) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await subscriptionPaymentApi.getStatus(orderCode);
+        setPayment(res);
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 3000); // 3s
+
+    return () => clearInterval(interval);
+  }, [orderCode, isAuthenticated, user]);
+
   // Redirect if payment is successful, failed, or canceled
   useEffect(() => {
     if (payment?.subscriptionPaymentStatus === "SUCCESS") {

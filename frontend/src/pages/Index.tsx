@@ -277,7 +277,7 @@ const FeaturesSection = ({ features }: { features: Array<{ icon: any; title: str
           className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
           variants={containerVariants}
           initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
+          animate={isInView ? "visible" : "visible"}
         >
           {features.map((feature, index) => (
             <motion.div key={index} variants={itemVariants}>
@@ -408,7 +408,7 @@ const PackagesSection = ({ packages, isLoading, error, handleRegisterPackage }: 
         <motion.div
           className="text-center max-w-3xl mx-auto mb-16"
           initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
           <h2 className="text-3xl font-bold sm:text-4xl mb-4">Choose Your Plan</h2>
@@ -418,10 +418,11 @@ const PackagesSection = ({ packages, isLoading, error, handleRegisterPackage }: 
         </motion.div>
 
         <motion.div
+          key={`packages-${packages?.length || 0}`}
           className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto items-stretch"
           variants={containerVariants}
           initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
+          animate="visible"
         >
           {packages.map((pkg) => {
             const PackageIcon = getPackageIcon(pkg.name);
@@ -450,7 +451,10 @@ const PackagesSection = ({ packages, isLoading, error, handleRegisterPackage }: 
                       <PackageIcon className="h-10 w-10 text-primary" />
                     </motion.div>
                     <CardTitle className="text-2xl text-center">{pkg.name}</CardTitle>
-                    <CardDescription className="text-lg font-semibold text-foreground text-center">
+                    <CardDescription className="text-sm text-muted-foreground text-center mt-2">
+                      {pkg.description}
+                    </CardDescription>
+                    <CardDescription className="text-lg font-semibold text-foreground text-center mt-3">
                       {formatPrice(pkg.price, pkg.billingPeriod)}
                     </CardDescription>
                   </CardHeader>
@@ -462,7 +466,7 @@ const PackagesSection = ({ packages, isLoading, error, handleRegisterPackage }: 
                           key={index}
                           className="flex items-start gap-2"
                           initial={{ opacity: 0, x: -10 }}
-                          animate={isInView ? { opacity: 1, x: 0 } : {}}
+                          animate={{ opacity: 1, x: 0 }}
                           transition={{ duration: 0.3, delay: index * 0.1 }}
                         >
                           <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />

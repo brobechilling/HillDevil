@@ -7,7 +7,6 @@ import com.example.backend.entities.Package;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.repository.PackageRepository;
-import com.example.backend.repository.RestaurantRepository;
 import com.example.backend.repository.SubscriptionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
