@@ -33,8 +33,7 @@ public class SubscriptionPaymentService {
             SubscriptionPaymentRepository subscriptionPaymentRepository,
             PayOSService payOSService,
             SubscriptionPaymentMapper subscriptionPaymentMapper,
-            ObjectMapper objectMapper
-    ) {
+            ObjectMapper objectMapper) {
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionPaymentRepository = subscriptionPaymentRepository;
         this.payOSService = payOSService;
@@ -48,7 +47,8 @@ public class SubscriptionPaymentService {
                 .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
         Package pkg = subscription.getaPackage();
-        if (pkg == null) throw new AppException(ErrorCode.PACKAGE_NOTEXISTED);
+        if (pkg == null)
+            throw new AppException(ErrorCode.PACKAGE_NOTEXISTED);
 
         Integer amount = pkg.getPrice();
         String itemName = pkg.getName();
@@ -66,7 +66,8 @@ public class SubscriptionPaymentService {
 
         String dynamicReturnUrl = payOSService.buildReturnUrl(orderCode);
 
-        CheckoutResponseData payResponse = payOSService.createVQRPayment(amount, orderCode, itemName, description, dynamicReturnUrl);
+        CheckoutResponseData payResponse = payOSService.createVQRPayment(amount, orderCode, itemName, description,
+                dynamicReturnUrl);
 
         SubscriptionPayment payment = new SubscriptionPayment();
         payment.setSubscription(subscription);
@@ -109,11 +110,18 @@ public class SubscriptionPaymentService {
         try {
             WebhookData data = payOSService.verifyWebhook(webhookBody);
             long orderCode = data.getOrderCode();
-            if (orderCode == 0) return;
+            if (orderCode == 0) {
+                System.err.println("[PayOS] ❌ orderCode = 0, webhook invalid");
+                return;
+            }
 
             SubscriptionPayment payment = subscriptionPaymentRepository.findByPayOsOrderCode(orderCode)
                     .orElse(null);
-            if (payment == null) return;
+
+            if (payment == null) {
+                System.err.println("[PayOS] ❌ Không tìm thấy payment với orderCode: " + orderCode);
+                return;
+            }
 
             payment.setWebhookStatus(true);
             payment.setSignatureVerified(true);
@@ -124,19 +132,24 @@ public class SubscriptionPaymentService {
             Restaurant restaurant = subscription.getRestaurant();
 
             if ("00".equals(data.getCode())) {
-                // ✅ success
+                System.out.println("[PayOS] ✅ Thanh toán thành công cho orderCode: " + orderCode);
                 payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.SUCCESS);
                 activateSubscription(subscription);
-                if (restaurant != null) restaurant.setStatus(true);
+                if (restaurant != null)
+                    restaurant.setStatus(true);
             } else {
-                // ✅ failed
+                System.out.println("[PayOS] ⚠️ Thanh toán thất bại cho orderCode: " + orderCode);
                 payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.FAILED);
                 cancelSubscription(subscription);
-                if (restaurant != null) restaurant.setStatus(false);
+                if (restaurant != null)
+                    restaurant.setStatus(false);
             }
 
             subscriptionPaymentRepository.save(payment);
         } catch (Exception e) {
+            // ✅ Ghi log lỗi chi tiết để dễ debug
+            e.printStackTrace();
+            System.err.println("[PayOS] ❌ Webhook exception: " + e.getMessage());
             throw new AppException(ErrorCode.PAYMENT_WEBHOOK_FAILED);
         }
     }
