@@ -6,6 +6,7 @@ import { useSessionStore } from "./store/sessionStore";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ThemeProvider } from "./components/theme-provider.tsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ createRoot(document.getElementById("root")!).render(
       >
         <ErrorBoundary>
           <AppWrapper />
+          <ReactQueryDevtools />
         </ErrorBoundary>
       </ThemeProvider>
     </QueryClientProvider>
