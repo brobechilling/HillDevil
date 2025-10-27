@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, CreditCard, Loader2, XCircle, AlertCircle } from "lucide-react";
 import { useSessionStore } from "@/store/sessionStore";
 import { subscriptionPaymentApi } from "@/api/subscriptionPaymentApi";
+import { usePaymentStatus } from "@/hooks/queries/useSubscriptionPayment";
 import { toast } from "@/hooks/use-toast";
 import { SubscriptionPaymentResponse } from "@/dto/subscriptionPayment.dto";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -27,6 +28,9 @@ const PaymentPage = () => {
   const orderCode = searchParams.get("orderCode");
   const restaurantName = searchParams.get("restaurantName") || "";
   const initialPayment = location.state as SubscriptionPaymentResponse | null;
+
+  // ✅ Sử dụng hook để polling
+  const { data: polledPayment, isLoading: isPolling } = usePaymentStatus(orderCode || "");
 
   useEffect(() => {
     initialize();
@@ -71,20 +75,12 @@ const PaymentPage = () => {
     }
   }, [isAuthenticated, user, orderCode, initialPayment, navigate]);
 
+  // ✅ Update payment từ polling data
   useEffect(() => {
-    if (!orderCode || !isAuthenticated || !user) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const res = await subscriptionPaymentApi.getStatus(orderCode);
-        setPayment(res);
-      } catch (err) {
-        console.error("Polling error:", err);
-      }
-    }, 3000); // 3s
-
-    return () => clearInterval(interval);
-  }, [orderCode, isAuthenticated, user]);
+    if (polledPayment && !initialPayment) {
+      setPayment(polledPayment);
+    }
+  }, [polledPayment, initialPayment]);
 
   // Redirect if payment is successful, failed, or canceled
   useEffect(() => {
