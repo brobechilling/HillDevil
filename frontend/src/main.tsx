@@ -12,14 +12,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 const queryClient = new QueryClient();
 
 function AppWrapper() {
-  const initializeMock = useAuthStore((state) => state.initialize);
+  // const initializeMock = useAuthStore((state) => state.initialize);
   const initializeSession = useSessionStore((state) => state.initialize);
 
   useEffect(() => {
-    initializeMockData();
-    initializeMock();
+    // initializeMockData();
+    // initializeMock();
     initializeSession();
-  }, [initializeMock, initializeSession]);
+  }, [initializeSession]);
 
   return <App />;
 }
