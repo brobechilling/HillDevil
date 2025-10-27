@@ -154,6 +154,7 @@ public class SubscriptionPaymentService {
         }
     }
 
+    @Transactional(readOnly = true)
     public SubscriptionPaymentResponse getPaymentStatus(Long orderCode) {
         var payment = subscriptionPaymentRepository.findByPayOsOrderCode(orderCode)
                 .orElseThrow(() -> new AppException(ErrorCode.PAYMENT_NOT_FOUND));
