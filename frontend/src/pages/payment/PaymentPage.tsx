@@ -30,7 +30,17 @@ const PaymentPage = () => {
   const initialPayment = location.state as SubscriptionPaymentResponse | null;
 
   // ✅ Sử dụng hook để polling
-  const { data: polledPayment, isLoading: isPolling } = usePaymentStatus(orderCode || "");
+  const { data: polledPayment, isLoading: isPolling, status, error: pollingError } = usePaymentStatus(orderCode || "");
+  
+  // Debug logging
+  console.log("🔍 PaymentPage Debug:", { 
+    orderCode, 
+    isAuthenticated, 
+    hasUser: !!user,
+    enabled: !!orderCode,
+    pollingError: pollingError?.message 
+  });
+  console.log("📊 usePaymentStatus:", { polledPayment, isPolling, status });
 
   useEffect(() => {
     initialize();
@@ -42,45 +52,27 @@ const PaymentPage = () => {
         restaurantName
       )}`;
       navigate(`/register?returnUrl=${encodeURIComponent(returnUrl)}`);
+      return;
     }
   }, [isAuthenticated, user, navigate, orderCode, restaurantName]);
 
+  // ✅ Update payment from polling hook (priority)
   useEffect(() => {
-    const fetchPayment = async () => {
-      if (initialPayment) {
-        setPayment(initialPayment);
-        setLoading(false);
-        return;
-      }
-
-      if (!orderCode || !user) return;
-
-      try {
-        const res = await subscriptionPaymentApi.getStatus(orderCode);
-        setPayment(res);
-      } catch (err) {
-        toast({
-          variant: "destructive",
-          title: "Payment initialization failed",
-          description: "Please try again later.",
-        });
-        navigate(-1);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (isAuthenticated) {
-      fetchPayment();
-    }
-  }, [isAuthenticated, user, orderCode, initialPayment, navigate]);
-
-  // ✅ Update payment từ polling data
-  useEffect(() => {
-    if (polledPayment && !initialPayment) {
+    if (polledPayment) {
+      console.log("🔄 Polling data received:", polledPayment);
       setPayment(polledPayment);
     }
-  }, [polledPayment, initialPayment]);
+  }, [polledPayment]);
+
+  // ✅ Set initial payment on mount (will be overridden by polling)
+  useEffect(() => {
+    if (initialPayment && !polledPayment) {
+      console.log("📦 Using initial payment:", initialPayment);
+      setPayment(initialPayment);
+    }
+    setLoading(false);
+  }, [initialPayment, polledPayment]);
+
 
   // Redirect if payment is successful, failed, or canceled
   useEffect(() => {
