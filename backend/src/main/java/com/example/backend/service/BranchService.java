@@ -34,32 +34,35 @@ public class BranchService {
     }
 
     public BranchDTO getById(UUID id) {
-        Branch b = branchRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
+        Branch b = branchRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
         return branchMapper.toDto(b);
     }
 
     @Transactional
     public BranchDTO create(BranchDTO dto) {
         Restaurant restaurant = restaurantRepository.findById(dto.getRestaurantId())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
+                .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
         Branch entity = branchMapper.toEntity(dto);
         entity.setRestaurant(restaurant);
+        entity.setActive(true);
         Branch saved = branchRepository.save(entity);
         return branchMapper.toDto(saved);
     }
 
     @Transactional
     public BranchDTO update(UUID id, BranchDTO dto) {
-        Branch exist = branchRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
+        Branch exist = branchRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
+
         branchMapper.updateEntityFromDto(dto, exist);
+
         Branch saved = branchRepository.save(exist);
         return branchMapper.toDto(saved);
     }
 
     @Transactional
     public void delete(UUID id) {
-        Branch exist = branchRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
-        // soft delete: mark inactive
+        Branch exist = branchRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
         exist.setActive(false);
         branchRepository.save(exist);
     }

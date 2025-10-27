@@ -82,19 +82,6 @@ export default function BranchInfoPage() {
         <CardContent className="space-y-6">
           <div className="grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="branchId">Branch ID</Label>
-              <Input
-                id="branchId"
-                value={branch?.branchId || ''}
-                disabled
-                className="bg-muted"
-              />
-              <p className="text-xs text-muted-foreground">
-                Branch ID cannot be changed
-              </p>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />

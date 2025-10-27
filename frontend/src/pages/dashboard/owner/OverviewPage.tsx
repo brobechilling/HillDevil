@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useBranchesByRestaurant } from '@/hooks/queries/useBranches';
 
 const OwnerOverviewPage = () => {
   const [user, setUser] = useState<UserDTO | null>(null);
@@ -47,13 +48,21 @@ const OwnerOverviewPage = () => {
     setLoading(false);
   }, [navigate]);
 
+  const selectedRestaurantRaw = localStorage.getItem('selected_restaurant');
+  const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
+  const restaurantId = selectedRestaurant?.restaurantId;
+
+  const branchesQuery = useBranchesByRestaurant(restaurantId);
+  const activeUiBranches = (branchesQuery.data ?? [])
+  .filter(b => b.isActive); 
+
+  const handleBranchUpdate = () => {
+    branchesQuery.refetch();
+  };
+
   const handleChooseBrand = () => {
     localStorage.removeItem('selected_restaurant');
     navigate('/brand-selection');
-  };
-
-  const handleBranchUpdate = () => {
-    console.log('Branch update requested');
   };
 
   if (loading) {
@@ -75,7 +84,7 @@ const OwnerOverviewPage = () => {
         </Button>
       </div>
       <OverviewDashboard
-        userBranches={userBranches}
+        userBranches={activeUiBranches}
         onBranchUpdate={handleBranchUpdate}
       />
     </div>

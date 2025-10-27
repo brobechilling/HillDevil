@@ -108,14 +108,14 @@ export const routes: RouteObject[] = [
       </ProtectedRoute>
     ),
   },
-  {
-    path: '/dashboard',
-    element: (
-      <ProtectedRoute>
-        <Dashboard />
-      </ProtectedRoute>
-    ),
-  },
+  // {
+  //   path: '/dashboard',
+  //   element: (
+  //     <ProtectedRoute>
+  //       <Dashboard />
+  //     </ProtectedRoute>
+  //   ),
+  // },
   {
     path: '/dashboard/owner',
     element: (
