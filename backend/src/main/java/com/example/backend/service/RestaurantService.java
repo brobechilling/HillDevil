@@ -126,7 +126,6 @@ public class RestaurantService {
                 .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
 
         try {
-            // 1. Cancel subscriptions
             List<Subscription> subs = subscriptionRepository.findAllByRestaurant_RestaurantId(id);
             for (Subscription s : subs) {
                 if (s.getStatus() != SubscriptionStatus.CANCELED && s.getStatus() != SubscriptionStatus.EXPIRED) {
@@ -136,10 +135,8 @@ public class RestaurantService {
                 }
             }
 
-            // 2. Soft delete tất cả branch (1 query)
             branchRepository.deactivateAllByRestaurantId(id);
 
-            // 3. Soft delete restaurant
             restaurant.setStatus(false);
             restaurant.setUpdatedAt(Instant.now());
             restaurantRepository.save(restaurant);
