@@ -111,6 +111,12 @@ public class SubscriptionService {
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
+        Restaurant res = subscription.getRestaurant();
+        if (res != null) {
+            res.setStatus(false);
+            restaurantRepository.save(res);
+        }
+
         if (subscription.getStatus() == SubscriptionStatus.CANCELED) {
             throw new AppException(ErrorCode.SUBSCRIPTION_ALREADY_CANCELLED);
         }
