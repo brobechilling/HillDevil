@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -7,10 +8,13 @@ import com.example.backend.dto.request.RestaurantCreateRequest;
 import com.example.backend.dto.RestaurantDTO;
 import com.example.backend.dto.response.PageResponse;
 import com.example.backend.entities.Restaurant;
+import com.example.backend.entities.Subscription;
+import com.example.backend.entities.SubscriptionStatus;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.RestaurantMapper;
 import com.example.backend.repository.RestaurantRepository;
+import com.example.backend.repository.SubscriptionRepository;
 import com.example.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -26,15 +30,18 @@ public class RestaurantService {
     private final RestaurantRepository restaurantRepository;
     private final RestaurantMapper restaurantMapper;
     private final UserRepository userRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
     @Value("${frontend.base-url}")
     private String webUrl; // 👈 lấy từ application.yml, ví dụ hilldevil.space
 
     public RestaurantService(RestaurantRepository restaurantRepository, RestaurantMapper restaurantMapper,
-                             UserRepository userRepository) {
+                             UserRepository userRepository,
+                             SubscriptionRepository subscriptionRepository) {
         this.restaurantRepository = restaurantRepository;
         this.restaurantMapper = restaurantMapper;
         this.userRepository = userRepository;
+        this.subscriptionRepository = subscriptionRepository;
     }
 
     public List<RestaurantDTO> getAll() {
@@ -107,9 +114,20 @@ public class RestaurantService {
     }
 
     public void delete(UUID id) {
-        if (!restaurantRepository.existsById(id))
-            throw new AppException(ErrorCode.RESTAURANT_NOTEXISTED);
-        restaurantRepository.deleteById(id);
+        Restaurant restaurant = restaurantRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
+
+        List<Subscription> subs = subscriptionRepository.findAllByRestaurant_RestaurantId(id);
+        for (Subscription s : subs) {
+            if (s.getStatus() != SubscriptionStatus.CANCELED && s.getStatus() != SubscriptionStatus.EXPIRED) {
+                s.setStatus(SubscriptionStatus.CANCELED);
+                s.setUpdatedAt(Instant.now());
+                subscriptionRepository.save(s);
+            }
+        }
+
+        // 👉 Sau đó mới xóa restaurant
+        restaurantRepository.delete(restaurant);
     }
 
     public List<RestaurantDTO> getByOwner(UUID userId) {
