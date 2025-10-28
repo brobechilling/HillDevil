@@ -10,10 +10,10 @@ export const useSubscription = (id: string) => {
 };
 
 export const useActiveSubscriptionByRestaurant = (restaurantId: string) => {
-  return useQuery({
+  return useQuery<SubscriptionResponse | null, Error>({
     queryKey: ["subscriptions", "active", restaurantId],
     queryFn: () => subscriptionApi.getActiveByRestaurant(restaurantId),
-    enabled: !!restaurantId,
+    enabled: !!restaurantId
   });
 };
 
@@ -97,5 +97,13 @@ export const useChangePackage = () => {
       qc.invalidateQueries({ queryKey: ["subscriptions", "active", variables.restaurantId] });
       qc.invalidateQueries({ queryKey: ["subscriptions", "overview"] });
     },
+  });
+};
+
+export const useAllSubscriptionsByRestaurant = (restaurantId: string) => {
+  return useQuery<SubscriptionResponse[], Error>({
+    queryKey: ['subscriptions', 'all', restaurantId],
+    queryFn: () => subscriptionApi.getAllByRestaurant(restaurantId),
+    enabled: !!restaurantId,
   });
 };
