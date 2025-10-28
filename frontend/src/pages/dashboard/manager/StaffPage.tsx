@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Plus, Eye, Trash2 } from "lucide-react";
+import { Users, Plus, Trash2 } from "lucide-react";
 import {
   useReceptionistNumberQuery,
   useWaiterNumberQuery,
@@ -12,7 +12,16 @@ import {
 import { StaffAccountDTO } from "@/dto/staff.dto";
 import { ROLE_NAME } from "@/dto/user.dto";
 import { StaffManagementDialog } from "@/components/manager/StaffManagementDialog";
-import { StaffViewDialog } from "@/components/manager/StaffViewDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function StaffPage() {
   const storedUser: string = localStorage.getItem("user");
@@ -23,8 +32,8 @@ export default function StaffPage() {
   const size = 3;
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  // const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  // const [selectedStaff, setSelectedStaff] = useState<StaffAccountDTO | null>(null);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<StaffAccountDTO | null>(null);
 
   const staffQuery = useStaffAccountPaginatedQuery(page, size, branchId);
   const waiterNumberQuery = useWaiterNumberQuery(branchId);
@@ -47,7 +56,8 @@ export default function StaffPage() {
 
   const handleUpdateStatus = (staffAccountId: string) => {
     updateStaffStatusMutation.mutate(staffAccountId);
-  }
+    setUpdateDialogOpen(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -134,21 +144,13 @@ export default function StaffPage() {
                     </div>
                   </div>
                   <div>
-                    {/* <Button
+                    <Button
                       size="sm"
                       variant="outline"
                       onClick={() => {
                         setSelectedStaff(staff);
-                        setViewDialogOpen(true);
+                        setUpdateDialogOpen(true);
                       }}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button> */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleUpdateStatus(staff.staffAccountId)}
                     >
                       <Trash2 className="h-4 w-4 mr-1 text-destructive" />
                       Delete
@@ -159,7 +161,6 @@ export default function StaffPage() {
             </div>
           )}
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-between items-center mt-6">
               <p className="text-sm text-muted-foreground">
@@ -188,18 +189,39 @@ export default function StaffPage() {
         </CardContent>
       </Card>
 
+      {/* Add Staff Dialog */}
       <StaffManagementDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
-        branchId={branchId} 
-        size={size}      
+        branchId={branchId}
+        size={size}
       />
 
-      {/* <StaffViewDialog
-        open={viewDialogOpen}
-        onOpenChange={setViewDialogOpen}
-        staff={selectedStaff}
-      /> */}
+      <AlertDialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {selectedStaff?.status ? " Are you sure you want to inactivate this staff account?" : "Are you sure you want to activate this staff account?" }
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedStaff?.status ? "This action will inactivate the account of " : "This action will activate the account of " }
+              <strong>{selectedStaff?.username}</strong>. 
+              {selectedStaff?.status ? " You can reinactivate it later if needed." : " You can reactivate it later if needed." }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                handleUpdateStatus(selectedStaff?.staffAccountId ?? "")
+              }
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
