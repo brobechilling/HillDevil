@@ -3,6 +3,7 @@ package com.example.backend.repository;
 import com.example.backend.entities.SubscriptionPayment;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -10,4 +11,5 @@ public interface SubscriptionPaymentRepository extends JpaRepository<Subscriptio
     Optional<SubscriptionPayment> findByPayOsOrderCode(Long payOsOrderCode);
 
     boolean existsByPayOsOrderCode(long orderCode);
+    List<SubscriptionPayment> findAllBySubscription_Restaurant_RestaurantIdOrderByDateDesc(UUID restaurantId);
 }

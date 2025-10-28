@@ -14,4 +14,6 @@ import com.example.backend.entities.Restaurant;
 public interface RestaurantRepository extends JpaRepository<Restaurant, UUID> {
     List<Restaurant> findByUser_UserId(UUID userId);
     Page<Restaurant> findAll(Pageable pageable);
+
+    List<Restaurant> findAllByUser_UserId(UUID ownerId);
 }
