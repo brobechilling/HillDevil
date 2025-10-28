@@ -5,9 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { getRestaurantById, updateRestaurant, deleteRestaurant } from '@/api/restaurantApi';
 import { subscriptionApi } from '@/api/subscriptionApi';
+import { usePackages } from '@/hooks/queries/usePackages';
+import { useActiveSubscriptionByRestaurant } from '@/hooks/queries/useSubscription';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +20,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { format } from 'date-fns';
+import { Package, Calendar, DollarSign, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function RestaurantInfoPage() {
   const navigate = useNavigate();
@@ -32,18 +37,15 @@ export default function RestaurantInfoPage() {
     description: '',
     status: 'inactive',
   });
-  const [subscription, setSubscription] = useState<any | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const selected = JSON.parse(localStorage.getItem('selected_restaurant') || '{}');
+  const restaurantId = selected?.restaurantId || selected?.id;
+
+  const { data: activeSubscription, isLoading: subLoading } = useActiveSubscriptionByRestaurant(restaurantId);
+
   useEffect(() => {
-    const stored = localStorage.getItem('selected_restaurant');
-    if (!stored) {
-      navigate('/brand-selection');
-      return;
-    }
-    const selected = JSON.parse(stored) as any;
-    const id = selected.restaurantId || selected.id || '';
-    if (!id) {
+    if (!restaurantId) {
       navigate('/brand-selection');
       return;
     }
@@ -51,7 +53,7 @@ export default function RestaurantInfoPage() {
     (async () => {
       try {
         setLoading(true);
-        const res = await getRestaurantById(String(id));
+        const res = await getRestaurantById(String(restaurantId));
         setRestaurant(res);
         setForm({
           name: res.name || '',
@@ -61,16 +63,13 @@ export default function RestaurantInfoPage() {
           description: res.description || '',
           status: res.status ? 'active' : 'inactive',
         });
-
-        const sub = await subscriptionApi.getByRestaurant(String(id)).catch(() => null);
-        setSubscription(sub);
       } catch (err: any) {
         toast({ variant: 'destructive', title: 'Load failed', description: err?.message || 'Could not load restaurant data.' });
       } finally {
         setLoading(false);
       }
     })();
-  }, [navigate]);
+  }, [restaurantId, navigate]);
 
   const handleChange = (k: keyof typeof form, v: string) => setForm((s) => ({ ...s, [k]: v }));
 
@@ -102,7 +101,7 @@ export default function RestaurantInfoPage() {
     setDeleting(true);
     try {
       await deleteRestaurant(String(restaurant.restaurantId || restaurant.id));
-      toast({ title: 'Deleted', description: 'Restaurant deleted.' });
+      toast({ title: 'Deleted', description: 'Restaurant and all subscriptions have been cancelled.' });
       localStorage.removeItem('selected_restaurant');
       navigate('/dashboard/owner');
     } catch (err: any) {
@@ -110,6 +109,21 @@ export default function RestaurantInfoPage() {
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return <Badge className="bg-emerald-500"><CheckCircle2 className="w-3 h-3 mr-1" /> Active</Badge>;
+      case 'PENDING_PAYMENT':
+        return <Badge variant="secondary"><AlertCircle className="w-3 h-3 mr-1" /> Pending</Badge>;
+      case 'CANCELED':
+        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" /> Cancelled</Badge>;
+      case 'EXPIRED':
+        return <Badge variant="outline"><XCircle className="w-3 h-3 mr-1" /> Expired</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -127,6 +141,7 @@ export default function RestaurantInfoPage() {
 
   return (
     <div className="space-y-6">
+      {/* Restaurant Info */}
       <Card>
         <CardHeader>
           <CardTitle>Restaurant Information</CardTitle>
@@ -157,39 +172,107 @@ export default function RestaurantInfoPage() {
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t mt-4">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(true)} className="mr-auto">Delete Restaurant</Button>
-            <Button onClick={handleUpdate} disabled={saving}>{saving ? 'Saving...' : 'Update'}</Button>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(true)} className="mr-auto">
+              Delete Restaurant
+            </Button>
+            <Button onClick={handleUpdate} disabled={saving}>
+              {saving ? 'Saving...' : 'Update'}
+            </Button>
           </div>
         </CardContent>
       </Card>
 
+      {/* Subscription Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Subscription</CardTitle>
-          <CardDescription>Current subscription details</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Current Subscription
+          </CardTitle>
+          <CardDescription>
+            {activeSubscription ? 'Active subscription details' : 'No active subscription'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {subscription ? (
-            <div className="space-y-2">
-              <div><strong>Package:</strong> {subscription.packageName || subscription.subscriptionName || '—'}</div>
-              <div><strong>Status:</strong> {subscription.subscriptionStatus || '—'}</div>
-              <div><strong>Expires At:</strong> {subscription.expiresAt || subscription.endAt || '—'}</div>
+          {subLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          ) : activeSubscription ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm text-muted-foreground">Package</Label>
+                  <p className="font-medium">{activeSubscription.packageName || 'Standard Package'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Status</Label>
+                  <div className="mt-1">{getStatusBadge(activeSubscription.status)}</div>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Amount</Label>
+                  <p className="font-medium flex items-center gap-1">
+                    <DollarSign className="h-4 w-4" />
+                    {activeSubscription.amount?.toLocaleString() || '0'} VND
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    Start Date
+                  </Label>
+                  <p className="font-medium">
+                    {activeSubscription.startDate ? format(new Date(activeSubscription.startDate), 'dd/MM/yyyy') : '—'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    End Date
+                  </Label>
+                  <p className="font-medium">
+                    {activeSubscription.endDate ? format(new Date(activeSubscription.endDate), 'dd/MM/yyyy') : '—'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Payment Status</Label>
+                  <p className="font-medium capitalize">{(activeSubscription.paymentStatus || 'unknown').toLowerCase()}</p>
+                </div>
+              </div>
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground">No subscription data available.</div>
+            <div className="text-center py-8 text-muted-foreground">
+              <Package className="mx-auto h-12 w-12 mb-3 text-muted-foreground/50" />
+              <p>No active subscription found for this restaurant.</p>
+              <p className="text-sm mt-2">Register a package to enable full features.</p>
+            </div>
           )}
         </CardContent>
       </Card>
 
+      {/* Delete Confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xóa nhà hàng</AlertDialogTitle>
-            <div className="text-sm text-muted-foreground">Bạn có chắc muốn xóa nhà hàng này không?</div>
+            <AlertDialogTitle>Delete Restaurant?</AlertDialogTitle>
+            <div className="text-sm text-muted-foreground space-y-2">
+              <p>This action <strong>cannot be undone</strong>.</p>
+              <p className="mt-2">
+                All active subscriptions will be <strong>automatically cancelled</strong>.
+              </p>
+              <p>
+                All branches, menu items, and data will be permanently deleted.
+              </p>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleting}>{deleting ? 'Đang xóa...' : 'Xác nhận'}</AlertDialogAction>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground">
+              {deleting ? 'Deleting...' : 'Delete Restaurant'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

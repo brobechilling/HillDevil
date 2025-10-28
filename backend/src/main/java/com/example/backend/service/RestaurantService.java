@@ -23,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.backend.repository.BranchRepository;
 
 @Service
 public class RestaurantService {
@@ -31,17 +32,23 @@ public class RestaurantService {
     private final RestaurantMapper restaurantMapper;
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final BranchRepository branchRepository;
 
     @Value("${frontend.base-url}")
     private String webUrl; // 👈 lấy từ application.yml, ví dụ hilldevil.space
 
-    public RestaurantService(RestaurantRepository restaurantRepository, RestaurantMapper restaurantMapper,
-                             UserRepository userRepository,
-                             SubscriptionRepository subscriptionRepository) {
+    public RestaurantService(
+        RestaurantRepository restaurantRepository,
+        RestaurantMapper restaurantMapper,
+        UserRepository userRepository,
+        SubscriptionRepository subscriptionRepository,
+        BranchRepository branchRepository 
+    ) {
         this.restaurantRepository = restaurantRepository;
         this.restaurantMapper = restaurantMapper;
         this.userRepository = userRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.branchRepository = branchRepository; 
     }
 
     public List<RestaurantDTO> getAll() {
@@ -113,21 +120,33 @@ public class RestaurantService {
         return restaurantMapper.toRestaurantDto(saved);
     }
 
+    @Transactional
     public void delete(UUID id) {
         Restaurant restaurant = restaurantRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
 
-        List<Subscription> subs = subscriptionRepository.findAllByRestaurant_RestaurantId(id);
-        for (Subscription s : subs) {
-            if (s.getStatus() != SubscriptionStatus.CANCELED && s.getStatus() != SubscriptionStatus.EXPIRED) {
-                s.setStatus(SubscriptionStatus.CANCELED);
-                s.setUpdatedAt(Instant.now());
-                subscriptionRepository.save(s);
+        try {
+            // 1. Cancel subscriptions
+            List<Subscription> subs = subscriptionRepository.findAllByRestaurant_RestaurantId(id);
+            for (Subscription s : subs) {
+                if (s.getStatus() != SubscriptionStatus.CANCELED && s.getStatus() != SubscriptionStatus.EXPIRED) {
+                    s.setStatus(SubscriptionStatus.CANCELED);
+                    s.setUpdatedAt(Instant.now());
+                    subscriptionRepository.save(s);
+                }
             }
-        }
 
-        // 👉 Sau đó mới xóa restaurant
-        restaurantRepository.delete(restaurant);
+            // 2. Soft delete tất cả branch (1 query)
+            branchRepository.deactivateAllByRestaurantId(id);
+
+            // 3. Soft delete restaurant
+            restaurant.setStatus(false);
+            restaurant.setUpdatedAt(Instant.now());
+            restaurantRepository.save(restaurant);
+
+        } catch (Exception e) {
+            throw new AppException(ErrorCode.RESTAURANT_DELETE_FAILED);
+        }
     }
 
     public List<RestaurantDTO> getByOwner(UUID userId) {

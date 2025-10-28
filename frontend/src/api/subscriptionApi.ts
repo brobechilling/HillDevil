@@ -21,14 +21,13 @@ export const subscriptionApi = {
     return res.data.result || [];
   },
 
-  getActiveByRestaurant: async (
-    restaurantId: string
-  ): Promise<SubscriptionResponse | null> => {
+  // api/subscriptionApi.ts
+  getActiveByRestaurant: async (restaurantId: string): Promise<SubscriptionResponse | null> => {
     try {
       const res = await axiosClient.get<ApiResponse<SubscriptionResponse>>(
         `/subscriptions/restaurant/${restaurantId}/active`
       );
-      return res.data.result;
+      return res.data.result ?? null; // Luôn trả về null nếu không có
     } catch (error: any) {
       if (error.response?.status === 404) return null;
       throw error;
@@ -112,4 +111,11 @@ export const subscriptionApi = {
     const res = await axiosClient.get<ApiResponse<any>>(`/subscriptions/restaurant/${restaurantId}`);
     return res.data.result ?? null;
   },
+
+  getAllByRestaurant: async (restaurantId: string): Promise<SubscriptionResponse[]> => {
+  const res = await axiosClient.get<ApiResponse<SubscriptionResponse[]>>(
+    `/subscriptions/restaurant/${restaurantId}`
+  );
+  return res.data.result || [];
+},
 };
