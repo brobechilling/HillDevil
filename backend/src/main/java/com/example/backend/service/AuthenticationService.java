@@ -97,6 +97,7 @@ public class AuthenticationService {
                 if (authenticationRequest.getBranchId() == null)
                     throw new AppException(ErrorCode.MISSING_BRANCHID);
                 Branch branch = branchRepository.findById(authenticationRequest.getBranchId()).orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
+                // a staffaccount is unique for each branch
                 StaffAccount staffAccount = staffAccountRepository.findByUsernameAndBranch(authenticationRequest.getUsername(), branch).orElseThrow(() -> new AppException(ErrorCode.STAFFACCOUNT_NOTEXISTED));
                 boolean isAuthenticated = passwordEncoder.matches(authenticationRequest.getPassword(), staffAccount.getPassword());
                 if (!isAuthenticated) {

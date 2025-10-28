@@ -78,9 +78,9 @@ public class UserController {
     }
 
     @DeleteMapping("/{userId}")
-    public ApiResponse<UserDTO> deleteUserById(@PathVariable UUID userId) {
+    public ApiResponse<UserDTO> setUserStatusById(@PathVariable UUID userId) {
         ApiResponse<UserDTO> apiResponse = new ApiResponse<>();
-        apiResponse.setResult(userService.deleteUserById(userId));
+        apiResponse.setResult(userService.setUserStatusById(userId));
         return apiResponse;
     }
 

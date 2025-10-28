@@ -23,3 +23,8 @@ export const updateUser = async (updateUser: UserDTO) => {
   const res = await axiosClient.put<ApiResponse<UserDTO>>("/users", updateUser);
   return res.data.result;
 };
+
+export const setUserStatus = async (userId: string) => {
+  const res = await axiosClient.delete<ApiResponse<UserDTO>>(`/users/${userId}`);
+  return res.data.result;
+};
