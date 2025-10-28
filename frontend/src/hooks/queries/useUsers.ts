@@ -1,4 +1,4 @@
-import { getUsers, updateUser } from "@/api/userApi";
+import { getUsers, setUserStatus, updateUser } from "@/api/userApi";
 import { PageResponse } from "@/dto/pageResponse";
 import { UserDTO } from "@/dto/user.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,11 +12,11 @@ export const useUsersPaginatedQuery = (page: number, size: number) => {
   });
 };
 
-// admin update user
-export const useUpdateUserMutation = (page: number, size: number) => {
+// admin update user status
+export const useSetUserStatusMutation = (page: number, size: number) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: updateUser,
+    mutationFn: setUserStatus,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users", page, size] , exact: true}); 
     },

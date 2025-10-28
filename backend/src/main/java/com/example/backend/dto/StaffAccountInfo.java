@@ -2,13 +2,14 @@ package com.example.backend.dto;
 
 import java.util.UUID;
 
-public class StaffAccountDTO {
+public class StaffAccountInfo {
     
     private UUID staffAccountId;
     private RoleDTO role;
     private String username;
     private boolean status;
     private UUID branchId;
+    private String password;
     
     public UUID getStaffAccountId() {
         return staffAccountId;
@@ -39,6 +40,12 @@ public class StaffAccountDTO {
     }
     public void setBranchId(UUID branchId) {
         this.branchId = branchId;
+    }
+    public String getPassword() {
+        return password;
+    }
+    public void setPassword(String password) {
+        this.password = password;
     }
     
 }

@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { UserDialog } from './UserDialog';
 import { Search, HandMetal, Angry, Laugh } from 'lucide-react';
-import { useUpdateUserMutation, useUsersPaginatedQuery } from '@/hooks/queries/useUsers';
+import { useSetUserStatusMutation, useUsersPaginatedQuery } from '@/hooks/queries/useUsers';
 import { UserDTO } from '@/dto/user.dto';
 import { Input } from '../ui/input';
 
@@ -29,11 +29,12 @@ export const UserTab = () => {
     user.username?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const updateUserMutation = useUpdateUserMutation(page, size); 
+  const setUserStatusMutation = useSetUserStatusMutation(page, size); 
 
   const handleStatusUpdate = (user: UserDTO) => {
-    const updatedUser = { ...user, status: !user.status };
-    updateUserMutation.mutate(updatedUser);
+    // TODO: add a dialog to confirm update this user status
+    // const updatedUser = { ...user, status: !user.status };
+    setUserStatusMutation.mutate(user.userId);
   };
 
   const handleUserRestaurantInfo = (user: UserDTO) => {
@@ -153,7 +154,7 @@ export const UserTab = () => {
       <UserDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        user={selectedUser ?? null}
+        user={selectedUser}
       />
     </div>
   );

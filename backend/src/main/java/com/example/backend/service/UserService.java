@@ -10,11 +10,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.example.backend.dto.RestaurantDTO;
 import com.example.backend.dto.UserDTO;
 import com.example.backend.dto.request.SignupRequest;
 import com.example.backend.dto.response.PageResponse;
-import com.example.backend.entities.Restaurant;
 import com.example.backend.entities.Role;
 import com.example.backend.entities.RoleName;
 import com.example.backend.entities.User;
@@ -67,9 +65,9 @@ public class UserService {
         return userMapper.toUserDto(userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED)));
     }
 
-    public UserDTO deleteUserById(UUID userId) {
+    public UserDTO setUserStatusById(UUID userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
-        user.setStatus(false);
+        user.setStatus(!user.isStatus());
         return userMapper.toUserDto(userRepository.save(user));
     }
 
