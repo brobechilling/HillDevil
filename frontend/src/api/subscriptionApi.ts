@@ -33,4 +33,9 @@ export const subscriptionApi = {
     const res = await axiosClient.get<ApiResponse<SubscriptionResponse>>(`/subscriptions/${id}`);
     return res.data.result;
   },
+
+  getByRestaurant: async (restaurantId: string) => {
+    const res = await axiosClient.get<ApiResponse<any>>(`/subscriptions/restaurant/${restaurantId}`);
+    return res.data.result ?? null;
+  },
 };

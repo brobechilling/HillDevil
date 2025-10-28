@@ -31,6 +31,7 @@ import ManagerMenuPage from './pages/dashboard/manager/MenuPage';
 
 // Owner nested pages
 import OwnerOverviewPage from './pages/dashboard/owner/OverviewPage';
+import RestaurantInfoPage from './pages/dashboard/owner/RestaurantInfoPage';
 import OwnerMenuPage from './pages/dashboard/owner/MenuPage';
 import OwnerTablesPage from './pages/dashboard/owner/TablesPage';
 import OwnerStaffPage from './pages/dashboard/owner/StaffPage';
@@ -135,6 +136,10 @@ export const routes: RouteObject[] = [
       {
         path: 'menu',
         element: <OwnerMenuPage />,
+      },
+      {
+        path: 'restaurant',
+        element: <RestaurantInfoPage />,
       },
       {
         path: 'tables',
