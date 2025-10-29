@@ -7,6 +7,7 @@ import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.StaffAccountDTO;
 import com.example.backend.dto.request.CreateStaffAccountRequest;
 import com.example.backend.dto.response.PageResponse;
+import com.example.backend.entities.RoleName;
 import com.example.backend.service.StaffAccountService;
 
 import java.util.List;
@@ -71,21 +72,21 @@ public class StaffAccountController {
     @GetMapping("/statistic/waiter/{branchId}")
     public ApiResponse<Long> getWaiterNumber(@PathVariable UUID branchId) {
         ApiResponse<Long> apiResponse = new ApiResponse<>();
-        apiResponse.setResult(staffAccountService.getWaiterNumber(branchId));
+        apiResponse.setResult(staffAccountService.getRoleNumber(branchId, RoleName.WAITER));
         return apiResponse;
     }
 
     @GetMapping("/statistic/receptionist/{branchId}")
     public ApiResponse<Long> getReceptionistNumber(@PathVariable UUID branchId) {
         ApiResponse<Long> apiResponse = new ApiResponse<>();
-        apiResponse.setResult(staffAccountService.getReceptionistNumber(branchId));
+        apiResponse.setResult(staffAccountService.getRoleNumber(branchId, RoleName.RECEPTIONIST));
         return apiResponse;
     }
 
     @GetMapping("/statistic/manager/{branchId}")
     public ApiResponse<Long> getManagerNumber(@PathVariable UUID branchId) {
         ApiResponse<Long> apiResponse = new ApiResponse<>();
-        apiResponse.setResult(staffAccountService.getManagerNumber(branchId));
+        apiResponse.setResult(staffAccountService.getRoleNumber(branchId, RoleName.BRANCH_MANAGER));
         return apiResponse;
     }
     

@@ -81,19 +81,9 @@ public class StaffAccountService {
         return pageResponse;
     }
 
-    public long getWaiterNumber(UUID branchId) {
+    public long getRoleNumber(UUID branchId, RoleName roleName) {
         Branch branch = branchRepository.findById(branchId).orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
-        return staffAccountRepository.countByBranchAndRole_Name(branch, RoleName.WAITER);
-    }
-
-    public long getReceptionistNumber(UUID branchId) {
-        Branch branch = branchRepository.findById(branchId).orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
-        return staffAccountRepository.countByBranchAndRole_Name(branch, RoleName.RECEPTIONIST);
-    }
-
-    public long getManagerNumber(UUID branchId) {
-        Branch branch = branchRepository.findById(branchId).orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
-        return staffAccountRepository.countByBranchAndRole_Name(branch, RoleName.BRANCH_MANAGER);
+        return staffAccountRepository.countByBranchAndRole_Name(branch, roleName);
     }
 
 }

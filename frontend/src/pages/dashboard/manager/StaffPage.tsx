@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Plus, Trash2 } from "lucide-react";
+import { Users, Plus, Trash2, Search } from "lucide-react";
 import {
   useReceptionistNumberQuery,
   useWaiterNumberQuery,
@@ -22,11 +22,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useSessionStore } from "@/store/sessionStore";
+import { isStaffAccountDTO } from "@/utils/typeCast";
 
 export default function StaffPage() {
-  const storedUser: string = localStorage.getItem("user");
-  const user: StaffAccountDTO | null = storedUser ? JSON.parse(storedUser) : null;
-  const branchId: string = user?.branchId ?? "";
+  const { user } = useSessionStore();
+  const manager: StaffAccountDTO | null = isStaffAccountDTO(user) ? user : null;
+  const branchId: string = manager?.branchId ?? "";
 
   const [page, setPage] = useState(1);
   const size = 3;
@@ -34,13 +44,22 @@ export default function StaffPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffAccountDTO | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [roleFilter, setRoleFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const staffQuery = useStaffAccountPaginatedQuery(page, size, branchId);
   const waiterNumberQuery = useWaiterNumberQuery(branchId);
   const receptionistNumberQuery = useReceptionistNumberQuery(branchId);
   const updateStaffStatusMutation = useSetStaffAccountStatusMutation(page, size, branchId);
 
-  const staffList = staffQuery.data?.items ?? [];
+  const filteredStaffs: StaffAccountDTO[] = (staffQuery.data?.items ?? []).filter((staff) => {
+    const matchSearch = staff.username?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchRole = roleFilter === "ALL" ? true : staff.role.name === roleFilter;
+    const matchStatus = statusFilter === "ALL" ? true : statusFilter === "ACTIVE" ? staff.status === true : staff.status === false;
+    return matchSearch && matchRole && matchStatus;
+  });
+
   const totalPages = staffQuery.data?.totalPages ?? 1;
 
   const getRoleBadgeVariant = (roleName: string) => {
@@ -112,6 +131,48 @@ export default function StaffPage() {
         </Card>
       </div>
 
+      <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full md:w-1/3">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by username..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        <div className="flex gap-3 w-full md:w-auto">
+          <Select
+            value={roleFilter}
+            onValueChange={(value) => setRoleFilter(value)}
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Filter by role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Roles</SelectItem>
+              <SelectItem value={ROLE_NAME.WAITER}>Waiter</SelectItem>
+              <SelectItem value={ROLE_NAME.RECEPTIONIST}>Receptionist</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value)}
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Status</SelectItem>
+              <SelectItem value="ACTIVE">Active</SelectItem>
+              <SelectItem value="INACTIVE">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Staff Accounts</CardTitle>
@@ -121,13 +182,13 @@ export default function StaffPage() {
             <div className="text-center text-muted-foreground">
               Loading staff accounts...
             </div>
-          ) : staffList.length === 0 ? (
+          ) : filteredStaffs.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               No staff accounts found.
             </div>
           ) : (
             <div className="space-y-3">
-              {staffList.map((staff) => (
+              {filteredStaffs.map((staff) => (
                 <div
                   key={staff.staffAccountId}
                   className="flex items-center justify-between p-3 border rounded-lg"
@@ -143,19 +204,17 @@ export default function StaffPage() {
                       </Badge>
                     </div>
                   </div>
-                  <div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedStaff(staff);
-                        setUpdateDialogOpen(true);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1 text-destructive" />
-                      Delete
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedStaff(staff);
+                      setUpdateDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1 text-destructive" />
+                    Delete
+                  </Button>
                 </div>
               ))}
             </div>
@@ -189,7 +248,6 @@ export default function StaffPage() {
         </CardContent>
       </Card>
 
-      {/* Add Staff Dialog */}
       <StaffManagementDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
@@ -201,12 +259,15 @@ export default function StaffPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {selectedStaff?.status ? " Are you sure you want to inactivate this staff account?" : "Are you sure you want to activate this staff account?" }
+              {selectedStaff?.status
+                ? "Are you sure you want to inactivate this staff account?"
+                : "Are you sure you want to activate this staff account?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedStaff?.status ? "This action will inactivate the account of " : "This action will activate the account of " }
-              <strong>{selectedStaff?.username}</strong>. 
-              {selectedStaff?.status ? " You can reinactivate it later if needed." : " You can reactivate it later if needed." }
+              {selectedStaff?.status
+                ? "This action will inactivate the account of "
+                : "This action will activate the account of "}
+              <strong>{selectedStaff?.username}</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
