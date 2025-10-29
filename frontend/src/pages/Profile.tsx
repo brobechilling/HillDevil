@@ -30,21 +30,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { statsApi } from '@/lib/api';
 import { getAllBranches } from '@/api/branchApi';
+import { useQueryClient } from '@tanstack/react-query';
+import { usePackages } from '@/hooks/queries/usePackages';
+import { useOverviewForOwner, useRenewSubscription, useCancelSubscription, useChangePackage } from '@/hooks/queries/useSubscription';
 import {
   Mail,
-  Phone,
-  MapPin,
   Calendar,
   Lock,
   LogOut,
   Edit2,
   Eye,
   EyeOff,
-  Shield,
   User,
   BarChart3,
   Building,
+  CreditCard,
+  Package as PackageIcon,
+  RefreshCw,
+  X,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  MapPin,
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { UserDTO } from '@/dto/user.dto';
+import type { PackageFeatureDTO as Package } from '@/dto/packageFeature.dto';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ProfileFormData {
   username: string;
@@ -56,6 +68,7 @@ const Profile = () => {
   const { user, isAuthenticated, isLoading, initialize, clearSession } = useSessionStore();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
@@ -65,9 +78,9 @@ const Profile = () => {
   const [stats, setStats] = useState<any>(null);
   const [branches, setBranches] = useState<any[]>([]);
   const [formData, setFormData] = useState<ProfileFormData>({
-    username: user?.username || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
+    username: (user as UserDTO)?.username || '',
+    email: (user as UserDTO)?.email || '',
+    phone: (user as UserDTO)?.phone || '',
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -75,41 +88,61 @@ const Profile = () => {
     confirmPassword: '',
   });
 
-  // Khởi tạo phiên
+  // Subscription state
+  const [isChangePackageOpen, setIsChangePackageOpen] = useState(false);
+  const [selectedNewPackage, setSelectedNewPackage] = useState<string>('');
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
+  const [selectedSubscription, setSelectedSubscription] = useState<any>(null); // Cho tab subscription
+
+  // React Query hooks
+  const { data: packages = [], isLoading: isLoadingPackages } = usePackages();
+  const { data: overviewData = [], isLoading: isLoadingOverview } = useOverviewForOwner();
+  const renewMutation = useRenewSubscription();
+  const cancelMutation = useCancelSubscription();
+  const changePackageMutation = useChangePackage();
+
+  // Initialize session
   useEffect(() => {
     initialize();
   }, [initialize]);
 
-  // Tải dữ liệu stats và branches
+  // Load stats and branches
   useEffect(() => {
     const loadData = async () => {
-      if (!user || !isAuthenticated) return;
+      if (!user || !isAuthenticated || (user as UserDTO).role.name !== 'RESTAURANT_OWNER') return;
 
       try {
         setIsLoadingStats(true);
-
-        // Tải stats cho owner hoặc branch_manager
-        if (user.role.name === 'RESTAURANT_OWNER' || user.role.name === 'BRANCH_MANAGER') {
-          const statsRes = await statsApi.getOwnerStats();
-          setStats(statsRes.data);
-        }
-
-        // Tải branches cho owner hoặc branch_manager
-        if (user.role.name === 'RESTAURANT_OWNER' || user.role.name === 'BRANCH_MANAGER') {
-          const branchesData = await getAllBranches();
-          setBranches(branchesData);
-        }
+        const statsRes = await statsApi.getOwnerStats();
+        setStats(statsRes.data);
+        const branchesData = await getAllBranches();
+        setBranches(branchesData);
       } catch (error) {
         console.error('Error loading profile data:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load profile data.',
+        });
       } finally {
         setIsLoadingStats(false);
       }
     };
 
     loadData();
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, toast]);
 
-  // Xử lý trạng thái đang tải
+  // Xử lý chọn nhà hàng trong tab subscription
+  useEffect(() => {
+    if (selectedRestaurantId && overviewData.length > 0) {
+      const selected = overviewData.find(sub => sub.restaurantId === selectedRestaurantId);
+      setSelectedSubscription(selected || null);
+    } else {
+      setSelectedSubscription(null);
+    }
+  }, [selectedRestaurantId, overviewData]);
+
+  // Handle loading state
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -123,14 +156,17 @@ const Profile = () => {
     );
   }
 
-  // Xử lý khi chưa xác thực
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated || !user || (user as UserDTO).role.name !== 'RESTAURANT_OWNER') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Not Authenticated</CardTitle>
-            <CardDescription>Please log in to view your profile</CardDescription>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+              {isAuthenticated
+                ? 'This profile page is only accessible to Restaurant Owners.'
+                : 'Please log in to view your profile.'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => navigate('/login')} className="w-full">
@@ -142,11 +178,13 @@ const Profile = () => {
     );
   }
 
+  const typedUser = user as UserDTO;
+
   const handleEditProfile = () => {
     setFormData({
-      username: user.username || '',
-      email: user.email || '',
-      phone: user.phone || '',
+      username: typedUser.username || '',
+      email: typedUser.email || '',
+      phone: typedUser.phone || '',
     });
     setIsEditDialogOpen(true);
   };
@@ -160,7 +198,6 @@ const Profile = () => {
       });
       return;
     }
-
     toast({
       title: 'Profile Updated',
       description: 'Your profile has been successfully updated.',
@@ -169,11 +206,7 @@ const Profile = () => {
   };
 
   const handleChangePassword = () => {
-    if (
-      !passwordData.currentPassword ||
-      !passwordData.newPassword ||
-      !passwordData.confirmPassword
-    ) {
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
       toast({
         variant: 'destructive',
         title: 'Validation Error',
@@ -181,7 +214,6 @@ const Profile = () => {
       });
       return;
     }
-
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast({
         variant: 'destructive',
@@ -190,7 +222,6 @@ const Profile = () => {
       });
       return;
     }
-
     if (passwordData.newPassword.length < 6) {
       toast({
         variant: 'destructive',
@@ -199,17 +230,12 @@ const Profile = () => {
       });
       return;
     }
-
     toast({
       title: 'Password Changed',
       description: 'Your password has been successfully updated.',
     });
     setIsChangePasswordOpen(false);
-    setPasswordData({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    });
+    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
   };
 
   const handleLogout = async () => {
@@ -217,123 +243,118 @@ const Profile = () => {
     navigate('/');
   };
 
-  const getRoleBadgeVariant = (role: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      RESTAURANT_OWNER: 'default',
-      ADMIN: 'destructive',
-      BRANCH_MANAGER: 'secondary',
-      WAITER: 'outline',
-      RECEPTIONIST: 'outline',
-    };
-    return variants[role] || 'secondary';
+  const handleRenew = async (subscriptionId: string) => {
+    try {
+      await renewMutation.mutateAsync({ id: subscriptionId, additionalMonths: 1 });
+      toast({ title: 'Success', description: 'Subscription renewed for 1 month.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to renew.' });
+    }
   };
 
-  const getRoleName = (role: string) => {
-    const names: Record<string, string> = {
-      RESTAURANT_OWNER: 'Restaurant Owner',
-      ADMIN: 'Administrator',
-      BRANCH_MANAGER: 'Branch Manager',
-      WAITER: 'Waiter',
-      RECEPTIONIST: 'Receptionist',
-    };
-    return names[role] || role;
+  const handleCancel = async (subscriptionId: string) => {
+    try {
+      await cancelMutation.mutateAsync(subscriptionId);
+      toast({ title: 'Success', description: 'Subscription cancelled.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to cancel.' });
+    }
   };
 
-  const getDashboardLink = (role: string) => {
-    const links: Record<string, string> = {
-      RESTAURANT_OWNER: '/dashboard/owner',
-      ADMIN: '/dashboard/admin',
-      BRANCH_MANAGER: '/dashboard/manager',
-      WAITER: '/dashboard/waiter',
-      RECEPTIONIST: '/dashboard/receptionist',
-    };
-    return links[role] || '/dashboard';
+  const handleChangePackage = async () => {
+    if (!selectedNewPackage || !selectedRestaurantId) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please select package and restaurant.' });
+      return;
+    }
+    try {
+      await changePackageMutation.mutateAsync({
+        restaurantId: selectedRestaurantId,
+        newPackageId: selectedNewPackage,
+      });
+      toast({ title: 'Success', description: 'Package change initiated.' });
+      setIsChangePackageOpen(false);
+      setSelectedNewPackage('');
+      setSelectedRestaurantId('');
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to change package.' });
+    }
   };
+
+  const getDaysUntilExpiry = (endDate?: string): number | null => {
+    if (!endDate) return null;
+    const expiry = new Date(endDate);
+    const now = new Date();
+    const diffTime = expiry.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case 'ACTIVE': return <Badge variant="default" className="bg-green-500"><CheckCircle2 className="w-3 h-3 mr-1" /> Active</Badge>;
+      case 'PENDING_PAYMENT': return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
+      case 'EXPIRED': return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" /> Expired</Badge>;
+      case 'CANCELED': return <Badge variant="outline"><X className="w-3 h-3 mr-1" /> Canceled</Badge>;
+      default: return <Badge variant="outline">Unknown</Badge>;
+    }
+  };
+
+  const getPackageName = (packageId: string) => {
+    const pkg = packages.find((p: Package) => p.packageId === packageId);
+    return pkg ? pkg.name : packageId;
+  };
+
+  const getDashboardLink = () => '/dashboard/owner';
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header Card with User Info */}
+        {/* Header Card */}
         <Card className="overflow-hidden border-2">
           <div className="h-24 bg-gradient-to-r from-primary/20 to-secondary/20"></div>
           <CardContent className="pt-0">
             <div className="flex flex-col md:flex-row gap-6 -mt-12 relative z-10">
               <Avatar className="h-24 w-24 border-4 border-background ring-2 ring-primary/20">
-                <AvatarImage src="https://via.placeholder.com/150" alt={user.username} />
+                <AvatarImage src="https://via.placeholder.com/150" alt={typedUser.username} />
                 <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground text-2xl font-bold">
-                  {user.username?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                  {typedUser.username?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 pt-2">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div className="space-y-2">
-                    <h1 className="text-3xl font-bold">{user.username}</h1>
+                    <h1 className="text-3xl font-bold">{typedUser.username}</h1>
                     <div className="flex items-center gap-2">
-                      <Badge variant={getRoleBadgeVariant(user.role.name)} className="text-sm">
-                        {getRoleName(user.role.name)}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">ID: {user.userId}</span>
+                      <Badge variant="default" className="text-sm">Restaurant Owner</Badge>
+                      <span className="text-sm text-muted-foreground">ID: {typedUser.userId}</span>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button
-                          onClick={handleEditProfile}
-                          variant="default"
-                          size="sm"
-                          className="gap-2"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                          Edit Profile
+                        <Button onClick={handleEditProfile} variant="default" size="sm" className="gap-2">
+                          <Edit2 className="w-4 h-4" /> Edit Profile
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Edit Profile</DialogTitle>
-                          <DialogDescription>
-                            Update your profile information
-                          </DialogDescription>
+                          <DialogDescription>Update your profile information</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <Label htmlFor="username">Username</Label>
-                            <Input
-                              id="username"
-                              placeholder="Enter your username"
-                              value={formData.username}
-                              onChange={(e) =>
-                                setFormData({ ...formData, username: e.target.value })
-                              }
-                            />
+                            <Input id="username" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              placeholder="Enter your email"
-                              value={formData.email}
-                              onChange={(e) =>
-                                setFormData({ ...formData, email: e.target.value })
-                              }
-                            />
+                            <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="phone">Phone (Optional)</Label>
-                            <Input
-                              id="phone"
-                              type="tel"
-                              placeholder="Enter your phone number"
-                              value={formData.phone || ''}
-                              onChange={(e) =>
-                                setFormData({ ...formData, phone: e.target.value })
-                              }
-                            />
+                            <Input id="phone" type="tel" value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
                           </div>
-                          <Button onClick={handleSaveProfile} className="w-full">
-                            Save Changes
-                          </Button>
+                          <Button onClick={handleSaveProfile} className="w-full">Save Changes</Button>
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -341,26 +362,17 @@ const Profile = () => {
                     <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" size="sm" className="gap-2">
-                          <LogOut className="w-4 h-4" />
-                          <span className="hidden sm:inline">Logout</span>
+                          <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Logout</span>
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to logout? You will need to login again to access
-                            your account.
-                          </AlertDialogDescription>
+                          <AlertDialogDescription>Are you sure you want to logout?</AlertDialogDescription>
                         </AlertDialogHeader>
                         <div className="flex gap-2 justify-end">
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleLogout}
-                            className="bg-destructive hover:bg-destructive/90"
-                          >
-                            Logout
-                          </AlertDialogAction>
+                          <AlertDialogAction onClick={handleLogout} className="bg-destructive hover:bg-destructive/90">Logout</AlertDialogAction>
                         </div>
                       </AlertDialogContent>
                     </AlertDialog>
@@ -371,325 +383,401 @@ const Profile = () => {
           </CardContent>
         </Card>
 
-        {/* Main Content Tabs */}
+        {/* Tabs */}
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview" className="gap-2">
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Overview</span>
+              <User className="w-4 h-4" /> <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="security" className="gap-2">
-              <Shield className="w-4 h-4" />
-              <span className="hidden sm:inline">Security</span>
+            <TabsTrigger value="subscription" className="gap-2">
+              <PackageIcon className="w-4 h-4" /> <span className="hidden sm:inline">Subscription</span>
             </TabsTrigger>
-            {(user.role.name === 'RESTAURANT_OWNER' || user.role.name === 'BRANCH_MANAGER') && (
-              <TabsTrigger value="stats" className="gap-2">
-                <BarChart3 className="w-4 h-4" />
-                <span className="hidden sm:inline">Stats</span>
-              </TabsTrigger>
-            )}
-            {user.role.name === 'RESTAURANT_OWNER' && (
-              <TabsTrigger value="branches" className="gap-2">
-                <Building className="w-4 h-4" />
-                <span className="hidden sm:inline">Branches</span>
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="branches" className="gap-2">
+              <Building className="w-4 h-4" /> <span className="hidden sm:inline">Branches</span>
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="w-5 h-5" />
-                  Contact Information
-                </CardTitle>
+                <CardTitle className="flex items-center gap-2"><Mail className="w-5 h-5" /> Contact Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-xs uppercase text-muted-foreground">
-                      Email Address
-                    </Label>
-                    <p className="font-medium flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-primary" />
-                      {user.email}
-                    </p>
+                    <Label className="text-xs uppercase text-muted-foreground">Email Address</Label>
+                    <p className="font-medium flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /> {typedUser.email}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs uppercase text-muted-foreground">
-                      User ID
-                    </Label>
-                    <p className="font-medium">{user.userId}</p>
+                    <Label className="text-xs uppercase text-muted-foreground">User ID</Label>
+                    <p className="font-medium">{typedUser.userId}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Change Password Card - ĐÃ CHUYỂN VÀO ĐÂY */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Quick Actions
-                </CardTitle>
+                <CardTitle className="flex items-center gap-2"><Lock className="w-5 h-5" /> Change Password</CardTitle>
+                <CardDescription>Update your account password</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  onClick={() => navigate(getDashboardLink(user.role.name))}
-                  variant="default"
-                  className="w-full justify-start gap-2"
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  Go to Dashboard
+              <CardContent>
+                <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">Change Password</Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Change Password</DialogTitle>
+                      <DialogDescription>Enter current and new password</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="current-password">Current Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="current-password"
+                            type={showPassword ? 'text' : 'password'}
+                            value={passwordData.currentPassword}
+                            onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                          />
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-password">New Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="new-password"
+                            type={showNewPassword ? 'text' : 'password'}
+                            value={passwordData.newPassword}
+                            onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                          />
+                          <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
+                            {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="confirm-password">Confirm New Password</Label>
+                        <Input
+                          id="confirm-password"
+                          type="password"
+                          value={passwordData.confirmPassword}
+                          onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                        />
+                      </div>
+                      <Button onClick={handleChangePassword} className="w-full">Update Password</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Calendar className="w-5 h-5" /> Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={() => navigate(getDashboardLink())} variant="default" className="w-full justify-start gap-2">
+                  <BarChart3 className="w-4 h-4" /> Go to Dashboard
                 </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Security Tab */}
-          <TabsContent value="security" className="space-y-6">
+          {/* Subscription Tab - CHỈ HIỂN THỊ 1 NHÀ HÀNG ĐÃ CHỌN */}
+          <TabsContent value="subscription" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Lock className="w-5 h-5" />
-                  Security Settings
+                  <PackageIcon className="w-5 h-5" />
+                  Subscription Management
                 </CardTitle>
-                <CardDescription>
-                  Manage your account security and password
-                </CardDescription>
+                <CardDescription>Select a restaurant to view and manage its subscription</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="space-y-1">
-                      <p className="font-medium">Password</p>
-                      <p className="text-sm text-muted-foreground">
-                        Last changed 3 months ago
-                      </p>
-                    </div>
-                    <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          Change
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Change Password</DialogTitle>
-                          <DialogDescription>
-                            Enter your current password and create a new one
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="current-password">Current Password</Label>
-                            <div className="relative">
-                              <Input
-                                id="current-password"
-                                type={showPassword ? 'text' : 'password'}
-                                placeholder="Enter current password"
-                                value={passwordData.currentPassword}
-                                onChange={(e) =>
-                                  setPasswordData({
-                                    ...passwordData,
-                                    currentPassword: e.target.value,
-                                  })
-                                }
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                              >
-                                {showPassword ? (
-                                  <EyeOff className="w-4 h-4" />
-                                ) : (
-                                  <Eye className="w-4 h-4" />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="new-password">New Password</Label>
-                            <div className="relative">
-                              <Input
-                                id="new-password"
-                                type={showNewPassword ? 'text' : 'password'}
-                                placeholder="Enter new password"
-                                value={passwordData.newPassword}
-                                onChange={(e) =>
-                                  setPasswordData({
-                                    ...passwordData,
-                                    newPassword: e.target.value,
-                                  })
-                                }
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowNewPassword(!showNewPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                              >
-                                {showNewPassword ? (
-                                  <EyeOff className="w-4 h-4" />
-                                ) : (
-                                  <Eye className="w-4 h-4" />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="confirm-password">Confirm New Password</Label>
-                            <Input
-                              id="confirm-password"
-                              type="password"
-                              placeholder="Confirm new password"
-                              value={passwordData.confirmPassword}
-                              onChange={(e) =>
-                                setPasswordData({
-                                  ...passwordData,
-                                  confirmPassword: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                          <Button onClick={handleChangePassword} className="w-full">
-                            Update Password
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="space-y-1">
-                      <p className="font-medium">Two-Factor Authentication</p>
-                      <p className="text-sm text-muted-foreground">Not enabled</p>
-                    </div>
-                    <Button variant="outline" size="sm" disabled>
-                      Enable
-                    </Button>
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="space-y-1">
-                      <p className="font-medium">Login Activity</p>
-                      <p className="text-sm text-muted-foreground">Last login: Today</p>
-                    </div>
-                    <Button variant="outline" size="sm" disabled>
-                      View
-                    </Button>
-                  </div>
+              <CardContent className="space-y-6">
+                {/* Chọn nhà hàng - dùng shadcn/ui Select */}
+                <div className="space-y-2">
+                  <Label>Select Restaurant</Label>
+                  <Select value={selectedRestaurantId} onValueChange={setSelectedRestaurantId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choose a restaurant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {overviewData.length > 0 ? (
+                        overviewData.map((sub) => (
+                          <SelectItem key={sub.restaurantId} value={sub.restaurantId}>
+                            {sub.restaurantName}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>No restaurants available</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {/* Hiển thị thông tin subscription nếu đã chọn */}
+                {selectedSubscription ? (
+                  <div className="space-y-6">
+                    {/* Subscription Info */}
+                    <div className="p-5 border rounded-lg bg-card">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold">{selectedSubscription.restaurantName}</h3>
+                        {getStatusBadge(selectedSubscription.currentSubscription?.status)}
+                      </div>
+
+                      {selectedSubscription.currentSubscription ? (
+                        <>
+                          {/* Thông tin gói */}
+                          <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                            <div>
+                              <span className="text-muted-foreground">Package:</span>{' '}
+                              <strong>{getPackageName(selectedSubscription.currentSubscription.packageId)}</strong>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Price:</span>{' '}
+                              <strong>
+                                {selectedSubscription.currentSubscription.amount?.toLocaleString()} VND/month
+                              </strong>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Start Date:</span>{' '}
+                              {new Date(selectedSubscription.currentSubscription.startDate).toLocaleDateString()}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">End Date:</span>{' '}
+                              {new Date(selectedSubscription.currentSubscription.endDate).toLocaleDateString()}
+                            </div>
+                          </div>
+
+                          {(() => {
+                            const daysLeft = getDaysUntilExpiry(selectedSubscription.currentSubscription.endDate);
+                            return daysLeft !== null ? (
+                              <div className="mb-4">
+                                <span className="text-sm font-medium">
+                                  {daysLeft > 0 ? (
+                                    <span className={daysLeft <= 3 ? 'text-orange-600' : 'text-green-600'}>
+                                      {daysLeft} day{daysLeft !== 1 ? 's' : ''} left
+                                    </span>
+                                  ) : (
+                                    <span className="text-red-600">Expired</span>
+                                  )}
+                                </span>
+                              </div>
+                            ) : null;
+                          })()}
+
+                          {/* Nút hành động */}
+                          <div className="flex gap-2">
+                            {(() => {
+                              const daysLeft = getDaysUntilExpiry(selectedSubscription.currentSubscription.endDate);
+                              const isActive = selectedSubscription.currentSubscription.status === 'ACTIVE';
+
+                              return (
+                                <>
+                                  {/* Nút Renew - chỉ hiện nếu còn ≤ 3 ngày */}
+                                  {isActive && daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button size="sm" className="flex-1">
+                                          <RefreshCw className="w-4 h-4 mr-2" />
+                                          Renew
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Renew Subscription?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to renew this subscription for 1 more month?{' '}
+                                            <strong>This action cannot be undone.</strong>
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <div className="flex gap-2 justify-end">
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => handleRenew(selectedSubscription.currentSubscription.subscriptionId)}
+                                            className="bg-primary hover:bg-primary/90"
+                                          >
+                                            Confirm Renew
+                                          </AlertDialogAction>
+                                        </div>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  )}
+
+                                  {/* Nút Cancel - luôn hiện nếu đang ACTIVE */}
+                                  {isActive && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm" className="flex-1">
+                                          <X className="w-4 h-4 mr-2" />
+                                          Cancel
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to cancel this subscription?{' '}
+                                            <strong>This action cannot be undone.</strong>
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <div className="flex gap-2 justify-end">
+                                          <AlertDialogCancel>Keep</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => handleCancel(selectedSubscription.currentSubscription.subscriptionId)}
+                                            className="bg-destructive hover:bg-destructive/90"
+                                          >
+                                            Yes, Cancel
+                                          </AlertDialogAction>
+                                        </div>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-6 text-muted-foreground">
+                          <PackageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                          <p>No active subscription</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Payment History */}
+                    {selectedSubscription.paymentHistory.length > 0 && (
+                      <>
+                        <Separator />
+                        <div className="space-y-3">
+                          <h3 className="font-medium text-lg">Payment History</h3>
+                          {selectedSubscription.paymentHistory.map((payment: any) => (
+                            <div key={payment.subscriptionPaymentId} className="p-4 border rounded-lg text-sm bg-muted/30">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="font-semibold">{payment.amount.toLocaleString()} VND</span>
+                                <Badge
+                                  variant={payment.subscriptionPaymentStatus === 'SUCCESS' ? 'default' : 'secondary'}
+                                >
+                                  {payment.subscriptionPaymentStatus}
+                                </Badge>
+                              </div>
+                              <div className="text-xs text-muted-foreground space-y-1">
+                                <div>Date: {payment.date ? new Date(payment.date).toLocaleDateString() : 'N/A'}</div>
+                                <div>Order: {payment.payOsOrderCode || 'N/A'}</div>
+                                {payment.payOsTransactionCode && (
+                                  <div>Tx: {payment.payOsTransactionCode}</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : selectedRestaurantId ? (
+                  <p className="text-center text-muted-foreground py-8">No subscription data available</p>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    Please select a restaurant to view its subscription details
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Change Package */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PackageIcon className="w-5 h-5" />
+                  Change Package
+                </CardTitle>
+                <CardDescription>Upgrade or downgrade package for the selected restaurant</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Dialog open={isChangePackageOpen} onOpenChange={setIsChangePackageOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full" disabled={!selectedRestaurantId}>
+                      Change Package
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Change Package</DialogTitle>
+                      <DialogDescription>
+                        Current: {overviewData.find(s => s.restaurantId === selectedRestaurantId)?.restaurantName}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Select New Package</Label>
+                        {packages
+                          .filter((pkg: Package) => pkg.packageId !== selectedSubscription?.currentSubscription?.packageId)
+                          .map((pkg: Package) => (
+                            <div
+                              key={pkg.packageId}
+                              className={`p-3 border rounded-lg cursor-pointer transition ${selectedNewPackage === pkg.packageId ? 'border-primary bg-primary/5' : 'hover:bg-muted'
+                                }`}
+                              onClick={() => setSelectedNewPackage(pkg.packageId)}
+                            >
+                              <p className="font-medium">{pkg.name}</p>
+                              <p className="text-sm text-muted-foreground">{pkg.description}</p>
+                              <p className="text-sm font-semibold">
+                                {pkg.price} VND/{pkg.billingPeriod}month
+                              </p>
+                            </div>
+                          ))}
+                      </div>
+                      <Button
+                        onClick={handleChangePackage}
+                        className="w-full"
+                        disabled={!selectedNewPackage || changePackageMutation.isPending}
+                      >
+                        {changePackageMutation.isPending ? 'Processing...' : 'Confirm Change'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Stats Tab */}
-          {(user.role.name === 'RESTAURANT_OWNER' || user.role.name === 'BRANCH_MANAGER') && (
-            <TabsContent value="stats" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5" />
-                    Business Statistics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingStats ? (
-                    <div className="space-y-4">
-                      <div className="h-12 bg-muted rounded animate-pulse"></div>
-                      <div className="h-12 bg-muted rounded animate-pulse"></div>
-                      <div className="h-12 bg-muted rounded animate-pulse"></div>
-                    </div>
-                  ) : stats ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="p-4 border rounded-lg">
-                        <p className="text-sm text-muted-foreground">Total Revenue</p>
-                        <p className="text-2xl font-bold mt-2">
-                          ${stats.totalRevenue?.toFixed(2) || '0.00'}
-                        </p>
-                      </div>
-                      <div className="p-4 border rounded-lg">
-                        <p className="text-sm text-muted-foreground">Total Orders</p>
-                        <p className="text-2xl font-bold mt-2">{stats.totalOrders || 0}</p>
-                      </div>
-                      <div className="p-4 border rounded-lg">
-                        <p className="text-sm text-muted-foreground">Active Customers</p>
-                        <p className="text-2xl font-bold mt-2">{stats.activeCustomers || 0}</p>
-                      </div>
-                      <div className="p-4 border rounded-lg">
-                        <p className="text-sm text-muted-foreground">Avg Order Value</p>
-                        <p className="text-2xl font-bold mt-2">
-                          ${stats.avgOrderValue?.toFixed(2) || '0.00'}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">No statistics available</p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
-
           {/* Branches Tab */}
-          {user.role.name === 'RESTAURANT_OWNER' && (
-            <TabsContent value="branches" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building className="w-5 h-5" />
-                    Your Branches
-                  </CardTitle>
-                  <CardDescription>Manage your restaurant branches</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingStats ? (
-                    <div className="space-y-3">
-                      <div className="h-24 bg-muted rounded animate-pulse"></div>
-                      <div className="h-24 bg-muted rounded animate-pulse"></div>
-                    </div>
-                  ) : branches.length > 0 ? (
-                    <div className="space-y-3">
-                      {branches.map((branch) => (
-                        <div
-                          key={branch.id}
-                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition"
-                        >
-                          <div>
-                            <p className="font-medium">{branch.name}</p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                              <MapPin className="w-4 h-4" />
-                              {branch.location}
-                            </p>
-                            <div className="flex gap-2 mt-2">
-                              <Badge variant="outline" className="text-xs">
-                                {branch.status}
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs">
-                                Tables: {branch.tables || 0}
-                              </Badge>
-                            </div>
+          <TabsContent value="branches" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Building className="w-5 h-5" /> Your Branches</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {branches.length > 0 ? (
+                  <div className="space-y-3">
+                    {branches.map((branch) => (
+                      <div key={branch.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">{branch.name}</p>
+                          <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><MapPin className="w-4 h-4" /> {branch.location}</p>
+                          <div className="flex gap-2 mt-2">
+                            <Badge variant="outline" className="text-xs">{branch.status}</Badge>
+                            <Badge variant="secondary" className="text-xs">Tables: {branch.tables || 0}</Badge>
                           </div>
-                          <Button variant="outline" size="sm">
-                            Manage
-                          </Button>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-8">
-                      No branches found
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
+                        <Button variant="outline" size="sm">Manage</Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No branches found</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </div>

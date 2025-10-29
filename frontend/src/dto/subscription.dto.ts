@@ -1,4 +1,5 @@
 import { SubscriptionPaymentResponse } from "./subscriptionPayment.dto";
+
 export interface SubscriptionRequest {
   restaurantId: string;
   packageId: string;
@@ -13,5 +14,14 @@ export interface SubscriptionResponse {
   updatedAt?: string;
   startDate?: string;
   endDate?: string;
-  latestPayment?: SubscriptionPaymentResponse;
+  paymentInfo?: SubscriptionPaymentResponse;
+  paymentStatus?: string;
+  amount?: number;
+}
+
+export interface RestaurantSubscriptionOverviewDTO {
+  restaurantId: string;
+  restaurantName: string;
+  currentSubscription?: SubscriptionResponse | null;
+  paymentHistory: SubscriptionPaymentResponse[];
 }

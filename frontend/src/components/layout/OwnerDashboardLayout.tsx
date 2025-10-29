@@ -55,6 +55,14 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
       gradient: 'from-blue-500 to-cyan-500'
     },
     {
+      id: 'restaurant',
+      path: '/dashboard/owner/restaurant',
+      icon: Home,
+      label: 'Restaurant Information',
+      description: 'Manage restaurant',
+      gradient: 'from-teal-500 to-emerald-500'
+    },
+    {
       id: 'menu',
       path: '/dashboard/owner/menu',
       icon: MenuIcon,
