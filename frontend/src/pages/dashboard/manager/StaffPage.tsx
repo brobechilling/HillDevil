@@ -30,11 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSessionStore } from "@/store/sessionStore";
+import { isStaffAccountDTO } from "@/utils/typeCast";
 
 export default function StaffPage() {
-  const storedUser: string = localStorage.getItem("user");
-  const user: StaffAccountDTO | null = storedUser ? JSON.parse(storedUser) : null;
-  const branchId: string = user?.branchId ?? "";
+  const { user } = useSessionStore();
+  const manager: StaffAccountDTO | null = isStaffAccountDTO(user) ? user : null;
+  const branchId: string = manager?.branchId ?? "";
 
   const [page, setPage] = useState(1);
   const size = 3;
