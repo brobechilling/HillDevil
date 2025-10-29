@@ -15,6 +15,8 @@ public enum ErrorCode {
     TOKEN_INVALID(1008, "The refresh token not exist in db", HttpStatus.UNAUTHORIZED),
     TOKEN_EXPIRED(1009, "The refresh token already expired", HttpStatus.UNAUTHORIZED),
     TOKEN_REUSED(2009, "The refresh token already used", HttpStatus.UNAUTHORIZED),
+    USER_INACTIVE(2010, "User account is inactive", HttpStatus.BAD_REQUEST),
+    STAFFACCOUNT_INACTIVE(2011, "Staff account is inactive", HttpStatus.BAD_REQUEST),
     //Subcriptions handling error: Khoi
     PACKAGE_NOTEXISTED(1010, "The package does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
     FEATURE_NOTEXISTED(1011, "The feature does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
