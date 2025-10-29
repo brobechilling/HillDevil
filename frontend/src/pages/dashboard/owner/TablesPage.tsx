@@ -1,10 +1,17 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-import { TableManagementReadOnlyByFloor } from '@/components/owner/TableManagementReadOnlyByFloor';
+import { OwnerTables } from '@/components/owner/OwnerTables';
 import { useEffect, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useBranches } from '@/hooks/queries/useBranches';
 import { BranchDTO } from '@/dto/branch.dto';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const OwnerTablesPage = () => {
   const { user } = useAuthStore();
@@ -59,11 +66,44 @@ const OwnerTablesPage = () => {
     );
   }
 
-  if (!activeBranch) {
+  if (!activeBranch || !branches) {
     return null;
   }
 
-  return <TableManagementReadOnlyByFloor allowBranchSelection={true} />;
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight">Table Management</h1>
+          <p className="text-muted-foreground mt-2">Manage tables across your branches</p>
+        </div>
+        {branches.length > 1 && (
+          <Select
+            value={activeBranch.branchId}
+            onValueChange={(branchId) => {
+              const branch = branches.find(b => b.branchId === branchId);
+              if (branch) {
+                setActiveBranch(branch);
+              }
+            }}
+          >
+            <SelectTrigger className="w-[250px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.map((branch) => (
+                <SelectItem key={branch.branchId} value={branch.branchId}>
+                  {branch.address}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      <OwnerTables branchId={activeBranch.branchId} />
+    </div>
+  );
 };
 
 export default OwnerTablesPage;
