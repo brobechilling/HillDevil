@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -53,8 +53,26 @@ export const ManagerTables = ({ branchId }: ManagerTablesProps) => {
   const deleteTableMutation = useDeleteTable();
   const { data: qrDataUrl } = useTableQrCode(qrTableId);
 
-  const { getAreasByBranch } = useAreaStore();
+  const { getAreasByBranch, addArea, areas: allAreas } = useAreaStore();
   const areas = getAreasByBranch(branchId);
+
+  // Initialize default areas if none exist for this branch
+  useEffect(() => {
+    if (areas.length === 0) {
+      const defaultAreas = [
+        { branchId, name: 'Ground Floor', floor: 1, status: 'active' as const },
+        { branchId, name: 'First Floor', floor: 2, status: 'active' as const },
+        { branchId, name: 'Second Floor', floor: 3, status: 'active' as const },
+        { branchId, name: 'VIP Area', floor: 1, status: 'active' as const },
+      ];
+      defaultAreas.forEach((area) => addArea(area));
+    }
+  }, [branchId, areas.length, addArea]);
+
+  const handleViewQR = (tableId: string) => {
+    setQrTableId(tableId);
+    setIsQROpen(true);
+  };
 
   const handleCreateTable = async () => {
     if (!selectedAreaId || !tableTag || !capacity) {
@@ -79,11 +97,6 @@ export const ManagerTables = ({ branchId }: ManagerTablesProps) => {
       await deleteTableMutation.mutateAsync(tableToDelete);
       setTableToDelete(null);
     }
-  };
-
-  const handleViewQR = (tableId: string) => {
-    setQrTableId(tableId);
-    setIsQROpen(true);
   };
 
   const getStatusColor = (status: string) => {
