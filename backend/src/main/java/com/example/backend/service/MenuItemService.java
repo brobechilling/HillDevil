@@ -3,6 +3,7 @@ package com.example.backend.service;
 import com.example.backend.dto.MenuItemDTO;
 import com.example.backend.dto.request.MenuItemCreateRequest;
 import com.example.backend.entities.*;
+import com.example.backend.entities.MenuItemStatus;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.MenuItemMapper;
@@ -48,6 +49,7 @@ public class MenuItemService {
         return menuItemMapper.toMenuItemDTO(item);
     }
 
+    /** Tạo mới MenuItem */
     @Transactional
     public MenuItemDTO create(MenuItemCreateRequest request) {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
@@ -62,12 +64,11 @@ public class MenuItemService {
         item.setPrice(request.getPrice());
         item.setBestSeller(request.isBestSeller());
         item.setHasCustomization(request.isHasCustomization());
-        item.setStatus(true);
+        item.setStatus(MenuItemStatus.ACTIVE);
         item.setRestaurant(restaurant);
         item.setCategory(category);
         item.setCreatedAt(Instant.now());
 
-        // customizations
         if (request.getCustomizationIds() != null && !request.getCustomizationIds().isEmpty()) {
             Set<Customization> customizations = request.getCustomizationIds().stream()
                     .map(id -> customizationRepository.findById(id)
@@ -78,8 +79,8 @@ public class MenuItemService {
 
         MenuItem savedItem = menuItemRepository.save(item);
 
+        // Tự động gán cho tất cả chi nhánh
         Set<Branch> branches = restaurant.getBranches();
-
         if (branches != null && !branches.isEmpty()) {
             for (Branch branch : branches) {
                 BranchMenuItem bmi = new BranchMenuItem();
@@ -93,7 +94,6 @@ public class MenuItemService {
         return menuItemMapper.toMenuItemDTO(savedItem);
     }
 
-
     @Transactional
     public MenuItemDTO update(UUID id, MenuItemDTO dto) {
         return menuItemRepository.findById(id)
@@ -106,7 +106,16 @@ public class MenuItemService {
                     exist.setUpdatedAt(Instant.now());
                     return menuItemMapper.toMenuItemDTO(menuItemRepository.save(exist));
                 })
-                .orElse(null);
+                .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
+    }
+
+    @Transactional
+    public void setActiveStatus(UUID menuItemId, boolean active) {
+        MenuItem item = menuItemRepository.findById(menuItemId)
+                .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
+        item.setStatus(active ? MenuItemStatus.ACTIVE : MenuItemStatus.INACTIVE);
+        item.setUpdatedAt(Instant.now());
+        menuItemRepository.save(item);
     }
 
     @Transactional
@@ -114,24 +123,15 @@ public class MenuItemService {
         MenuItem item = menuItemRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
 
+        item.setStatus(MenuItemStatus.DELETED);
+        item.setUpdatedAt(Instant.now());
+        menuItemRepository.save(item);
+
         List<BranchMenuItem> mappings = branchMenuItemRepository.findAll()
                 .stream()
                 .filter(bmi -> bmi.getMenuItem().getMenuItemId().equals(id))
                 .toList();
-
         branchMenuItemRepository.deleteAll(mappings);
-
-        // Sau đó xóa menu item
-        menuItemRepository.delete(item);
-    }
-
-    @Transactional
-    public void setActiveStatus(UUID menuItemId, boolean active) {
-        MenuItem item = menuItemRepository.findById(menuItemId)
-                .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
-        item.setStatus(active);
-        item.setUpdatedAt(Instant.now());
-        menuItemRepository.save(item);
     }
 
     public boolean isMenuItemActiveInBranch(UUID menuItemId, UUID branchId) {

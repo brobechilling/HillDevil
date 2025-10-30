@@ -1,5 +1,7 @@
 package com.example.backend.dto;
 
+import com.example.backend.entities.MenuItemStatus;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Set;
@@ -10,7 +12,7 @@ public class MenuItemDTO {
     private String name;
     private String description;
     private BigDecimal price;
-    private boolean status;
+    private MenuItemStatus status;
     private boolean bestSeller;
     private boolean hasCustomization;
     private UUID restaurantId;
@@ -32,8 +34,8 @@ public class MenuItemDTO {
     public BigDecimal getPrice() { return price; }
     public void setPrice(BigDecimal price) { this.price = price; }
 
-    public boolean isStatus() { return status; }
-    public void setStatus(boolean status) { this.status = status; }
+    public MenuItemStatus getStatus() { return status; }
+    public void setStatus(MenuItemStatus status) { this.status = status; }
 
     public boolean isBestSeller() { return bestSeller; }
     public void setBestSeller(boolean bestSeller) { this.bestSeller = bestSeller; }
