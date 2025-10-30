@@ -19,4 +19,5 @@ public interface StaffAccountRepository extends JpaRepository<StaffAccount, UUID
     Optional<StaffAccount> findByUsernameAndBranch(String username, Branch branch);
     Page<StaffAccount> findByBranchAndRole_NameNot(Branch branch, RoleName roleName ,Pageable pageable);
     long countByBranchAndRole_Name(Branch branch, RoleName roleName);
+    Page<StaffAccount> findByBranch_Restaurant_RestaurantId(UUID restaurantId, Pageable pageable);
 }

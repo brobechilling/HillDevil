@@ -10,7 +10,7 @@ import {
   useSetStaffAccountStatusMutation,
 } from "@/hooks/queries/useStaff";
 import { StaffAccountDTO } from "@/dto/staff.dto";
-import { ROLE_NAME } from "@/dto/user.dto";
+import { ROLE_NAME, UserDTO } from "@/dto/user.dto";
 import { StaffManagementDialog } from "@/components/manager/StaffManagementDialog";
 import {
   AlertDialog,
@@ -31,13 +31,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSessionStore } from "@/store/sessionStore";
-import { isStaffAccountDTO } from "@/utils/typeCast";
+import { isStaffAccountDTO, isUserDTO } from "@/utils/typeCast";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function StaffPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  // get the branchId when the person access this page is the owner, this branchId is passed in OwnerStaffManagement.tsx
+  const { branchId: branchIdFromState } =location.state || {};
   const { user } = useSessionStore();
+  // if the person access is the manager
   const manager: StaffAccountDTO | null = isStaffAccountDTO(user) ? user : null;
-  const branchId: string = manager?.branchId ?? "";
-
+  const branchIdFromStore = manager?.branchId || "";
+  const branchId: string = branchIdFromState || branchIdFromStore;
+  
+  
   const [page, setPage] = useState(1);
   const size = 3;
 
@@ -94,7 +102,7 @@ export default function StaffPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-lg font-medium">Total Staff</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -104,7 +112,7 @@ export default function StaffPage() {
               {staffQuery.data?.totalElements ?? 0}
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
