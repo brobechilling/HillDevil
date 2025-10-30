@@ -55,6 +55,13 @@ public enum ErrorCode {
     CUSTOMIZATION_NOT_FOUND(4002, "Customization not found", HttpStatus.NOT_FOUND),
     MENUITEM_NOT_FOUND(4003, "Menu item not found", HttpStatus.NOT_FOUND),
     BRANCHMENUITEM_NOT_FOUND(4004, "Branch item not found", HttpStatus.NOT_FOUND),
+
+    //Media upload
+    MEDIA_UPLOAD_FAILED(4050, "media upload failed", HttpStatus.INTERNAL_SERVER_ERROR),
+    MEDIA_EMPTY(4051, "File is empty", HttpStatus.BAD_REQUEST),
+    MEDIA_NOT_FOUND(4052, "File not found", HttpStatus.NOT_FOUND),
+    MEDIA_DELETE_FAILED(4053, "File delete failed", HttpStatus.BAD_REQUEST),
+
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
 

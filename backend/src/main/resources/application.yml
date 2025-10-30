@@ -55,3 +55,8 @@ management:
 frontend: 
   base-url: ${FRONTEND_BASE_URL:http://localhost:5000}
 
+cloudinary:
+  cloud_name: ${CLOUD_NAME}
+  api_key: ${CLOUD_API_KEY}
+  api_secret: ${CLOUD_API_SECRET}
+
