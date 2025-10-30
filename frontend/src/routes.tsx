@@ -312,6 +312,24 @@ export const routes: RouteObject[] = [
         <Profile />
       </ProtectedRoute>
     ),
+    children: [
+      {
+        index: true,
+        element: <Profile />,
+      },
+      {
+        path: 'overview',
+        element: <Profile />,
+      },
+      {
+        path: 'subscription',
+        element: <Profile />,
+      },
+      {
+        path: 'branches',
+        element: <Profile />,
+      },
+    ],
   },
   {
     path: '/restaurant-login',
