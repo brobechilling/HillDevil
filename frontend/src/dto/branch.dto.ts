@@ -1,8 +1,7 @@
-import { UUID } from "crypto";
 
 export interface BranchDTO {
-    branchId: UUID;
-    restaurantId: UUID;
+    branchId: string;
+    restaurantId: string;
     address: string;
     branchPhone?: string;
     openingTime?: string;
@@ -12,7 +11,7 @@ export interface BranchDTO {
 }
 
 export interface CreateBranchDTO {
-    restaurantId: UUID;
+    restaurantId: string;
     address: string;
     branchPhone?: string;
     openingTime?: string;

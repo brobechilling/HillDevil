@@ -19,6 +19,16 @@ export const getStaffAccounts = async (page: number = 1, size: number = 2, branc
   return res.data.result;
 };
 
+export const getStaffAccountsByRestaurant = async (page: number = 1, size: number = 2, restaurantId: string) => {
+  const res = await axiosClient.get<ApiResponse<PageResponse<StaffAccountDTO>>>(
+    `/staff/paginated/restaurant`,
+    {
+      params: { page, size, restaurantId },
+    }
+  );
+  return res.data.result;
+};
+
 export const getWaiterNumber = async (branchId: string) => {
   const res = await axiosClient.get<ApiResponse<number>>(`/staff/statistic/waiter/${branchId}`);
   return res.data.result;

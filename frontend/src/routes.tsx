@@ -35,6 +35,7 @@ import RestaurantInfoPage from './pages/dashboard/owner/RestaurantInfoPage';
 import OwnerMenuPage from './pages/dashboard/owner/MenuPage';
 import OwnerTablesPage from './pages/dashboard/owner/TablesPage';
 import OwnerStaffPage from './pages/dashboard/owner/StaffPage';
+import BranchSelectionPage from './pages/dashboard/owner/BranchSelectionPage';
 
 // import OwnerCategoriesPage from './pages/dashboard/owner/CategoriesPage';
 // import OwnerCustomizationsPage from './pages/dashboard/owner/CustomizationsPage';
@@ -59,6 +60,7 @@ import ReceptionistBillingPage from './pages/dashboard/receptionist/BillingPage'
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import { ROLE_NAME } from './dto/user.dto';
+
 
 export const routes: RouteObject[] = [
   {
@@ -165,6 +167,10 @@ export const routes: RouteObject[] = [
         path: 'customization',
         element: <OwnerCustomizationPage />,
       },
+      {
+        path: 'branch-selection',
+        element: <BranchSelectionPage />,
+      }
     ],
   },
   // {
@@ -178,7 +184,7 @@ export const routes: RouteObject[] = [
   {
     path: '/dashboard/manager',
     element: (
-      <ProtectedRoute allowedRoles={[ROLE_NAME.BRANCH_MANAGER]}>
+      <ProtectedRoute allowedRoles={[ROLE_NAME.BRANCH_MANAGER, ROLE_NAME.RESTAURANT_OWNER]}>
         <ManagerDashboard />
       </ProtectedRoute>
     ),
