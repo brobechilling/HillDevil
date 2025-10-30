@@ -63,13 +63,12 @@ public class MenuItemController {
         return res;
     }
 
-    @PutMapping("/{menuItemId}/branch/{branchId}/status")
-    public ApiResponse<Void> setMenuItemStatusAtBranch(
+    @PutMapping("/{menuItemId}/status")
+    public ApiResponse<Void> setActiveStatus(
             @PathVariable UUID menuItemId,
-            @PathVariable UUID branchId,
-            @RequestParam boolean status
+            @RequestParam boolean active
     ) {
-        menuItemService.setMenuItemStatusAtBranch(menuItemId, branchId, status);
+        menuItemService.setActiveStatus(menuItemId, active);
         return new ApiResponse<>();
     }
 }

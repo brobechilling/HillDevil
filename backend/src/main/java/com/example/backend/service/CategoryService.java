@@ -17,9 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,14 +27,10 @@ public class CategoryService {
     private final CategoryMapper categoryMapper;
     private final RestaurantRepository restaurantRepository;
     private final CustomizationRepository customizationRepository;
-    private Logger logger = LoggerFactory.getLogger(CategoryService.class);
+    private final Logger logger = LoggerFactory.getLogger(CategoryService.class);
 
-    public CategoryService(
-            CategoryRepository categoryRepository,
-            CategoryMapper categoryMapper,
-            RestaurantRepository restaurantRepository,
-            CustomizationRepository customizationRepository
-    ) {
+    public CategoryService(CategoryRepository categoryRepository, CategoryMapper categoryMapper,
+                           RestaurantRepository restaurantRepository, CustomizationRepository customizationRepository) {
         this.categoryRepository = categoryRepository;
         this.categoryMapper = categoryMapper;
         this.restaurantRepository = restaurantRepository;
@@ -45,8 +39,11 @@ public class CategoryService {
 
     public List<CategoryDTO> getAll() {
         logger.info("category service - getAll called");
-        return categoryRepository.findAll()
-                .stream().map(categoryMapper::toCategoryDTO).toList();
+        List<Category> categories = categoryRepository.findAll();
+        if (categories.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return categories.stream().map(categoryMapper::toCategoryDTO).toList();
     }
 
     public CategoryDTO getById(UUID id) {
@@ -103,10 +100,10 @@ public class CategoryService {
 
     @Transactional
     public void delete(UUID id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
-        category.setStatus(false);
-        categoryRepository.save(category);
-        logger.info("category service - delete");
+        categoryRepository.findById(id).ifPresent(category -> {
+            category.setStatus(false);
+            categoryRepository.save(category);
+            logger.info("category service - deleted safely");
+        });
     }
 }

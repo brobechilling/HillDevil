@@ -24,12 +24,9 @@ public class MenuItemService {
     private final CustomizationRepository customizationRepository;
     private final BranchMenuItemRepository branchMenuItemRepository;
 
-    public MenuItemService(MenuItemRepository menuItemRepository,
-                           MenuItemMapper menuItemMapper,
-                           RestaurantRepository restaurantRepository,
-                           CategoryRepository categoryRepository,
-                           CustomizationRepository customizationRepository,
-                           BranchMenuItemRepository branchMenuItemRepository) {
+    public MenuItemService(MenuItemRepository menuItemRepository, MenuItemMapper menuItemMapper,
+                           RestaurantRepository restaurantRepository, CategoryRepository categoryRepository,
+                           CustomizationRepository customizationRepository, BranchMenuItemRepository branchMenuItemRepository) {
         this.menuItemRepository = menuItemRepository;
         this.menuItemMapper = menuItemMapper;
         this.restaurantRepository = restaurantRepository;
@@ -39,8 +36,10 @@ public class MenuItemService {
     }
 
     public List<MenuItemDTO> getAll() {
-        return menuItemRepository.findAll()
-                .stream().map(menuItemMapper::toMenuItemDTO).toList();
+        List<MenuItem> list = menuItemRepository.findAll();
+        return list.isEmpty()
+                ? Collections.emptyList()
+                : list.stream().map(menuItemMapper::toMenuItemDTO).toList();
     }
 
     public MenuItemDTO getById(UUID id) {
@@ -68,6 +67,7 @@ public class MenuItemService {
         item.setCategory(category);
         item.setCreatedAt(Instant.now());
 
+        // customizations
         if (request.getCustomizationIds() != null && !request.getCustomizationIds().isEmpty()) {
             Set<Customization> customizations = request.getCustomizationIds().stream()
                     .map(id -> customizationRepository.findById(id)
@@ -76,42 +76,65 @@ public class MenuItemService {
             item.setCustomizations(customizations);
         }
 
-        return menuItemMapper.toMenuItemDTO(menuItemRepository.save(item));
+        MenuItem savedItem = menuItemRepository.save(item);
+
+        Set<Branch> branches = restaurant.getBranches();
+
+        if (branches != null && !branches.isEmpty()) {
+            for (Branch branch : branches) {
+                BranchMenuItem bmi = new BranchMenuItem();
+                bmi.setBranch(branch);
+                bmi.setMenuItem(savedItem);
+                bmi.setAvailable(false);
+                branchMenuItemRepository.save(bmi);
+            }
+        }
+
+        return menuItemMapper.toMenuItemDTO(savedItem);
     }
+
 
     @Transactional
     public MenuItemDTO update(UUID id, MenuItemDTO dto) {
-        MenuItem exist = menuItemRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
-
-        exist.setName(dto.getName());
-        exist.setDescription(dto.getDescription());
-        exist.setPrice(dto.getPrice());
-        exist.setBestSeller(dto.isBestSeller());
-        exist.setHasCustomization(dto.isHasCustomization());
-        exist.setUpdatedAt(Instant.now());
-
-        return menuItemMapper.toMenuItemDTO(menuItemRepository.save(exist));
+        return menuItemRepository.findById(id)
+                .map(exist -> {
+                    exist.setName(dto.getName());
+                    exist.setDescription(dto.getDescription());
+                    exist.setPrice(dto.getPrice());
+                    exist.setBestSeller(dto.isBestSeller());
+                    exist.setHasCustomization(dto.isHasCustomization());
+                    exist.setUpdatedAt(Instant.now());
+                    return menuItemMapper.toMenuItemDTO(menuItemRepository.save(exist));
+                })
+                .orElse(null);
     }
 
     @Transactional
     public void delete(UUID id) {
         MenuItem item = menuItemRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
-        item.setStatus(false);
+
+        List<BranchMenuItem> mappings = branchMenuItemRepository.findAll()
+                .stream()
+                .filter(bmi -> bmi.getMenuItem().getMenuItemId().equals(id))
+                .toList();
+
+        branchMenuItemRepository.deleteAll(mappings);
+
+        // Sau đó xóa menu item
+        menuItemRepository.delete(item);
+    }
+
+    @Transactional
+    public void setActiveStatus(UUID menuItemId, boolean active) {
+        MenuItem item = menuItemRepository.findById(menuItemId)
+                .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
+        item.setStatus(active);
+        item.setUpdatedAt(Instant.now());
         menuItemRepository.save(item);
     }
 
     public boolean isMenuItemActiveInBranch(UUID menuItemId, UUID branchId) {
         return branchMenuItemRepository.existsByBranch_BranchIdAndMenuItem_MenuItemIdAndAvailableTrue(branchId, menuItemId);
-    }
-
-    @Transactional
-    public void setMenuItemStatusAtBranch(UUID menuItemId, UUID branchId, boolean status) {
-        BranchMenuItem bmi = branchMenuItemRepository
-                .findByBranch_BranchIdAndMenuItem_MenuItemId(branchId, menuItemId)
-                .orElseThrow(() -> new AppException(ErrorCode.BRANCHMENUITEM_NOT_FOUND));
-        bmi.setAvailable(status);
-        branchMenuItemRepository.save(bmi);
     }
 }

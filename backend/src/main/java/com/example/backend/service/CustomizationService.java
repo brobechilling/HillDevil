@@ -15,8 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class CustomizationService {
@@ -24,7 +23,7 @@ public class CustomizationService {
     private final CustomizationRepository customizationRepository;
     private final CustomizationMapper customizationMapper;
     private final RestaurantRepository restaurantRepository;
-    private Logger logger = LoggerFactory.getLogger(CustomizationService.class);
+    private final Logger logger = LoggerFactory.getLogger(CustomizationService.class);
 
     public CustomizationService(CustomizationRepository customizationRepository,
                                 CustomizationMapper customizationMapper,
@@ -35,8 +34,10 @@ public class CustomizationService {
     }
 
     public List<CustomizationDTO> getAll() {
-        return customizationRepository.findAll()
-                .stream().map(customizationMapper::toCustomizationDTO).toList();
+        List<Customization> list = customizationRepository.findAll();
+        return list.isEmpty()
+                ? Collections.emptyList()
+                : list.stream().map(customizationMapper::toCustomizationDTO).toList();
     }
 
     public CustomizationDTO getById(UUID id) {
@@ -62,23 +63,23 @@ public class CustomizationService {
 
     @Transactional
     public CustomizationDTO update(UUID id, CustomizationDTO dto) {
-        Customization exist = customizationRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.CUSTOMIZATION_NOT_FOUND));
-
-        exist.setName(dto.getName());
-        exist.setPrice(dto.getPrice());
-        exist.setUpdatedAt(Instant.now());
-
-        logger.info("customization updated");
-        return customizationMapper.toCustomizationDTO(customizationRepository.save(exist));
+        return customizationRepository.findById(id)
+                .map(exist -> {
+                    exist.setName(dto.getName());
+                    exist.setPrice(dto.getPrice());
+                    exist.setUpdatedAt(Instant.now());
+                    logger.info("customization updated");
+                    return customizationMapper.toCustomizationDTO(customizationRepository.save(exist));
+                })
+                .orElse(null); // ✅ Không throw nếu chưa có
     }
 
     @Transactional
     public void delete(UUID id) {
-        Customization customization = customizationRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.CUSTOMIZATION_NOT_FOUND));
-        customization.setStatus(false);
-        customizationRepository.save(customization);
-        logger.info("Customization has been deleted");
+        customizationRepository.findById(id).ifPresent(customization -> {
+            customization.setStatus(false);
+            customizationRepository.save(customization);
+            logger.info("customization deleted safely");
+        });
     }
 }
