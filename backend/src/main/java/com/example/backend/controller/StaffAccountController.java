@@ -90,4 +90,11 @@ public class StaffAccountController {
         return apiResponse;
     }
     
+    @GetMapping("/paginated/restaurant")
+    public ApiResponse<PageResponse<StaffAccountDTO>> getStaffAccountByRestaurantPaginated(@RequestParam( required = false, defaultValue = "1") int page, @RequestParam( required = false, defaultValue = "1") int size, @RequestParam UUID restaurantId) {
+        ApiResponse<PageResponse<StaffAccountDTO>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(staffAccountService.getStaffAccountByRestaurantPaginated(page, size, restaurantId));
+        return apiResponse;
+    }
+    
 }

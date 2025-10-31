@@ -14,6 +14,7 @@ import com.example.backend.dto.StaffAccountDTO;
 import com.example.backend.dto.request.CreateStaffAccountRequest;
 import com.example.backend.dto.response.PageResponse;
 import com.example.backend.entities.Branch;
+import com.example.backend.entities.Restaurant;
 import com.example.backend.entities.Role;
 import com.example.backend.entities.RoleName;
 import com.example.backend.entities.StaffAccount;
@@ -21,6 +22,7 @@ import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.StaffAccountMapper;
 import com.example.backend.repository.BranchRepository;
+import com.example.backend.repository.RestaurantRepository;
 import com.example.backend.repository.RoleRepository;
 import com.example.backend.repository.StaffAccountRepository;
 
@@ -32,13 +34,15 @@ public class StaffAccountService {
     private final RoleRepository roleRepository;
     private final BranchRepository branchRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RestaurantRepository restaurantRepository;
 
-    public StaffAccountService(StaffAccountRepository staffAccountRepository, StaffAccountMapper staffAccountMapper, RoleRepository roleRepository, BranchRepository branchRepository, PasswordEncoder passwordEncoder) {
+    public StaffAccountService(StaffAccountRepository staffAccountRepository, StaffAccountMapper staffAccountMapper, RoleRepository roleRepository, BranchRepository branchRepository, PasswordEncoder passwordEncoder, RestaurantRepository restaurantRepository) {
         this.staffAccountRepository = staffAccountRepository;
         this.staffAccountMapper = staffAccountMapper;
         this.roleRepository = roleRepository;
         this.branchRepository = branchRepository;
         this.passwordEncoder = passwordEncoder;
+        this.restaurantRepository = restaurantRepository;
     }
 
     public List<StaffAccountDTO> getAllStaffAccounts() {
@@ -84,6 +88,17 @@ public class StaffAccountService {
     public long getRoleNumber(UUID branchId, RoleName roleName) {
         Branch branch = branchRepository.findById(branchId).orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
         return staffAccountRepository.countByBranchAndRole_Name(branch, roleName);
+    }
+
+    public PageResponse<StaffAccountDTO> getStaffAccountByRestaurantPaginated(int page, int size, UUID restaurantId) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
+        Restaurant restaurant = restaurantRepository.findById(restaurantId).orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
+        Page<StaffAccount> pageData = staffAccountRepository.findByBranch_Restaurant_RestaurantId(restaurantId, pageable);
+        PageResponse<StaffAccountDTO> pageResponse = new PageResponse<>();
+        pageResponse.setItems(pageData.map(staffAccount -> staffAccountMapper.toStaffAccountDTO(staffAccount)).toList());
+        pageResponse.setTotalElements(pageData.getTotalElements());
+        pageResponse.setTotalPages(pageData.getTotalPages());
+        return pageResponse;
     }
 
 }

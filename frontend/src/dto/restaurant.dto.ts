@@ -1,9 +1,7 @@
-import { UUID } from "crypto";
-
 
 export interface RestaurantDTO {
-    restaurantId: UUID;
-    userId: UUID;
+    restaurantId: string;
+    userId: string;
     name: string;
     email: string;
     status: string;
