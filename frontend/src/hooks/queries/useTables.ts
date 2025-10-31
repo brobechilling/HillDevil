@@ -3,74 +3,59 @@ import {
   getTablesByBranch,
   createTable,
   deleteTable,
-  getTableQrDataUrl,
-  TableResponse,
-  CreateTableRequest,
-  TablesPageResponse,
+  getTableQrCode,
 } from '@/api/tableApi';
-import { toast } from '@/hooks/use-toast';
+import { TableDTO, CreateTableRequest } from '@/dto/table.dto';
 
-// Fetch tables by branch
-export const useTablesByBranch = (branchId: string | undefined, page: number = 0, size: number = 20) => {
-  return useQuery<TablesPageResponse>({
-    queryKey: ['tables', branchId, page, size],
-    queryFn: () => getTablesByBranch(branchId!, page, size),
+export const useTables = (
+  branchId: string | undefined,
+  page: number = 0,
+  size: number = 20,
+  sort?: string
+) => {
+  return useQuery({
+    queryKey: ['tables', branchId, page, size, sort],
+    queryFn: () => getTablesByBranch(branchId!, page, size, sort),
     enabled: !!branchId,
   });
 };
 
-// Create table mutation
 export const useCreateTable = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateTableRequest) => createTable(data),
-    onSuccess: (data) => {
+    mutationFn: createTable,
+    onSuccess: (data, variables) => {
       // Invalidate tables query to refetch
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      toast({
-        title: 'Success',
-        description: `Table "${data.tag}" created successfully.`,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to create table.',
+      queryClient.invalidateQueries({
+        queryKey: ['tables', variables.areaId],
       });
     },
   });
 };
 
-// Delete table mutation
 export const useDeleteTable = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (tableId: string) => deleteTable(tableId),
+    mutationFn: deleteTable,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      toast({
-        title: 'Success',
-        description: 'Table deleted successfully.',
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to delete table.',
+      // Invalidate all tables queries
+      queryClient.invalidateQueries({
+        queryKey: ['tables'],
       });
     },
   });
 };
 
-// Get QR code
-export const useTableQrCode = (tableId: string | null) => {
-  return useQuery<string>({
-    queryKey: ['table-qr', tableId],
-    queryFn: () => getTableQrDataUrl(tableId!, 512),
+export const useTableQrCode = (tableId: string | undefined, size: number = 512) => {
+  return useQuery({
+    queryKey: ['table-qr', tableId, size],
+    queryFn: async () => {
+      if (!tableId) return null;
+      const blob = await getTableQrCode(tableId, size);
+      return URL.createObjectURL(blob);
+    },
     enabled: !!tableId,
   });
 };

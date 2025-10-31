@@ -1,77 +1,78 @@
-import { axiosClient } from './axiosClient';
-import { ApiResponse } from '@/dto/apiResponse';
+import { ApiResponse } from "@/dto/apiResponse";
+import { axiosClient } from "./axiosClient";
+import { TableDTO, CreateTableRequest, TableListResponse } from "@/dto/table.dto";
 
-export interface TableResponse {
-  id: string;
-  tag: string;
-  capacity: number;
-  status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED';
-  reservedBy?: string | null;
-}
-
-export interface CreateTableRequest {
-  areaId: string;
-  tag: string;
-  capacity: number;
-}
-
-export interface TablesPageResponse {
-  content: TableResponse[];
+interface PagedTableResponse {
+  content: TableDTO[];
   totalElements: number;
   totalPages: number;
-  currentPage: number;
-  pageSize: number;
+  number: number;
+  size: number;
 }
 
-// Get all tables by branch with pagination
 export const getTablesByBranch = async (
   branchId: string,
   page: number = 0,
   size: number = 20,
   sort?: string
-): Promise<TablesPageResponse> => {
-  const params = new URLSearchParams();
-  params.append('branchId', branchId);
-  params.append('page', page.toString());
-  params.append('size', size.toString());
-  if (sort) {
-    params.append('sort', sort);
-  }
-
-  const res = await axiosClient.get<ApiResponse<any>>(`/owner/tables?${params.toString()}`);
-  
-  // Transform response to match expected format
-  const pageData = res.data.result;
-  return {
-    content: pageData.content || [],
-    totalElements: pageData.totalElements || 0,
-    totalPages: pageData.totalPages || 0,
-    currentPage: pageData.number || 0,
-    pageSize: pageData.size || 20,
-  };
-};
-
-// Create new table
-export const createTable = async (data: CreateTableRequest): Promise<TableResponse> => {
-  const res = await axiosClient.post<ApiResponse<TableResponse>>('/owner/tables', data);
+) => {
+  const res = await axiosClient.get<ApiResponse<PagedTableResponse>>(
+    "/owner/tables",
+    {
+      params: {
+        branchId,
+        page,
+        size,
+        ...(sort && { sort }),
+      },
+    }
+  );
   return res.data.result;
 };
 
-// Delete table
-export const deleteTable = async (tableId: string): Promise<void> => {
-  await axiosClient.delete(`/owner/tables/${tableId}`);
+export const createTable = async (data: CreateTableRequest) => {
+  const res = await axiosClient.post<ApiResponse<TableDTO>>(
+    "/owner/tables",
+    data
+  );
+  return res.data.result;
 };
 
-// Get table QR code as PNG
-export const getTableQrPng = async (tableId: string, size: number = 512): Promise<Blob> => {
-  const res = await axiosClient.get(`/owner/tables/${tableId}/qr.png?size=${size}`, {
-    responseType: 'blob',
+export const deleteTable = async (tableId: string) => {
+  const res = await axiosClient.delete<ApiResponse<void>>(
+    `/owner/tables/${tableId}`
+  );
+  return res.data;
+};
+
+export const getTableQrCode = async (
+  tableId: string,
+  size: number = 512
+): Promise<Blob> => {
+  const res = await axiosClient.get(`/owner/tables/${tableId}/qr.png`, {
+    params: { size },
+    responseType: "blob",
   });
   return res.data;
 };
 
-// Get table QR code as data URL for displaying in image tag
-export const getTableQrDataUrl = async (tableId: string, size: number = 512): Promise<string> => {
-  const blob = await getTableQrPng(tableId, size);
-  return URL.createObjectURL(blob);
+export const downloadTableQr = async (
+  tableId: string,
+  tableName: string,
+  size: number = 512
+) => {
+  try {
+    const blob = await getTableQrCode(tableId, size);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `table-${tableName || tableId}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error downloading QR code:", error);
+    throw error;
+  }
 };
