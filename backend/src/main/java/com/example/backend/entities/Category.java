@@ -30,12 +30,15 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID categoryId;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(nullable = false, name = "restaurant_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "restaurant_id", nullable = true)
     private Restaurant restaurant;
 
     @Column(name = "name")
     private String name;
+
+    @Column(name = "status")
+    private boolean status;
 
     @CreationTimestamp
     @Column(name = "created_at")
@@ -112,6 +115,11 @@ public class Category {
         this.menuItems = menuItems;
     }
 
-    
-    
+    public boolean isStatus() {
+        return status;
+    }
+
+    public void setStatus(boolean status) {
+        this.status = status;
+    }
 }
