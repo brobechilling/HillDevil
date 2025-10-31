@@ -12,7 +12,15 @@ export const usePaymentStatus = (orderCode: string) => {
     queryKey: ["payment-status", orderCode],
     queryFn: () => subscriptionPaymentApi.getStatus(orderCode),
     enabled: !!orderCode,
-    refetchInterval: 5000, // Poll every 5 seconds
+    refetchInterval: (query) => {
+      // ✅ Chỉ polling khi status là PENDING
+      const data = query.state.data;
+      if (data?.subscriptionPaymentStatus && data.subscriptionPaymentStatus !== "PENDING") {
+        return false; // Stop polling
+      }
+      return 3000; // Poll every 3 seconds
+    },
+    refetchIntervalInBackground: true, // Continue polling when tab is in background
   });
 };
 

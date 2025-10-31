@@ -8,6 +8,7 @@ public class StaffAccountDTO {
     private RoleDTO role;
     private String username;
     private boolean status;
+    private UUID branchId;
     
     public UUID getStaffAccountId() {
         return staffAccountId;
@@ -33,6 +34,11 @@ public class StaffAccountDTO {
     public void setStatus(boolean status) {
         this.status = status;
     }
-
+    public UUID getBranchId() {
+        return branchId;
+    }
+    public void setBranchId(UUID branchId) {
+        this.branchId = branchId;
+    }
     
 }

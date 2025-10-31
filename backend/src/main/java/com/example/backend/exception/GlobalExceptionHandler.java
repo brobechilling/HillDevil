@@ -28,22 +28,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ErrorCode.VALIDATION_VIOLATED.getStatusCode()).body(apiResponse);
     }
 
-    @ExceptionHandler(value = AccessDeniedException.class)
-    ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException e) {
-        ApiResponse<Void> apiResponse = new ApiResponse<>();
-        apiResponse.setCode(ErrorCode.UNAUTHORIZED.getCode());
-        apiResponse.setMessage(ErrorCode.UNAUTHORIZED.getMessage());
-        return ResponseEntity.status(ErrorCode.UNAUTHORIZED.getStatusCode()).body(apiResponse);
-    }
+    // @ExceptionHandler(value = AccessDeniedException.class)
+    // ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException e) {
+    //     ApiResponse<Void> apiResponse = new ApiResponse<>();
+    //     apiResponse.setCode(ErrorCode.UNAUTHORIZED.getCode());
+    //     apiResponse.setMessage(ErrorCode.UNAUTHORIZED.getMessage());
+    //     return ResponseEntity.status(ErrorCode.UNAUTHORIZED.getStatusCode()).body(apiResponse);
+    // }
 
      // handle unexpected exception
-//     @ExceptionHandler(value = Exception.class)
-//     ResponseEntity<ApiResponse<Void>> handleUncategorizedException(Exception e) {
-//         ApiResponse<Void> apiResponse = new ApiResponse<>();
-//         apiResponse.setCode(ErrorCode.WE_COOKED.getCode());
-//         apiResponse.setMessage(ErrorCode.WE_COOKED.getMessage());
-//         return
-//         ResponseEntity.status(ErrorCode.WE_COOKED.getStatusCode()).body(apiResponse);
-//     }
+    @ExceptionHandler(value = Exception.class)
+    ResponseEntity<ApiResponse<Void>> handleUncategorizedException(Exception e) {
+        ApiResponse<Void> apiResponse = new ApiResponse<>();
+        apiResponse.setCode(ErrorCode.WE_COOKED.getCode());
+        apiResponse.setMessage(ErrorCode.WE_COOKED.getMessage());
+        return
+        ResponseEntity.status(ErrorCode.WE_COOKED.getStatusCode()).body(apiResponse);
+    }
 
 }

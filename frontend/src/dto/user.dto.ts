@@ -1,7 +1,6 @@
-import { UUID } from "crypto";
 
 export interface UserDTO {
-    userId: UUID;
+    userId: string;
     email: string;
     username: string;
     phone: string;

@@ -13,39 +13,43 @@ import {
   Palette,
   ChevronRight,
   Sparkles,
-  Home
+  Home,
+  LayoutGrid
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { useSessionStore } from '@/store/sessionStore';
 
 interface OwnerDashboardLayoutProps {
   children: ReactNode;
 }
 
 const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
-  const [user, setUser] = useState<UserDTO | null>(null);
+  // const [user, setUser] = useState<UserDTO | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const { user, clearSession } = useSessionStore();
 
-  useEffect(() => {
-    // Get user data from localStorage (stored by Login component)
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const userData = JSON.parse(storedUser) as UserDTO;
-      setUser(userData);
-    }
-  }, []);
+  // useEffect(() => {
+  //   // Get user data from localStorage (stored by Login component)
+  //   const storedUser = localStorage.getItem('user');
+  //   if (storedUser) {
+  //     const userData = JSON.parse(storedUser) as UserDTO;
+  //     setUser(userData);
+  //   }
+  // }, []);
 
   const handleLogout = () => {
     // Clear localStorage
     localStorage.removeItem('user');
     localStorage.removeItem('selected_restaurant');
     localStorage.removeItem('user_restaurants');
+    clearSession();
     navigate('/login');
   };
 
-  const menuItems = [
+  const features = [
     {
       id: 'overview',
       path: '/dashboard/owner/overview',
@@ -53,6 +57,14 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
       label: 'Overview',
       description: 'Dashboard summary and KPIs',
       gradient: 'from-blue-500 to-cyan-500'
+    },
+    {
+      id: 'restaurant',
+      path: '/dashboard/owner/restaurant',
+      icon: Home,
+      label: 'Restaurant Information',
+      description: 'Manage restaurant',
+      gradient: 'from-teal-500 to-emerald-500'
     },
     {
       id: 'menu',
@@ -94,6 +106,15 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
       description: 'View performance metrics',
       gradient: 'from-indigo-500 to-purple-500'
     },
+    {
+      id: 'managerDashboard',
+      path: '/dashboard/owner/branch-selection',
+      icon: LayoutGrid ,
+      label: 'Manager Dashboard',
+      description: 'Access manager dashborad',
+      gradient: 'from-indigo-500 to-purple-500'
+    },
+
   ];
 
   const isActiveRoute = (path: string) => {
@@ -134,7 +155,7 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
 
         {/* Navigation with staggered animations */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {menuItems.map((item, index) => {
+          {features.map((item, index) => {
             const isActive = isActiveRoute(item.path);
             const isHovered = hoveredItem === item.id;
 
@@ -179,7 +200,6 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
                     )}
                   >
                     <div className="flex items-start gap-3 w-full">
-                      {/* Icon with gradient on active */}
                       <div className={cn(
                         "relative transition-all duration-300",
                         isActive && "scale-110",
@@ -212,7 +232,6 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
                         </div>
                       </div>
 
-                      {/* Chevron indicator */}
                       <ChevronRight className={cn(
                         "h-4 w-4 transition-all duration-300",
                         isActive ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2",
@@ -224,6 +243,7 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
               </Link>
             );
           })}
+
         </nav>
 
         {/* User section with hover effects */}

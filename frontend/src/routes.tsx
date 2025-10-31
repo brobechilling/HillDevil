@@ -16,7 +16,9 @@ import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import StaffManagerLoginPage from './pages/auth/StaffManagerLogin';
 import RestaurantLoginPage from './pages/auth/RestaurantLoginPage';
-import PaymentPage from "./pages/auth/PaymentPage"; 
+import PaymentPage from "./pages/payment/PaymentPage";
+import PaymentSuccessPage from "./pages/payment/PaymentSuccessPage";
+import PaymentCancelPage from "./pages/payment/PaymentCancelPage";
 
 // Manager nested pages
 import ManagerOverviewPage from './pages/dashboard/manager/OverviewPage';
@@ -29,9 +31,11 @@ import ManagerMenuPage from './pages/dashboard/manager/MenuPage';
 
 // Owner nested pages
 import OwnerOverviewPage from './pages/dashboard/owner/OverviewPage';
+import RestaurantInfoPage from './pages/dashboard/owner/RestaurantInfoPage';
 import OwnerMenuPage from './pages/dashboard/owner/MenuPage';
 import OwnerTablesPage from './pages/dashboard/owner/TablesPage';
 import OwnerStaffPage from './pages/dashboard/owner/StaffPage';
+import BranchSelectionPage from './pages/dashboard/owner/BranchSelectionPage';
 
 // import OwnerCategoriesPage from './pages/dashboard/owner/CategoriesPage';
 // import OwnerCustomizationsPage from './pages/dashboard/owner/CustomizationsPage';
@@ -57,6 +61,7 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import { ROLE_NAME } from './dto/user.dto';
 
+
 export const routes: RouteObject[] = [
   {
     path: '/',
@@ -79,9 +84,9 @@ export const routes: RouteObject[] = [
     element: <RegisterConfirm />,
   },
   {
-  path: "/payment/:orderCode",
-  element: <PaymentPage />,
-},
+    path: "/payment/:orderCode",
+    element: <PaymentPage />,
+  },
   {
     path: '/branch/:shortCode',
     element: <GuestLanding />,
@@ -89,6 +94,14 @@ export const routes: RouteObject[] = [
   {
     path: '/branch/:shortCode/table/:tableId',
     element: <GuestLanding />,
+  },
+  {
+    path: '/payment/success',
+    element: <PaymentSuccessPage />,
+  },
+  {
+    path: '/payment/cancel',
+    element: <PaymentCancelPage />,
   },
   {
     path: '/brand-selection',
@@ -127,6 +140,10 @@ export const routes: RouteObject[] = [
         element: <OwnerMenuPage />,
       },
       {
+        path: 'restaurant',
+        element: <RestaurantInfoPage />,
+      },
+      {
         path: 'tables',
         element: <OwnerTablesPage />,
       },
@@ -150,6 +167,10 @@ export const routes: RouteObject[] = [
         path: 'customization',
         element: <OwnerCustomizationPage />,
       },
+      {
+        path: 'branch-selection',
+        element: <BranchSelectionPage />,
+      }
     ],
   },
   // {
@@ -163,7 +184,7 @@ export const routes: RouteObject[] = [
   {
     path: '/dashboard/manager',
     element: (
-      <ProtectedRoute allowedRoles={[ROLE_NAME.BRANCH_MANAGER]}>
+      <ProtectedRoute allowedRoles={[ROLE_NAME.BRANCH_MANAGER, ROLE_NAME.RESTAURANT_OWNER]}>
         <ManagerDashboard />
       </ProtectedRoute>
     ),

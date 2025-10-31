@@ -19,32 +19,36 @@ import {
 import { ROLE_NAME, RoleDTO } from "@/dto/user.dto";
 import { toast } from "@/hooks/use-toast";
 import { useCreateStaffAccountMutation } from "@/hooks/queries/useStaff";
+import { BranchDTO } from "@/dto/branch.dto";
+import { useBranchesByRestaurant } from "@/hooks/queries/useBranches";
 
-interface StaffManagementDialogProps {
+interface StaffAddDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  branchId: string;
   size: number;
+  restaurantId: string;
 }
 
-export const StaffManagementDialog = ({
+export const StaffAddDialog = ({
   open,
   onOpenChange,
-  branchId,
   size,
-}: StaffManagementDialogProps) => {
+  restaurantId,
+}: StaffAddDialogProps) => {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
     role: ROLE_NAME.WAITER,
+    branchId: "", 
   });
 
-  const createStaffMutation = useCreateStaffAccountMutation(1, size, branchId);
+  const { data: branches, isLoading, isError } = useBranchesByRestaurant(restaurantId);
+  const createStaffMutation = useCreateStaffAccountMutation(1, size, restaurantId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.username || !formData.password) {
+    if (!formData.username || !formData.password || !formData.branchId) {
       toast({
         variant: "destructive",
         title: "Missing fields",
@@ -59,7 +63,7 @@ export const StaffManagementDialog = ({
       await createStaffMutation.mutateAsync({
         username: formData.username,
         password: formData.password,
-        branchId,
+        branchId: formData.branchId,
         role: roleDto,
       });
 
@@ -69,7 +73,7 @@ export const StaffManagementDialog = ({
       });
 
       onOpenChange(false);
-      setFormData({ username: "", password: "", role: ROLE_NAME.WAITER });
+      setFormData({ username: "", password: "", role: ROLE_NAME.WAITER, branchId: "" });
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -77,13 +81,6 @@ export const StaffManagementDialog = ({
         description: error?.message || "Something went wrong",
       });
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.id]: e.target.value,
-    });
   };
 
   return (
@@ -134,8 +131,42 @@ export const StaffManagementDialog = ({
               <SelectContent>
                 <SelectItem value={ROLE_NAME.WAITER}>Waiter</SelectItem>
                 <SelectItem value={ROLE_NAME.RECEPTIONIST}>Receptionist</SelectItem>
+                <SelectItem value={ROLE_NAME.BRANCH_MANAGER}>Branch Manager</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Branch</Label>
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading branches...</p>
+            ) : isError ? (
+              <p className="text-sm text-destructive">Failed to load branches.</p>
+            ) : (
+              <Select
+                value={formData.branchId}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, branchId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches?.length ? (
+                    branches.map((branch: BranchDTO) => (
+                      <SelectItem key={branch.branchId} value={branch.branchId}>
+                        {branch.address}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      No branches available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

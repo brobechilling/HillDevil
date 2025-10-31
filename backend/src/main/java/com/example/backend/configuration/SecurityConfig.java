@@ -15,7 +15,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 import com.example.backend.entities.RoleName;
 
@@ -24,7 +23,7 @@ import com.example.backend.entities.RoleName;
 public class SecurityConfig {
 
 
-    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated", "/api/staff",  "/api/packages/**", "/api/branches/**"};
+    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated", "/api/staff/**",  "/api/packages/**", "/api/branches/**"};
     private final String[] ADMIN_ENDPOINTS = {"/api/users/**", "/api/roles/**"};
     private final String[] RESTAURANT_OWNER_ENDPOINTS = {};
     private final String[] BRANCH_MANAGER_ENDPOINTS = {};
@@ -46,17 +45,26 @@ public class SecurityConfig {
             request
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // allow preflight request in local
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                .requestMatchers(ADMIN_ENDPOINTS).hasAnyRole(RoleName.ADMIN.name()) 
+                
+                // User API
+                .requestMatchers(HttpMethod.GET, "/api/users/{userId}").hasAnyRole(RoleName.ADMIN.name(), RoleName.RESTAURANT_OWNER.name())
+                .requestMatchers(HttpMethod.PUT, "/api/users/").hasAnyRole(RoleName.ADMIN.name(), RoleName.RESTAURANT_OWNER.name())
+                .requestMatchers("/api/users/**").hasAnyRole(RoleName.ADMIN.name()) 
+
+                // Role API
+                .requestMatchers("/api/roles/**").hasAnyRole(RoleName.ADMIN.name())
+
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll());
 
             // config jwt authentication provider so that authentication filter can check the Authorization: Bearer token in the header of the request
-            httpSecurity.oauth2ResourceServer(oauth2 -> 
-                oauth2.jwt(jwtConfig -> jwtConfig.decoder(myCustomJwtDecoder).jwtAuthenticationConverter(jwtAuthenticationConverter()))
+        httpSecurity.oauth2ResourceServer(oauth2 -> 
+            oauth2.jwt(jwtConfig -> jwtConfig.decoder(myCustomJwtDecoder).jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
             );
-        
+        httpSecurity.exceptionHandling(exception -> 
+            exception.authenticationEntryPoint(new JwtAuthenticationEntryPoint()).accessDeniedHandler(new CustomAccessDeniedHandler()));
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
         httpSecurity.cors(cors -> cors.configurationSource(corsConfigurationSource()));
         

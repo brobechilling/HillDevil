@@ -15,6 +15,8 @@ public enum ErrorCode {
     TOKEN_INVALID(1008, "The refresh token not exist in db", HttpStatus.UNAUTHORIZED),
     TOKEN_EXPIRED(1009, "The refresh token already expired", HttpStatus.UNAUTHORIZED),
     TOKEN_REUSED(2009, "The refresh token already used", HttpStatus.UNAUTHORIZED),
+    USER_INACTIVE(2010, "User account is inactive", HttpStatus.BAD_REQUEST),
+    STAFFACCOUNT_INACTIVE(2011, "Staff account is inactive", HttpStatus.BAD_REQUEST),
     //Subcriptions handling error: Khoi
     PACKAGE_NOTEXISTED(1010, "The package does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
     FEATURE_NOTEXISTED(1011, "The feature does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
@@ -27,6 +29,7 @@ public enum ErrorCode {
     SUBSCRIPTION_NOT_ACTIVE(1018, "Subscription not active", HttpStatus.BAD_REQUEST),
     ORDER_CODE_EXISTS(1019, "Order code already exists", HttpStatus.BAD_REQUEST),
     PAYMENT_CREATION_FAILED(1020, "Payment creation failed", HttpStatus.BAD_REQUEST),
+    SUBSCRIPTION_ALREADY_CANCELLED(1021, "Subscriptions already cancelled", HttpStatus.BAD_REQUEST),
     INVALID_REQUEST(4000, "Invalid request", HttpStatus.BAD_REQUEST),
     
     // Table handling errors
@@ -45,7 +48,8 @@ public enum ErrorCode {
     BRANCH_NOTEXISTED(3001, "Branch not existed", HttpStatus.NOT_FOUND),
     AUTHENTICATION_INVALID(9000, "Authentication request invalid, missing email or username", HttpStatus.BAD_REQUEST),
     MISSING_BRANCHID(9001, "Missing branchId when login as staff", HttpStatus.BAD_REQUEST),
-    WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
+    RESTAURANT_DELETE_FAILED(3002, "Failed to delete restaurant", HttpStatus.INTERNAL_SERVER_ERROR),    WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
+
 
     private int code;
     private String message;

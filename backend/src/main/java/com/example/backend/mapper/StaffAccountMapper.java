@@ -10,6 +10,7 @@ import com.example.backend.entities.StaffAccount;
 @Mapper(componentModel = "spring", uses = {RoleMapper.class})
 public interface StaffAccountMapper {
 
+    @Mapping(target = "branchId", source = "branch.branchId")
     StaffAccountDTO toStaffAccountDTO(StaffAccount staffAccount);
 
     StaffAccount toStaffAccount(StaffAccountDTO staffAccountDTO);

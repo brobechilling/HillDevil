@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, CreditCard, Loader2, XCircle, AlertCircle } from "lucide-react";
 import { useSessionStore } from "@/store/sessionStore";
 import { subscriptionPaymentApi } from "@/api/subscriptionPaymentApi";
+import { usePaymentStatus } from "@/hooks/queries/useSubscriptionPayment";
 import { toast } from "@/hooks/use-toast";
 import { SubscriptionPaymentResponse } from "@/dto/subscriptionPayment.dto";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -18,15 +19,18 @@ import { QRCodeCanvas } from "qrcode.react";
 
 const PaymentPage = () => {
   const navigate = useNavigate();
+  const { orderCode } = useParams(); // ✅ Lấy từ URL path: /payment/:orderCode
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const { user, isAuthenticated, initialize } = useSessionStore();
   const [loading, setLoading] = useState(true);
   const [payment, setPayment] = useState<SubscriptionPaymentResponse | null>(null);
 
-  const orderCode = searchParams.get("orderCode");
   const restaurantName = searchParams.get("restaurantName") || "";
   const initialPayment = location.state as SubscriptionPaymentResponse | null;
+
+  // ✅ Sử dụng hook để polling
+  const { data: polledPayment, isLoading: isPolling } = usePaymentStatus(orderCode || "");
 
   useEffect(() => {
     initialize();
@@ -38,47 +42,37 @@ const PaymentPage = () => {
         restaurantName
       )}`;
       navigate(`/register?returnUrl=${encodeURIComponent(returnUrl)}`);
+      return;
     }
   }, [isAuthenticated, user, navigate, orderCode, restaurantName]);
 
+  // ✅ Update payment from polling hook (priority)
   useEffect(() => {
-    const fetchPayment = async () => {
-      if (initialPayment) {
-        setPayment(initialPayment);
-        setLoading(false);
-        return;
-      }
-
-      if (!orderCode || !user) return;
-
-      try {
-        const res = await subscriptionPaymentApi.getStatus(orderCode);
-        setPayment(res);
-      } catch (err) {
-        toast({
-          variant: "destructive",
-          title: "Payment initialization failed",
-          description: "Please try again later.",
-        });
-        navigate(-1);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (isAuthenticated) {
-      fetchPayment();
+    if (polledPayment) {
+      setPayment(polledPayment);
     }
-  }, [isAuthenticated, user, orderCode, initialPayment, navigate]);
+  }, [polledPayment]);
+
+  // ✅ Set initial payment on mount (will be overridden by polling)
+  useEffect(() => {
+    if (initialPayment && !polledPayment) {
+      setPayment(initialPayment);
+    }
+    setLoading(false);
+  }, [initialPayment, polledPayment]);
+
 
   // Redirect if payment is successful, failed, or canceled
   useEffect(() => {
     if (payment?.subscriptionPaymentStatus === "SUCCESS") {
-      toast({
-        title: "Payment successful!",
-        description: "Your subscription is now active.",
+      // ✅ Redirect to success page instead of dashboard directly
+      navigate("/payment/success", {
+        state: {
+          restaurantName,
+          orderCode,
+          amount: payment.amount
+        }
       });
-      navigate("/dashboard/owner/overview");
     } else if (payment?.subscriptionPaymentStatus === "FAILED" || payment?.subscriptionPaymentStatus === "CANCELED") {
       toast({
         variant: "destructive",
@@ -94,7 +88,7 @@ const PaymentPage = () => {
       });
       navigate(-1);
     }
-  }, [payment, navigate]);
+  }, [payment, navigate, restaurantName, orderCode]);
 
   const handleCancel = async () => {
     if (!payment?.payOsOrderCode) return;
@@ -104,7 +98,7 @@ const PaymentPage = () => {
         title: "Payment canceled",
         description: "You can start over if needed.",
       });
-      navigate(-1);
+      navigate("/payment/cancel", { replace: true }); // ✅ chuyển sang trang cancel
     } catch {
       toast({
         variant: "destructive",
@@ -113,6 +107,7 @@ const PaymentPage = () => {
       });
     }
   };
+
 
   if (loading) {
     return (
@@ -169,13 +164,12 @@ const PaymentPage = () => {
 
                 <p className="text-sm text-muted-foreground mt-4 mb-2">Status</p>
                 <p
-                  className={`font-medium ${
-                    payment.subscriptionPaymentStatus === "SUCCESS"
+                  className={`font-medium ${payment.subscriptionPaymentStatus === "SUCCESS"
                       ? "text-green-600"
                       : payment.subscriptionPaymentStatus === "FAILED" || payment.subscriptionPaymentStatus === "CANCELED"
-                      ? "text-red-600"
-                      : "text-yellow-600"
-                  }`}
+                        ? "text-red-600"
+                        : "text-yellow-600"
+                    }`}
                 >
                   {payment.subscriptionPaymentStatus || "PENDING"}
                 </p>

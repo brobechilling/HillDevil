@@ -10,11 +10,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.example.backend.dto.RestaurantDTO;
 import com.example.backend.dto.UserDTO;
 import com.example.backend.dto.request.SignupRequest;
 import com.example.backend.dto.response.PageResponse;
-import com.example.backend.entities.Restaurant;
 import com.example.backend.entities.Role;
 import com.example.backend.entities.RoleName;
 import com.example.backend.entities.User;
@@ -67,9 +65,9 @@ public class UserService {
         return userMapper.toUserDto(userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED)));
     }
 
-    public UserDTO deleteUserById(UUID userId) {
+    public UserDTO setUserStatusById(UUID userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
-        user.setStatus(false);
+        user.setStatus(!user.isStatus());
         return userMapper.toUserDto(userRepository.save(user));
     }
 
@@ -79,12 +77,13 @@ public class UserService {
         user.setPhone(userDTO.getPhone());
         user.setUsername(userDTO.getUsername());
         user.setRole(roleRepository.findByName(userDTO.getRole().getName()).orElseThrow(() -> new AppException(ErrorCode.ROLE_NOTEXISTED)));
+        user.setStatus(userDTO.isStatus());
         return userMapper.toUserDto(userRepository.save(user));
     }
     
     public PageResponse<UserDTO> getUserPaginated(int page, int size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
-        Page<User> pageData = userRepository.findAll(pageable);
+        Page<User> pageData = userRepository.findByRole_NameNot(RoleName.ADMIN, pageable);
         PageResponse<UserDTO> pageResponse = new PageResponse<>();
         pageResponse.setItems(pageData.map(user -> userMapper.toUserDto(user)).toList());
         pageResponse.setTotalElements(pageData.getTotalElements());
