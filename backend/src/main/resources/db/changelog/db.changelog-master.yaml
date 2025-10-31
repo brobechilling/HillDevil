@@ -42,3 +42,7 @@ databaseChangeLog:
   - include:
       file: fix-subscription-payment-entity-changelog.sql
       relativeToChangelogFile: true
+
+  - include:
+      file: fix-menu-features-and-seed-data-changelog.sql
+      relativeToChangelogFile: true
