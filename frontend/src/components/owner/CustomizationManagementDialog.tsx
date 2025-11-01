@@ -1,159 +1,118 @@
+// src/components/owner/CustomizationManagementDialog.tsx
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useMenuCustomizationStore, Customization } from '@/store/customizationStore';
+import { Trash2, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { Trash2 } from 'lucide-react';
+import { useCreateCustomization, useUpdateCustomization, useDeleteCustomization } from '@/hooks/queries/useCustomizations';
+import { CustomizationDTO } from '@/dto/customization.dto';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-interface CustomizationManagementDialogProps {
+interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  branchId: string;
-  customization?: Customization;
+  restaurantId: string;
+  customization?: CustomizationDTO;
 }
 
 export const CustomizationManagementDialog = ({
   open,
   onOpenChange,
-  branchId,
+  restaurantId,
   customization,
-}: CustomizationManagementDialogProps) => {
-  const { addCustomization, updateCustomization, deleteCustomization } = useMenuCustomizationStore();
-  
+}: Props) => {
+  const createMutation = useCreateCustomization();
+  const updateMutation = useUpdateCustomization();
+  const deleteMutation = useDeleteCustomization();
+
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
 
   useEffect(() => {
-    if (open && customization) {
+    if (customization) {
       setName(customization.name);
-      setPrice(customization.price.toString());
-    } else if (open) {
+      setPrice(customization.price);
+    } else {
       setName('');
       setPrice('');
     }
-  }, [open, customization]);
+  }, [customization, open]);
 
   const handleSave = () => {
-    if (!name.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Name required',
-        description: 'Please enter a customization name.',
-      });
-      return;
-    }
+    if (!name.trim()) return toast({ variant: 'destructive', title: 'Name required' });
 
-    const priceValue = parseFloat(price) || 0;
+    const payload = { name: name.trim(), price: price || '0', restaurantId };
 
     if (customization) {
-      updateCustomization(customization.id, {
-        name: name.trim(),
-        price: priceValue,
-      });
-      toast({
-        title: 'Customization updated',
-        description: 'The customization has been updated successfully.',
+      updateMutation.mutate({
+        id: customization.customizationId,
+        data: payload
+      }, {
+        onSuccess: () => {
+          toast({ title: 'Updated', description: 'Customization saved.' });
+          onOpenChange(false);
+        }
       });
     } else {
-      addCustomization({
-        id: `cust_${Date.now()}`,
-        name: name.trim(),
-        price: priceValue,
-        branchId,
-        options: [],
-      });
-      toast({
-        title: 'Customization added',
-        description: 'The customization has been added successfully.',
+      createMutation.mutate(payload, {
+        onSuccess: () => {
+          toast({ title: 'Created', description: 'Customization added.' });
+          onOpenChange(false);
+        }
       });
     }
-
-    onOpenChange(false);
   };
 
   const handleDelete = () => {
     if (customization) {
-      deleteCustomization(customization.id);
-      toast({
-        title: 'Customization deleted',
-        description: 'The customization has been removed.',
+      deleteMutation.mutate(customization.customizationId, {
+        onSuccess: () => {
+          toast({ title: 'Deleted', description: 'Customization removed.' });
+          setShowDelete(false);
+          onOpenChange(false);
+        }
       });
-      setShowDeleteConfirm(false);
-      onOpenChange(false);
     }
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {customization ? 'Edit Customization' : 'Add Customization'}
-            </DialogTitle>
-            <DialogDescription>
-              {customization ? 'Update the customization details' : 'Create a new customization option'}
+            <DialogTitle className="text-lg font-semibold tracking-tight">{customization ? 'Edit' : 'Add'} Customization</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {customization ? 'Update details' : 'Create new option'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Extra Cheese, Large Size"
-              />
+            <div className="space-y-1.5">
+              <Label className="text-sm">Name *</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Extra Cheese" className="h-9" />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="price">Additional Price ($) *</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="0.00"
-              />
+            <div className="space-y-1.5">
+              <Label className="text-sm">Price ($)</Label>
+              <Input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" className="h-9" />
             </div>
 
             <div className="flex gap-2 pt-4">
               {customization && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="mr-auto"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
+                <Button variant="destructive" onClick={() => setShowDelete(true)} className="mr-auto h-9">
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
                 </Button>
               )}
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave}>
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9">Cancel</Button>
+              <Button onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending} className="h-9">
+                {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {customization ? 'Update' : 'Add'}
               </Button>
             </div>
@@ -161,12 +120,12 @@ export const CustomizationManagementDialog = ({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Customization</AlertDialogTitle>
+            <AlertDialogTitle>Delete Customization?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this customization? This action cannot be undone.
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

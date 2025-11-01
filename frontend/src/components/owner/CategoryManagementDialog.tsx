@@ -1,213 +1,167 @@
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useMenuCustomizationStore, Customization } from '@/store/customizationStore';
-import { toast } from '@/hooks/use-toast';
-import { Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Plus, Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { useCustomizations, useCreateCustomization } from '@/hooks/queries/useCustomizations';
+import { useUpdateCategory, useCategory } from '@/hooks/queries/useCategories';
 
-interface CategoryManagementDialogProps {
+interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  categoryName: string;
-  branchId: string;
+  categoryId: string;
+  restaurantId: string;
 }
 
 export const CategoryManagementDialog = ({
   open,
   onOpenChange,
-  categoryName,
-  branchId,
-}: CategoryManagementDialogProps) => {
-  const {
-    customizations,
-    getCustomizationsByBranch,
-    getCategoryCustomizations,
-    linkCategoryCustomization,
-    unlinkCategoryCustomization,
-    addCustomization,
-  } = useMenuCustomizationStore();
+  categoryId,
+  restaurantId,
+}: Props) => {
+  const { data: allCustomizations = [] } = useCustomizations();
+  const { data: category } = useCategory(categoryId);
+  const createMutation = useCreateCustomization();
+  const updateCategoryMutation = useUpdateCategory();
 
-  const [selectedCustomizations, setSelectedCustomizations] = useState<Set<string>>(new Set());
-  const [showAddCustomization, setShowAddCustomization] = useState(false);
-  const [newCustomizationName, setNewCustomizationName] = useState('');
-  const [newCustomizationPrice, setNewCustomizationPrice] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPrice, setNewPrice] = useState('');
 
-  const allCustomizations = getCustomizationsByBranch(branchId);
-  const categoryCustomizations = getCategoryCustomizations(categoryName, branchId);
-
+  // Load linked customizations
   useEffect(() => {
-    if (open) {
-      const linkedIds = new Set(categoryCustomizations.map((c) => c.id));
-      setSelectedCustomizations(linkedIds);
-    }
-  }, [open, categoryCustomizations]);
-
-  const handleToggleCustomization = (customizationId: string, isChecked: boolean) => {
-    const newSelected = new Set(selectedCustomizations);
-    if (isChecked) {
-      newSelected.add(customizationId);
-      linkCategoryCustomization(categoryName, customizationId, branchId);
+    if (open && category?.customizationIds) {
+      setSelectedIds(category.customizationIds);
     } else {
-      newSelected.delete(customizationId);
-      unlinkCategoryCustomization(categoryName, customizationId, branchId);
+      setSelectedIds([]);
     }
-    setSelectedCustomizations(newSelected);
+  }, [open, category]);
+
+  const handleToggle = (custId: string, checked: boolean) => {
+    const newIds = checked
+      ? [...selectedIds, custId]
+      : selectedIds.filter(id => id !== custId);
+
+    setSelectedIds(newIds);
+    if (!category) return;
+    updateCategoryMutation.mutate({
+      id: categoryId,
+      data: { ...category, customizationIds: newIds }
+    });
   };
 
-  const handleAddNewCustomization = () => {
-    if (!newCustomizationName.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Name required',
-        description: 'Please enter a customization name.',
-      });
-      return;
-    }
+  const handleAddNew = () => {
+    if (!newName.trim()) return toast({ variant: 'destructive', title: 'Name required' });
 
-    const price = parseFloat(newCustomizationPrice) || 0;
-    addCustomization({
-      id: crypto.randomUUID(),
-      name: newCustomizationName.trim(),
-      price,
-      branchId,
-      options: [],
+    createMutation.mutate({
+      name: newName,
+      price: newPrice || '0',
+      restaurantId,
+    }, {
+      onSuccess: (newCust) => {
+        const newIds = [...selectedIds, newCust.customizationId];
+        if (category) {
+          updateCategoryMutation.mutate({
+            id: categoryId,
+            data: { ...category, customizationIds: newIds }
+          });
+        }
+        setNewName('');
+        setNewPrice('');
+        setShowAddForm(false);
+        toast({ title: 'Added', description: 'Customization created and linked.' });
+      }
     });
-
-    toast({
-      title: 'Customization added',
-      description: 'New customization has been created.',
-    });
-
-    setNewCustomizationName('');
-    setNewCustomizationPrice('');
-    setShowAddCustomization(false);
-  };
-
-  const handleSave = () => {
-    toast({
-      title: 'Category updated',
-      description: `Customizations for ${categoryName} have been updated.`,
-    });
-    onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Manage Category: {categoryName}</DialogTitle>
-          <DialogDescription>
-            Select which customizations apply to this category
+          <DialogTitle className="text-lg font-semibold tracking-tight">Manage Customizations</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            {category?.name} – Select applicable customizations
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {!showAddCustomization ? (
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setShowAddCustomization(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add New Customization
+          {/* Add New */}
+          {!showAddForm ? (
+            <Button variant="outline" className="w-full h-9" onClick={() => setShowAddForm(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Add New Customization
             </Button>
           ) : (
             <div className="p-4 border rounded-lg space-y-3 bg-muted/50">
-              <h4 className="font-semibold text-sm">Create New Customization</h4>
-              <div className="space-y-2">
-                <Label htmlFor="customization-name">Name</Label>
-                <Input
-                  id="customization-name"
-                  value={newCustomizationName}
-                  onChange={(e) => setNewCustomizationName(e.target.value)}
-                  placeholder="e.g., Extra Topping"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="customization-price">Additional Price ($)</Label>
-                <Input
-                  id="customization-price"
-                  type="number"
-                  step="0.01"
-                  value={newCustomizationPrice}
-                  onChange={(e) => setNewCustomizationPrice(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
+              <h4 className="font-semibold text-sm">New Customization</h4>
+              <Input
+                placeholder="Name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="h-9"
+              />
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="Price"
+                value={newPrice}
+                onChange={(e) => setNewPrice(e.target.value)}
+                className="h-9"
+              />
               <div className="flex gap-2">
-                <Button onClick={handleAddNewCustomization} size="sm">
+                <Button size="sm" onClick={handleAddNew} disabled={createMutation.isPending} className="h-8">
+                  {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Add
                 </Button>
-                <Button
-                  onClick={() => {
-                    setShowAddCustomization(false);
-                    setNewCustomizationName('');
-                    setNewCustomizationPrice('');
-                  }}
-                  variant="outline"
-                  size="sm"
-                >
+                <Button size="sm" variant="outline" onClick={() => {
+                  setShowAddForm(false);
+                  setNewName('');
+                  setNewPrice('');
+                }} className="h-8">
                   Cancel
                 </Button>
               </div>
             </div>
           )}
 
-          <div className="space-y-3">
-            <h4 className="font-semibold">Available Customizations</h4>
+          {/* List */}
+          <div className="space-y-2">
             {allCustomizations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No customizations available. Create one above.
-              </p>
+              <p className="text-sm text-muted-foreground">No customizations yet.</p>
             ) : (
-              <div className="space-y-2">
-                {allCustomizations.map((customization) => (
-                  <div
-                    key={customization.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      <Checkbox
-                        id={`custom-${customization.id}`}
-                        checked={selectedCustomizations.has(customization.id)}
-                        onCheckedChange={(checked) =>
-                          handleToggleCustomization(customization.id, checked as boolean)
-                        }
-                      />
-                      <Label
-                        htmlFor={`custom-${customization.id}`}
-                        className="flex-1 cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{customization.name}</span>
-                          {customization.price > 0 && (
-                            <Badge variant="secondary">+${customization.price.toFixed(2)}</Badge>
-                          )}
-                        </div>
-                      </Label>
+              allCustomizations.map(cust => (
+                <div
+                  key={cust.customizationId}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div className="flex items-center gap-3 flex-1">
+                    <Checkbox
+                      checked={selectedIds.includes(cust.customizationId)}
+                      onCheckedChange={(checked) => handleToggle(cust.customizationId, checked as boolean)}
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-sm">{cust.name}</span>
+                        {parseFloat(cust.price) > 0 && (
+                          <Badge variant="secondary" className="text-[11px]">+${parseFloat(cust.price).toFixed(2)}</Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))
             )}
           </div>
 
           <div className="flex gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-              Cancel
-            </Button>
-            <Button onClick={handleSave} className="flex-1">
-              Save Changes
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 h-9">
+              Close
             </Button>
           </div>
         </div>

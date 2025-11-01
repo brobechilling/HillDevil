@@ -1,84 +1,68 @@
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { ImageUpload } from '@/components/ui/image-upload';
-import { useMenuStore, MenuItem } from '@/store/menuStore';
-import { useMenuCustomizationStore } from '@/store/customizationStore';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { useEffect, useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-const DEFAULT_CATEGORIES = [
-  'Appetizers', 'Soups & Salads', 'Main Course', 'Seafood', 'Grills',
-  'Pasta & Noodles', 'Desserts', 'Beverages', 'Cocktails', 'Milk Tea', 'Coffee', 'Custom',
-];
-
-const CUSTOMIZATION_CATEGORIES = [
-  'Topping', 'Size', 'Temperature', 'Sweetness', 'Custom',
-];
+import { useCategories } from '@/hooks/queries/useCategories';
+import { useCreateMenuItem, useUpdateMenuItem } from '@/hooks/queries/useMenuItems';
+import { Loader2 } from 'lucide-react';
+import { MenuItemDTO } from '@/dto/menuItem.dto';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const menuItemSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
-  price: z.coerce.number().min(0.01, 'Price must be greater than 0'),
-  category: z.string().min(2, 'Category is required'),
-  parentCategory: z.string().optional(),
-  isCustomizationCategory: z.boolean().default(false),
+  name: z.string().min(2, 'Name must have at least 2 characters'),
+  description: z.string().min(10, 'Description must have at least 10 characters'),
+  price: z.coerce.number().positive('Price must be greater than 0'),
+  categoryId: z.string().min(1, 'Please select a category'),
+  hasCustomization: z.boolean(),
+  bestSeller: z.boolean().default(false),
   imageUrl: z.string().optional(),
-  available: z.boolean().default(true),
 });
+type FormData = z.infer<typeof menuItemSchema>;
 
-type MenuItemFormData = z.infer<typeof menuItemSchema>;
-
-interface MenuItemDialogProps {
+interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  restaurantId: string;
   branchId: string;
-  item?: MenuItem;
+  item?: MenuItemDTO;
 }
 
 export const MenuItemDialog = ({
   open,
   onOpenChange,
+  restaurantId,
   branchId,
   item,
-}: MenuItemDialogProps) => {
-  const addItem = useMenuStore((state) => state.addItem);
-  const updateItem = useMenuStore((state) => state.updateItem);
-  const allItems = useMenuStore((state) => state.items);
-  const branchItems = allItems.filter((i) => i.branchId === branchId);
+}: Props) => {
+  const { data: categories = [] } = useCategories();
+  const createMutation = useCreateMenuItem();
+  const updateMutation = useUpdateMenuItem();
 
-  const {
-    getCategoryCustomizations,
-    getMenuItemCustomizations,
-    linkMenuItemCustomization,
-    unlinkMenuItemCustomization,
-  } = useMenuCustomizationStore();
+  // ✅ Dùng imageUrl từ item (BE đã có)
+  const existingImageUrl = item?.imageUrl || null;
 
-  const [categoryType, setCategoryType] = useState<string>('');
-  const [showCustomCategory, setShowCustomCategory] = useState(false);
-  const [customizationCategoryType, setCustomizationCategoryType] = useState<string>('');
-  const [showCustomCustomizationCategory, setShowCustomCustomizationCategory] = useState(false);
-  const [allowCustomizations, setAllowCustomizations] = useState(false);
-  const [selectedCustomizations, setSelectedCustomizations] = useState<Set<string>>(new Set());
-  const [showLeftScroll, setShowLeftScroll] = useState(false);
-  const [showRightScroll, setShowRightScroll] = useState(false);
-  const categoryScrollRef = useRef<HTMLDivElement>(null);
-  const customizationScrollRef = useRef<HTMLDivElement>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const {
     register,
@@ -87,211 +71,285 @@ export const MenuItemDialog = ({
     reset,
     setValue,
     watch,
-  } = useForm<MenuItemFormData>({
+  } = useForm<FormData>({
     resolver: zodResolver(menuItemSchema),
-    defaultValues: { available: true, isCustomizationCategory: false },
+    defaultValues: {
+      name: '',
+      description: '',
+      price: undefined,
+      categoryId: '',
+      hasCustomization: false,
+      bestSeller: false,
+      imageUrl: '',
+    },
   });
 
-  const available = watch('available');
-  const isCustomizationCategory = watch('isCustomizationCategory');
-  const parentCategory = watch('parentCategory');
-  const category = watch('category');
-
-  const categoryCustomizations = !isCustomizationCategory && category
-    ? getCategoryCustomizations(category, branchId)
-    : [];
-  const itemCustomizations = item ? getMenuItemCustomizations(item.id) : [];
+  const hasCustomization = watch('hasCustomization');
+  const categoryId = watch('categoryId');
 
   useEffect(() => {
-    if (item) {
-      const isDefaultCategory = DEFAULT_CATEGORIES.includes(item.category);
-      setCategoryType(isDefaultCategory ? item.category : 'Custom');
-      setShowCustomCategory(!isDefaultCategory);
+    if (open) {
+      if (item) {
+        reset({
+          name: item.name || '',
+          description: item.description || '',
+          price: item.price ?? undefined,
+          categoryId: item.categoryId || '',
+          hasCustomization: item.hasCustomization || false,
+          bestSeller: item.bestSeller || false,
+          imageUrl: item.imageUrl || '',
+        });
+      } else {
+        reset({
+          name: '',
+          description: '',
+          price: undefined,
+          categoryId: '',
+          hasCustomization: false,
+          bestSeller: false,
+          imageUrl: '',
+        });
+      }
+      setImageFile(null);
+      setImagePreview(null);
+    }
+  }, [item, open, reset]);
 
-      if (item.isCustomizationCategory && item.parentCategory) {
-        const isDefaultCustomization = CUSTOMIZATION_CATEGORIES.includes(item.category);
-        setCustomizationCategoryType(isDefaultCustomization ? item.category : 'Custom');
-        setShowCustomCustomizationCategory(!isDefaultCustomization);
+  // ✅ Preview ảnh mới chọn
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setImageFile(file);
+
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+    } else {
+      setImagePreview(null);
+    }
+  };
+
+  // ✅ Submit
+  const onSubmit = async (data: FormData) => {
+    try {
+      setIsUploading(true);
+
+      const payload = {
+        ...data,
+        price: data.price,
+        restaurantId,
+        customizationIds: [],
+      };
+
+      if (item) {
+        await updateMutation.mutateAsync({
+          id: item.menuItemId,
+          data: payload as any,
+          imageFile: imageFile || undefined,
+        });
+      } else {
+        await createMutation.mutateAsync({
+          data: payload as any,
+          imageFile: imageFile || undefined,
+        });
       }
 
-      const linkedIds = new Set(itemCustomizations.map((c) => c.id));
-      setSelectedCustomizations(linkedIds);
-      setAllowCustomizations(linkedIds.size > 0);
-
-      reset({
-        name: item.name,
-        description: item.description,
-        price: item.price,
-        category: item.category,
-        parentCategory: item.parentCategory || '',
-        isCustomizationCategory: item.isCustomizationCategory || false,
-        imageUrl: item.imageUrl || '',
-        available: item.available,
+      toast({
+        title: item ? 'Updated' : 'Created',
+        description: 'Menu item saved successfully.',
       });
-    } else {
-      setCategoryType('');
-      setShowCustomCategory(false);
-      setCustomizationCategoryType('');
-      setShowCustomCustomizationCategory(false);
-      setAllowCustomizations(false);
-      setSelectedCustomizations(new Set());
-      reset({
-        name: '',
-        description: '',
-        price: 0,
-        category: '',
-        parentCategory: '',
-        isCustomizationCategory: false,
-        imageUrl: '',
-        available: true,
+
+      onOpenChange(false);
+      reset();
+    } catch (error: any) {
+      console.error('Error saving menu item:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description:
+          error?.response?.data?.message ||
+          error.message ||
+          'Failed to save menu item.',
       });
+    } finally {
+      setIsUploading(false);
     }
-  }, [item]);
-
-  const handleCategoryTypeChange = (value: string) => {
-    setCategoryType(value);
-    setShowCustomCategory(value === 'Custom');
-    setValue('category', value === 'Custom' ? '' : value);
-  };
-
-  const handleCustomizationCategoryChange = (value: string) => {
-    setCustomizationCategoryType(value);
-    setShowCustomCustomizationCategory(value === 'Custom');
-    setValue('category', value === 'Custom' ? '' : value);
-  };
-
-  const onSubmit = (data: MenuItemFormData) => {
-    if (item) {
-      updateItem(item.id, data);
-      toast({ title: 'Menu Item Updated', description: 'Updated successfully.' });
-    } else {
-      // Ensure all required fields are present
-      const itemData: Omit<MenuItem, 'id' | 'createdAt' | 'customizations'> = {
-        name: data.name || '',
-        description: data.description || '',
-        price: data.price || 0,
-        category: data.category || '',
-        branchId,
-        available: data.available ?? true,
-        parentCategory: data.parentCategory,
-        isCustomizationCategory: data.isCustomizationCategory,
-        imageUrl: data.imageUrl,
-      };
-      addItem(itemData);
-      toast({ title: 'Menu Item Added', description: 'Added successfully.' });
-    }
-    onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-2xl w-full p-0 overflow-hidden rounded-2xl border border-orange-100 shadow-xl"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-6 py-4">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-slate-800">
-              {item ? 'Edit Menu Item' : 'Add Menu Item'}
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              {item ? 'Update the menu item details' : 'Add a new item to your menu'}
-            </DialogDescription>
-          </DialogHeader>
-        </div>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold tracking-tight">
+            {item ? 'Edit' : 'Add'} Menu Item
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            {item ? 'Update item details' : 'Create a new menu item'}
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Scrollable Content */}
-        <div className="px-6 py-5 overflow-y-auto max-h-[75vh] scroll-smooth space-y-5">
-          {/* Customization toggle */}
-          <div className="flex items-center space-x-2 p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200">
-            <Switch
-              id="isCustomizationCategory"
-              checked={isCustomizationCategory}
-              onCheckedChange={(checked) => setValue('isCustomizationCategory', checked)}
-            />
-            <Label htmlFor="isCustomizationCategory" className="cursor-pointer font-medium text-slate-700">
-              This is a customization item (e.g., Topping, Size)
-            </Label>
-          </div>
-
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-4">
           {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name" className="font-semibold text-slate-700">Item Name *</Label>
-            <Input {...register('name')} id="name" placeholder="e.g., Pearl, Large Size" />
-            {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
+          <div className="space-y-1.5">
+            <Label className="text-sm">Name *</Label>
+            <Input {...register('name')} className="h-9" />
+            {errors.name && (
+              <p className="text-sm text-red-500">{errors.name.message}</p>
+            )}
           </div>
 
-          {/* Category pills */}
-          <div className="space-y-2">
-            <Label className="font-semibold text-slate-700">Category *</Label>
-            <div className="flex flex-wrap gap-2">
-              {DEFAULT_CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => handleCategoryTypeChange(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                    categoryType === cat
-                      ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-            {showCustomCategory && (
-              <Input {...register('category')} placeholder="Enter custom category name" />
+          {/* Category */}
+          <div className="space-y-1.5">
+            <Label className="text-sm">Category *</Label>
+            <Select
+              value={categoryId || ''}
+              onValueChange={(val) =>
+                setValue('categoryId', val, { shouldValidate: true })
+              }
+            >
+              <SelectTrigger className="w-full h-9">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.length === 0 ? (
+                  <SelectItem value="none" disabled>
+                    No categories available
+                  </SelectItem>
+                ) : (
+                  categories.map((cat) => (
+                    <SelectItem key={cat.categoryId} value={cat.categoryId}>
+                      {cat.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            {errors.categoryId && (
+              <p className="text-sm text-red-500 mt-1">
+                {errors.categoryId.message}
+              </p>
             )}
-            {errors.category && <p className="text-sm text-red-500">{errors.category.message}</p>}
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description" className="font-semibold text-slate-700">Description *</Label>
-            <Textarea {...register('description')} id="description" placeholder="Describe the dish..." rows={3} />
-            {errors.description && <p className="text-sm text-red-500">{errors.description.message}</p>}
+          <div className="space-y-1.5">
+            <Label className="text-sm">Description *</Label>
+            <Textarea {...register('description')} rows={3} className="min-h-[84px]" />
+            {errors.description && (
+              <p className="text-sm text-red-500">
+                {errors.description.message}
+              </p>
+            )}
           </div>
 
           {/* Price */}
-          <div className="space-y-2">
-            <Label htmlFor="price" className="font-semibold text-slate-700">Price ($) *</Label>
-            <Input {...register('price')} id="price" type="number" step="0.01" placeholder="0.00" />
-            {errors.price && <p className="text-sm text-red-500">{errors.price.message}</p>}
-          </div>
-
-          {/* Image */}
-          <div className="space-y-2">
-            <Label className="font-semibold text-slate-700">Product Image</Label>
-            <ImageUpload
-              value={watch('imageUrl')}
-              onChange={(value) => setValue('imageUrl', value)}
-              maxSize={5}
+          <div className="space-y-1.5">
+            <Label className="text-sm">Price *</Label>
+            <Input
+              type="number"
+              step="0.01"
+              {...register('price', { valueAsNumber: true })}
+              className="h-9"
             />
+            {errors.price && (
+              <p className="text-sm text-red-500">{errors.price.message}</p>
+            )}
           </div>
 
-          {/* Available */}
-          <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-3">
-            <Switch id="available" checked={available} onCheckedChange={(checked) => setValue('available', checked)} />
-            <Label htmlFor="available" className="cursor-pointer font-medium text-slate-700">
-              Available for order
-            </Label>
+          {/* Customization */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={hasCustomization}
+              onCheckedChange={(v) => setValue('hasCustomization', v === true)}
+            />
+            <Label className="text-sm">Has Customization</Label>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-slate-100 px-6 py-4 flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit(onSubmit)}
-            className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg"
-          >
-            {item ? 'Update' : 'Add'} Item
-          </Button>
-        </div>
+          {/* Image Upload */}
+          <div className="space-y-1.5">
+            <Label className="text-sm">Image</Label>
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              disabled={isUploading}
+            />
+
+            {/* Preview current + new */}
+            <div className="flex gap-4 mt-3">
+              {existingImageUrl && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Current image:
+                  </p>
+                  <img
+                    src={existingImageUrl}
+                    alt="Current"
+                    className="w-32 h-32 object-cover rounded border"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        parent.innerHTML =
+                          '<div class="flex items-center justify-center w-32 h-32 border rounded text-xs text-muted-foreground">Image not available</div>';
+                      }
+                    }}
+                  />
+                </div>
+              )}
+
+              {imagePreview && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    New image:
+                  </p>
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded border"
+                  />
+                </div>
+              )}
+            </div>
+
+            {isUploading && (
+              <p className="text-sm text-blue-500 mt-1">Uploading image...</p>
+            )}
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="h-9"
+              disabled={
+                createMutation.isPending ||
+                updateMutation.isPending ||
+                isUploading
+              }
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={
+                createMutation.isPending ||
+                updateMutation.isPending ||
+                isUploading
+              }
+              className="h-9"
+            >
+              {(createMutation.isPending ||
+                updateMutation.isPending ||
+                isUploading) && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {item ? 'Update' : 'Create'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

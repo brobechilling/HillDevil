@@ -5,6 +5,7 @@ import com.example.backend.dto.MenuItemDTO;
 import com.example.backend.dto.request.MenuItemCreateRequest;
 import com.example.backend.service.MenuItemService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -33,17 +34,24 @@ public class MenuItemController {
         return res;
     }
 
-    @PostMapping("")
-    public ApiResponse<MenuItemDTO> create(@RequestBody MenuItemCreateRequest request) {
+    @PostMapping(value = "/create", consumes = {"multipart/form-data"})
+    public ApiResponse<MenuItemDTO> create(
+            @RequestPart("data") MenuItemCreateRequest request,
+            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile
+    ) {
         ApiResponse<MenuItemDTO> res = new ApiResponse<>();
-        res.setResult(menuItemService.create(request));
+        res.setResult(menuItemService.create(request, imageFile));
         return res;
     }
 
-    @PutMapping("/{id}")
-    public ApiResponse<MenuItemDTO> update(@PathVariable UUID id, @RequestBody MenuItemDTO dto) {
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    public ApiResponse<MenuItemDTO> update(
+            @PathVariable UUID id,
+            @RequestPart("data") MenuItemCreateRequest request,
+            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile
+    ) {
         ApiResponse<MenuItemDTO> res = new ApiResponse<>();
-        res.setResult(menuItemService.update(id, dto));
+        res.setResult(menuItemService.update(id, request, imageFile));
         return res;
     }
 
