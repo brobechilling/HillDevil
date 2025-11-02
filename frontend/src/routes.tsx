@@ -87,14 +87,26 @@ export const routes: RouteObject[] = [
     path: "/payment/:orderCode",
     element: <PaymentPage />,
   },
+  // Public guest landing routes: use restaurant slug from DB (e.g. /seouly)
   {
-    path: '/branch/:shortCode',
+    path: '/:restaurantSlug',
     element: <GuestLanding />,
   },
   {
-    path: '/branch/:shortCode/table/:tableId',
+    path: '/:restaurantSlug/branch/:branchId',
     element: <GuestLanding />,
   },
+  // Note: branch-specific route removed to keep selection on the same page
+  // QR / table-based routes are temporarily disabled. Use slug-only routes for guest landing.
+  // {
+  //   path: '/:restaurantSlug/table/:tableId',
+  //   element: <GuestLanding />,
+  // },
+  // {
+  //   // optional: support explicit branch and table in path
+  //   path: '/:restaurantSlug/:branchId/:tableId',
+  //   element: <GuestLanding />,
+  // },
   {
     path: '/payment/success',
     element: <PaymentSuccessPage />,

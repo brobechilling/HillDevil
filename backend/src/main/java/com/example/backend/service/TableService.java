@@ -5,6 +5,8 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.example.backend.exception.AppException;
+import com.example.backend.exception.ErrorCode;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +45,13 @@ public class TableService {
     @Transactional
     public TableResponse createTable(CreateTableRequest req) {
         Area area = areaRepository.findById(req.getAreaId())
-                .orElseThrow(() -> new IllegalArgumentException("Area not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.AREA_NOT_FOUND));
+
+        // Kiểm tra tag trùng trong area
+        boolean tagExists = tableRepository.existsByArea_AreaIdAndTag(area.getAreaId(), req.getTag());
+        if (tagExists) {
+            throw new AppException(ErrorCode.TABLE_TAG_EXISTED_IN_AREA);
+        }
 
         AreaTable table = new AreaTable();
         table.setArea(area);
@@ -51,24 +59,46 @@ public class TableService {
         table.setCapacity(req.getCapacity());
         table.setStatus(TableStatus.FREE);
 
-        table = tableRepository.save(table); // để có UUID
+        // Lưu lần 1 → có UUID
+        table = tableRepository.save(table);
 
-        // Không lưu Base64 vào DB theo phương án A (nhẹ DB)
+        // === TẠO QR URL CHUẨN ===
+        String publicUrl = area.getBranch().getRestaurant().getPublicUrl(); // https://hilldevil.space/sunnycafe
+        String slug = publicUrl.substring(publicUrl.lastIndexOf("/") + 1);
+        String baseUrl = appProps.getBaseUrl();
+        if (baseUrl == null || baseUrl.isBlank()) {
+            baseUrl = "http://localhost:3000"; // fallback
+        }
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+
+        String qrUrl = baseUrl + "/" + slug + "/table/" + table.getAreaTableId();
+        table.setQr(qrUrl);
+
+        // Lưu lần 2 → có QR URL
+        table = tableRepository.save(table);
+
         return new TableResponse(
                 table.getAreaTableId(),
                 table.getTag(),
                 table.getCapacity(),
                 table.getStatus(),
-                null);
+                null
+        );
     }
 
     @Transactional(readOnly = true)
     public byte[] getTableQrPng(UUID tableId, int size) {
         AreaTable t = tableRepository.findById(tableId)
-                .orElseThrow(() -> new NoSuchElementException("Table not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
 
-        String orderUrl = buildOrderUrl(t.getAreaTableId());
-        return QrCodeGenerator.toPngBytes(orderUrl, Math.max(size, 128));
+        String url = t.getQr();
+        if (url == null || url.isBlank()) {
+            url = buildOrderUrl(t.getAreaTableId());
+        }
+
+        return QrCodeGenerator.toPngBytes(url, Math.max(size, 128));
     }
 
     @Transactional(readOnly = true)

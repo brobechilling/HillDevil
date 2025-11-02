@@ -11,4 +11,5 @@ public interface BranchMenuItemRepository extends JpaRepository<BranchMenuItem, 
     boolean existsByBranch_BranchIdAndMenuItem_MenuItemIdAndAvailableTrue(UUID branchId, UUID menuItemId);
     Optional<BranchMenuItem> findByBranch_BranchIdAndMenuItem_MenuItemId(UUID branchId, UUID menuItemId);
     List<BranchMenuItem> findAllByBranch_BranchId(UUID branchId);
+    List<BranchMenuItem> findByBranch_BranchId(UUID branchId);
 }

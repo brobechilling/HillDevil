@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { menuApi } from '@/lib/api';
-// Note: GuestLanding still uses mock data for branches until backend supports getByShortCode
+import { useParams, useNavigate } from 'react-router-dom';
+import useGuestContext from '@/hooks/queries/useGuestContext';
+import { publicApi } from '@/api/publicApi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, MapPin, Phone, Mail, Clock, Plus, Minus, Loader2, Calendar } from 'lucide-react';
@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrderItem } from '@/store/orderStore';
 import { BookingItem } from '@/store/bookingStore';
+import { ArrowLeft, ArrowRight, Store } from 'lucide-react';
 
 type MenuItemLite = {
   id: string;
@@ -68,10 +69,16 @@ type BranchLite = {
   aboutSection2Title?: string;
   aboutSection2Text?: string;
   aboutSection2Image?: string;
+  openingTime?: string;
+  closingTime?: string;
 };
 
 const GuestLanding = () => {
-  const { shortCode, tableId } = useParams<{ shortCode: string; tableId?: string }>();
+  const navigate = useNavigate();
+  const params = useParams<{ shortCode?: string; restaurantSlug?: string; tableId?: string; branchId?: string }>();
+  const shortCode = params.shortCode || params.restaurantSlug;
+  const routeBranchId = params.branchId;
+  const tableId = params.tableId;
   const [branch, setBranch] = useState<BranchLite | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItemLite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,80 +88,59 @@ const GuestLanding = () => {
   const [flowState, setFlowState] = useState<'selection' | 'menu' | 'reservation' | 'post-reservation'>('selection');
   const [showMenuAfterReservation, setShowMenuAfterReservation] = useState(false);
 
+  const { tableContext, restaurant, branchMenu, derivedSlug, branchId: branchIdToUse, isLoading: contextLoading } =
+    useGuestContext({ slug: shortCode, branchId: routeBranchId });
+  // Precompute theme values early so selection UI can use them
+  const selectedTheme = branch?.selectedThemeId ? getThemeById(branch.selectedThemeId) : null;
+  const restaurantSelectedTheme = (restaurant as any)?.selectedThemeId ? getThemeById((restaurant as any).selectedThemeId) : null;
+  const themeColors = branch?.themeColors || selectedTheme?.colors || (restaurant as any)?.themeColors || restaurantSelectedTheme?.colors;
+
+  const branches = (restaurant as any)?.branches || [];
+
   useEffect(() => {
-    const loadBranchData = async () => {
-      try {
-        setLoading(true);
-        if (!shortCode) throw new Error('Branch code not provided');
+    setLoading(contextLoading);
+  }, [contextLoading]);
 
-        // Temporarily use localStorage until backend supports getByShortCode
-        const branches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
-        const branchData = branches.find((b: any) => b.shortCode === shortCode);
-        if (!branchData) throw new Error('Branch not found');
-        setBranch(branchData);
-
-        if (tableId) {
-          const tables = JSON.parse(localStorage.getItem('mock_tables') || '[]') as Array<{ id: string; number: string }>;
-          const table = tables.find((t) => t.id === tableId);
-          if (table) {
-            setTableNumber(table.number);
-          }
-        }
-
-        const menuResponse = await menuApi.getAll(branchData.id);
-        console.log('Branch ID:', branchData.id);
-        console.log('Menu items loaded:', menuResponse.data);
-        console.log('Menu items from localStorage:', JSON.parse(localStorage.getItem('menu_items') || '[]'));
-        console.log('Mock menu items from localStorage:', JSON.parse(localStorage.getItem('mock_menu_items') || '[]'));
-
-        // Debug: Check if any items have images
-        const itemsWithImages = (menuResponse.data as MenuItemLite[]).filter((item) => item.imageUrl && item.imageUrl !== '/placeholder.svg');
-        console.log('Items with images:', itemsWithImages);
-
-        setMenuItems(menuResponse.data);
-      } catch (error) {
-        console.error('Error loading branch:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Branch not found',
-          description: 'The requested branch could not be found.',
+  // Sync fetched data to local component state (UI-focused)
+  useEffect(() => {
+    if (restaurant) {
+      const rest = restaurant as any;
+      // Do not auto-select a branch. Only pre-select when branchIdToUse (route param) is present.
+      const branchInfo = rest.branches?.find((b: any) => b.branchId === branchIdToUse);
+      if (branchIdToUse && branchInfo) {
+        setBranch({
+          id: branchInfo.branchId,
+          address: branchInfo.address,
+          phone: branchInfo.phone,
+          email: branchInfo.email,
+          name: rest.name,
+          brandName: rest.name,
+          logoUrl: branchInfo.logoUrl,
+          bannerUrl: branchInfo.bannerUrl,
+          tagline: branchInfo.tagline,
+          themeColors: branchInfo.themeColors,
+          selectedThemeId: branchInfo.selectedThemeId,
+          layout: branchInfo.layout,
+          galleryImages: branchInfo.galleryImages,
+          sliderImages: branchInfo.sliderImages,
+          openingTime: branchInfo.openingTime,
+          closingTime: branchInfo.closingTime,
         });
-      } finally {
-        setLoading(false);
       }
-    };
-
-    loadBranchData();
-
-    // Set initial flow state based on tableId
-    if (tableId) {
-      setFlowState('menu'); // Directly show the menu for table-based ordering
-      setOrderType('now'); // Order immediately for the scanned table
-    } else {
-      setFlowState('selection'); // Default to selection screen
     }
 
-    // Listen for localStorage changes to reload branch data (both storage event and custom event)
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'mock_branches') {
-        loadBranchData();
+    if (tableContext) {
+      const tc = tableContext as any;
+      if (tc.tableId) {
+        setTableNumber(tc.tableTag || '');
       }
-    };
+    }
 
-    const handleLocalStorageChanged = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail?.key === 'mock_branches') {
-        loadBranchData();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('localStorageChanged', handleLocalStorageChanged);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('localStorageChanged', handleLocalStorageChanged);
-    };
-  }, [shortCode, tableId]);
+    if (branchMenu) {
+      setMenuItems(branchMenu.items || []);
+      setFlowState('menu');
+    }
+  }, [restaurant, branchMenu, derivedSlug, branchIdToUse, tableContext]);
 
   const addToCart = (item: MenuItemLite) => {
     const existingItem = selectedItems.find((i) => i.menuItemId === item.id);
@@ -186,20 +172,55 @@ const GuestLanding = () => {
   };
 
   const updateQuantity = (menuItemId: string, delta: number) => {
-    setSelectedItems((items) =>
-      items
-        .map((item) =>
-          item.menuItemId === menuItemId
-            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
+    setSelectedItems((prev) =>
+      prev
+        .map((p) => (p.menuItemId === menuItemId ? { ...p, quantity: Math.max(0, p.quantity + delta) } : p))
+        .filter((p) => p.quantity > 0)
     );
   };
 
   const getItemQuantity = (menuItemId: string) => {
     return selectedItems.find((i) => i.menuItemId === menuItemId)?.quantity || 0;
   };
+
+  const loadBranchMenu = async (bid: string) => {
+    setLoading(true);
+    try {
+      const res = await publicApi.getBranchMenu(bid);
+      const bdata = (restaurant as any)?.branches?.find((x: any) => x.branchId === bid) || {};
+      setBranch({
+        id: bid,
+        address: bdata.address,
+        phone: bdata.phone,
+        email: bdata.email,
+        name: (restaurant as any).name,
+        brandName: (restaurant as any).name,
+        logoUrl: bdata.logoUrl,
+        bannerUrl: bdata.bannerUrl,
+        tagline: bdata.tagline,
+        themeColors: bdata.themeColors,
+        selectedThemeId: bdata.selectedThemeId,
+        layout: bdata.layout,
+        galleryImages: bdata.galleryImages,
+        sliderImages: bdata.sliderImages,
+        openingTime: bdata.openingTime,
+        closingTime: bdata.closingTime,
+      });
+      setMenuItems(res?.items || []);
+      setFlowState('menu');
+      navigate(`/${derivedSlug}/branch/${bid}`, { replace: true });
+    } catch (err) {
+      toast({ title: 'Unable to load menu', description: 'Please try again later.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!contextLoading && !branch && branches.length === 1) {
+      loadBranchMenu(branches[0].branchId);
+    }
+  }, [contextLoading, branch, branches, loadBranchMenu, derivedSlug, navigate]);
 
   const totalItems = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -211,14 +232,15 @@ const GuestLanding = () => {
     );
   }
 
-  if (!branch) {
+  // If there's no restaurant data at all, show not found.
+  if (!restaurant) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="max-w-md">
           <CardHeader>
-            <CardTitle>Branch Not Found</CardTitle>
+            <CardTitle>Restaurant Not Found</CardTitle>
             <CardDescription>
-              The branch you're looking for doesn't exist or is no longer available.
+              The restaurant you're looking for doesn't exist or is no longer available.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -226,110 +248,19 @@ const GuestLanding = () => {
     );
   }
 
-  // Selection screen - shown when no tableId and user hasn't made a choice
-  if (flowState === 'selection' && !tableId) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="max-w-2xl w-full space-y-8"
-        >
-          {/* Logo and Header */}
-          <div className="text-center space-y-4">
-            {branch.logoUrl && (
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, duration: 0.5 }}
-                className="flex justify-center"
-              >
-                <img
-                  src={branch.logoUrl}
-                  alt={branch.brandName || branch.name}
-                  className="h-24 w-24 object-contain rounded-full shadow-lg"
-                />
-              </motion.div>
-            )}
-            <motion.h1
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="text-4xl font-bold"
-            >
-              Welcome to {branch.brandName || branch.name}
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-              className="text-muted-foreground text-lg"
-            >
-              Reserve your table to get started
-            </motion.p>
-          </div>
-
-          {/* Only show "Reserve Table" button when no tableId */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-          >
-            <Button
-              size="lg"
-              variant="default"
-              className="w-full h-24 text-xl font-semibold shadow-xl hover:shadow-2xl transition-all"
-              onClick={() => {
-                setFlowState('reservation');
-                setOrderType('booking');
-              }}
-            >
-              <div className="flex flex-col items-center gap-2">
-                <Calendar className="h-8 w-8" />
-                <span>Reserve Table</span>
-              </div>
-            </Button>
-          </motion.div>
-
-          {/* Info message */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-            className="text-center text-sm text-muted-foreground"
-          >
-            <p>Please reserve a table first, then you can pre-order your menu items.</p>
-          </motion.div>
-        </motion.div>
-      </div>
-    );
-  }
+  // selection UI removed — selection control will be rendered inline on the page
 
   const menuCategories = [...new Set(menuItems.map((item) => item.category))];
 
-  // Get theme configuration
-  const selectedTheme = branch.selectedThemeId ? getThemeById(branch.selectedThemeId) : null;
-  const themeColors = branch.themeColors || selectedTheme?.colors;
+  // Get theme configuration (moved up above selection UI)
+  // (already computed earlier near the top of the component)
 
-  const layout = branch.layout || 'default';
-  const galleryImages = branch.galleryImages || [];
-  const sliderImages = branch.sliderImages || [];
+  const displayBranch = branch || (restaurant as any) || {};
+  const layout = displayBranch.layout || 'default';
+  const galleryImages = displayBranch.galleryImages || [];
+  const sliderImages = displayBranch.sliderImages || [];
 
-  const themeStyles = themeColors ? {
-    '--page-bg': `hsl(${themeColors.pageBackground})`,
-    '--hero-bg': `hsl(${themeColors.heroBackground})`,
-    '--hero-text': `hsl(${themeColors.heroText})`,
-    '--hero-accent': `hsl(${themeColors.heroAccent})`,
-    '--card-bg': `hsl(${themeColors.cardBackground})`,
-    '--card-border': `hsl(${themeColors.cardBorder})`,
-    '--btn-primary': `hsl(${themeColors.buttonPrimary})`,
-    '--btn-primary-text': `hsl(${themeColors.buttonPrimaryText})`,
-    '--btn-secondary': `hsl(${themeColors.buttonSecondary})`,
-    '--btn-secondary-text': `hsl(${themeColors.buttonSecondaryText})`,
-    '--heading': `hsl(${themeColors.headingColor})`,
-    '--body-text': `hsl(${themeColors.bodyTextColor})`,
-  } as React.CSSProperties : {};
+  // Theme styling is handled globally via the theme provider / Tailwind classes.
 
   const renderDefaultLayout = () => (
     <>
@@ -338,20 +269,15 @@ const GuestLanding = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative min-h-[500px] flex items-center justify-center overflow-hidden"
-        style={{
-          background: branch.bannerUrl
-            ? 'transparent'
-            : `linear-gradient(135deg, hsl(var(--hero-bg, 240 5% 15%)), hsl(var(--hero-accent, 43 74% 66%)) 100%)`
-        }}
+        className={`relative min-h-[500px] flex items-center justify-center overflow-hidden ${displayBranch.bannerUrl ? '' : 'bg-gradient-to-br from-slate-800 via-slate-700 to-amber-500'}`}
       >
         {/* Chỉnh độ rõ mờ của  */}
-        {branch.bannerUrl && (
+        {displayBranch.bannerUrl && (
           <>
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{
-                backgroundImage: `url(${branch.bannerUrl})`,
+                backgroundImage: `url(${displayBranch.bannerUrl})`,
                 opacity: 1,
                 filter: 'blur(2px) brightness(0.9) contrast(1.05)',
                 transform: 'scale(1.05)',
@@ -362,7 +288,7 @@ const GuestLanding = () => {
         )}
 
         <div className="relative z-10 w-full px-4 max-w-7xl mx-auto py-20 text-left">
-          {branch.logoUrl && (
+          {displayBranch.logoUrl && (
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -370,8 +296,8 @@ const GuestLanding = () => {
               className="mb-8"
             >
               <img
-                src={branch.logoUrl}
-                alt={branch.brandName}
+                src={displayBranch.logoUrl}
+                alt={displayBranch.brandName}
                 className="h-24 w-24 sm:h-28 sm:w-28 object-contain mx-auto rounded-2xl shadow-large bg-card/80 p-4 backdrop-blur-sm"
               />
             </motion.div>
@@ -382,24 +308,21 @@ const GuestLanding = () => {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
               className="logo-text text-5xl md:text-6xl font-semibold leading-tight mb-4 text-white"
-              style={{
-                textShadow: 'none'
-              }}
             >
-              {branch.brandName}
+              {displayBranch.brandName}
             </motion.h1>
             <div className="h-1 w-20 rounded-full mb-4 bg-white/60" />
             {tableNumber && (
               <Badge className="mb-3 text-base px-4 py-1.5 shadow-soft">Table {tableNumber}</Badge>
             )}
-            {branch.tagline && (
+            {displayBranch.tagline && (
               <motion.p
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.3, duration: 0.45 }}
                 className="slogan text-white/90 text-base md:text-lg mb-6"
               >
-                {branch.tagline}
+                {displayBranch.tagline}
               </motion.p>
             )}
             <div className="mt-4 flex items-center gap-3">
@@ -422,90 +345,55 @@ const GuestLanding = () => {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.5 }}
         >
-          <Card
-            className="mb-8 border-2"
-            style={{
-              backgroundColor: themeColors ? `hsl(${themeColors.cardBackground})` : undefined,
-              borderColor: themeColors ? `hsl(${themeColors.cardBorder})` : undefined,
-            }}
-          >
+          <Card className="mb-8 border-2">
             <CardHeader>
-              <CardTitle
-                className="text-2xl"
-                style={{ color: themeColors ? `hsl(${themeColors.headingColor})` : undefined }}
-              >
-                {branch.name}
-              </CardTitle>
-              <CardDescription style={{ color: themeColors ? `hsl(${themeColors.bodyTextColor})` : undefined }}>
-                Branch Information
-              </CardDescription>
+              <CardTitle className="text-2xl">{displayBranch.name}</CardTitle>
+              <CardDescription>Branch Information</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                   <div>
-                    <p
-                      className="text-sm font-semibold mb-1"
-                      style={{ color: themeColors ? `hsl(${themeColors.headingColor})` : undefined }}
-                    >
+                    <p className="text-sm font-semibold mb-1">
                       Address
                     </p><p
                       className="text-sm"
-                      style={{ color: themeColors ? `hsl(${themeColors.bodyTextColor})` : undefined }}
                     >
-                      {branch.address}
+                      {displayBranch.address}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Phone className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                   <div>
-                    <p
-                      className="text-sm font-semibold mb-1"
-                      style={{ color: themeColors ? `hsl(${themeColors.headingColor})` : undefined }}
-                    >
+                    <p className="text-sm font-semibold mb-1">
                       Phone
                     </p>
-                    <p
-                      className="text-sm"
-                      style={{ color: themeColors ? `hsl(${themeColors.bodyTextColor})` : undefined }}
-                    >
-                      {branch.phone}
+                    <p className="text-sm">
+                      {displayBranch.phone}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Mail className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                   <div>
-                    <p
-                      className="text-sm font-semibold mb-1"
-                      style={{ color: themeColors ? `hsl(${themeColors.headingColor})` : undefined }}
-                    >
+                    <p className="text-sm font-semibold mb-1">
                       Email
                     </p>
-                    <p
-                      className="text-sm"
-                      style={{ color: themeColors ? `hsl(${themeColors.bodyTextColor})` : undefined }}
-                    >
-                      {branch.email}
+                    <p className="text-sm">
+                      {displayBranch.email}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Clock className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                   <div>
-                    <p
-                      className="text-sm font-semibold mb-1"
-                      style={{ color: themeColors ? `hsl(${themeColors.headingColor})` : undefined }}
-                    >
+                    <p className="text-sm font-semibold mb-1">
                       Hours
                     </p>
-                    <p
-                      className="text-sm"
-                      style={{ color: themeColors ? `hsl(${themeColors.bodyTextColor})` : undefined }}
-                    >
-                      Mon-Sun: 10am - 10pm
+                    <p className="text-sm">
+                      {displayBranch.openingTime && displayBranch.closingTime ? `${displayBranch.openingTime.slice(0, 5)} - ${displayBranch.closingTime.slice(0, 5)}` : 'Mon-Sun: 10am - 10pm'}
                     </p>
                   </div>
                 </div>
@@ -514,22 +402,17 @@ const GuestLanding = () => {
           </Card>
         </motion.div>
 
+        {/* Inline branch selector removed — branch selection is handled on the selection screen (dropdown) */}
+
         {/* Menu Section */}
         <div id="menu-section" className="space-y-8">
           <div className="flex items-center justify-between">
             <div>
-              <h2
-                className="text-3xl font-bold"
-                style={{ color: themeColors ? `hsl(${themeColors.headingColor})` : 'inherit' }}
-              >
-                Our Menu
-              </h2>
-              <p
-                className="mt-1"
-                style={{ color: themeColors ? `hsl(${themeColors.bodyTextColor})` : 'inherit' }}
-              >
-                Browse our delicious offerings
-              </p>
+              <h2 className="text-3xl font-bold">Our Menu</h2>
+              <p className="mt-1 text-muted-foreground">Browse our delicious offerings</p>
+            </div>
+            <div className="flex items-center gap-3">
+
             </div>
           </div>
 
@@ -543,10 +426,7 @@ const GuestLanding = () => {
               className="space-y-4"
             >
               <div className="flex items-center gap-3">
-                <h3
-                  className="text-2xl font-semibold"
-                  style={{ color: themeColors ? `hsl(${themeColors.headingColor})` : 'inherit' }}
-                >
+                <h3 className="text-2xl font-semibold">
                   {category}
                 </h3>
                 <Separator className="flex-1" />
@@ -565,13 +445,7 @@ const GuestLanding = () => {
                         viewport={{ once: true }}
                         className="h-full"
                       >
-                        <Card
-                          className="overflow-hidden hover:shadow-medium transition-smooth border-2 h-full flex flex-col"
-                          style={{
-                            backgroundColor: themeColors ? `hsl(${themeColors.cardBackground})` : undefined,
-                            borderColor: themeColors ? `hsl(${themeColors.cardBorder})` : undefined,
-                          }}
-                        >
+                        <Card className="overflow-hidden hover:shadow-medium transition-smooth border-2 h-full flex flex-col">
                           <div className="aspect-video bg-muted relative overflow-hidden">
                             <img
                               src={item.imageUrl}
@@ -592,17 +466,14 @@ const GuestLanding = () => {
                           </div>
                           <CardHeader className="flex-shrink-0">
                             <CardTitle className="flex items-start justify-between">
-                              <span style={{ color: themeColors ? `hsl(${themeColors.headingColor})` : 'inherit' }}>
+                              <span>
                                 {item.name}
                               </span>
-                              <span style={{ color: themeColors ? `hsl(${themeColors.heroAccent})` : 'inherit' }}>
+                              <span>
                                 ${item.price}
                               </span>
                             </CardTitle>
-                            <CardDescription
-                              className="min-h-[2.5rem]"
-                              style={{ color: themeColors ? `hsl(${themeColors.bodyTextColor})` : 'inherit' }}
-                            >
+                            <CardDescription className="min-h-[2.5rem]">
                               {item.description}
                             </CardDescription>
                           </CardHeader>
@@ -624,24 +495,16 @@ const GuestLanding = () => {
                                   size="icon"
                                   onClick={() => updateQuantity(item.id, 1)}
                                   disabled={!item.available}
-                                  className="h-10 w-10"
-                                  style={{
-                                    backgroundColor: themeColors ? `hsl(${themeColors.buttonPrimary})` : undefined,
-                                    color: themeColors ? `hsl(${themeColors.buttonPrimaryText})` : undefined,
-                                  }}
+                                  className="h-10 w-10 bg-primary text-primary-foreground"
                                 >
                                   <Plus className="h-4 w-4" />
                                 </Button>
                               </div>
                             ) : (
                               <Button
-                                className="w-full"
+                                className="w-full bg-primary text-primary-foreground"
                                 onClick={() => addToCart(item)}
                                 disabled={!item.available}
-                                style={{
-                                  backgroundColor: themeColors ? `hsl(${themeColors.buttonPrimary})` : undefined,
-                                  color: themeColors ? `hsl(${themeColors.buttonPrimaryText})` : undefined,
-                                }}
                               >
                                 <ShoppingCart className="mr-2 h-4 w-4" />
                                 Add to Order
@@ -660,7 +523,7 @@ const GuestLanding = () => {
 
       {/* Footer */}
       <footer className="py-6 text-center" style={{ color: themeColors ? `hsl(${themeColors.bodyTextColor})` : 'inherit' }}>
-        <p className="text-sm">© 2024 {branch.brandName}. All rights reserved.</p>
+        <p className="text-sm">© 2024 {displayBranch.brandName}. All rights reserved.</p>
       </footer>
     </>
   );
@@ -680,7 +543,7 @@ const GuestLanding = () => {
             <Button
               variant="ghost"
               className="mb-6"
-              onClick={() => setFlowState('selection')}
+              onClick={() => setFlowState('menu')}
             >
               ← Back
             </Button>
@@ -693,13 +556,13 @@ const GuestLanding = () => {
             <CardHeader>
               <CardTitle>Booking Details</CardTitle>
               <CardDescription>
-                Reserve a table at {branch.brandName}. We'll confirm your reservation shortly.
+                Reserve a table at {displayBranch.brandName}. We'll confirm your reservation shortly.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ReservationBookingForm
-                branchId={branch.id}
-                branchName={branch.brandName || branch.name}
+                branchId={displayBranch.id}
+                branchName={displayBranch.brandName || displayBranch.name}
                 selectedItems={selectedItems as BookingItem[]}
                 onBookingComplete={() => {
                   setFlowState('post-reservation');
@@ -771,15 +634,66 @@ const GuestLanding = () => {
     );
   }
 
+  if (flowState === 'selection') {
+    return (
+      <div className="min-h-screen bg-muted/30 py-12 px-4">
+        <div className="container max-w-5xl">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold mb-4">Select Branch</h1>
+            <p className="text-lg text-muted-foreground">
+              Choose which branch you want to visit
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {branches.map((b: any) => (
+              <Card
+                key={b.branchId}
+                className="cursor-pointer transition-smooth hover:shadow-medium hover:border-primary border-border/50"
+                onClick={() => loadBranchMenu(b.branchId)}
+              >
+                <CardHeader>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 rounded-lg bg-primary/10">
+                      <Store className="h-8 w-8 text-primary" />
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-500`}>
+                      Active
+                    </span>
+                  </div>
+                  <CardTitle className="text-2xl">{b.name || b.address || `Branch ${b.branchId}`}</CardTitle>
+                  {b.tagline && <CardDescription className="text-base">{b.tagline}</CardDescription>}
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 mb-6">
+                    {b.address && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span>{b.address}</span>
+                      </div>
+                    )}
+                    {b.phone && (
+                      <p className="text-sm text-muted-foreground">
+                        {b.phone}
+                      </p>
+                    )}
+                  </div>
+                  <Button className="w-full" variant="outline">
+                    View Menu
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        backgroundColor: themeColors ? `hsl(${themeColors.pageBackground})` : 'hsl(0 0% 98%)',
-        ...themeStyles
-      }}
-    >
-      {/* Header with back button for menu state */}
+    <div className="min-h-screen bg-background">
+      {/* Header (no back button) */}
       {flowState === 'menu' && !tableId && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -788,15 +702,11 @@ const GuestLanding = () => {
           className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b py-4 px-4"
         >
           <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={() => setFlowState('post-reservation')}
-              className="flex items-center gap-2"
-            >
-              ← Back to Reservation
+            <Button variant="ghost" onClick={() => setFlowState('selection')}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Branches
             </Button>
-            <h2 className="text-lg font-semibold">{branch.brandName}</h2>
-            <div className="w-12" />
+            <h2 className="text-lg font-semibold">{displayBranch.brandName}</h2>
+            <div className="w-[140px]" /> {/* Placeholder for balance */}
           </div>
         </motion.div>
       )}
@@ -807,8 +717,8 @@ const GuestLanding = () => {
           {tableId ? (
             // Nếu có tableId (quét QR) -> chỉ cho Order Now
             <OrderDialog
-              branchId={branch.id}
-              branchName={branch.brandName || branch.name}
+              branchId={displayBranch.id}
+              branchName={displayBranch.brandName || displayBranch.name}
               selectedItems={selectedItems}
               tableNumber={tableId}
               onOrderComplete={() => setSelectedItems([])}
@@ -816,8 +726,8 @@ const GuestLanding = () => {
           ) : (
             // Nếu không có tableId (đặt bàn trước) -> chỉ cho Pre-Order
             <BookingDialog
-              branchId={branch.id}
-              branchName={branch.brandName || branch.name}
+              branchId={displayBranch.id}
+              branchName={displayBranch.brandName || displayBranch.name}
               selectedItems={selectedItems as BookingItem[]}
               onBookingComplete={() => setSelectedItems([])}
             />
@@ -825,6 +735,23 @@ const GuestLanding = () => {
           <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full h-7 w-7 flex items-center justify-center text-sm font-bold shadow-lg">
             {totalItems}
           </div>
+        </div>
+      )}
+
+      {/* Floating Reserve Button */}
+      {flowState === 'menu' && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <Button
+            size="lg"
+            className="px-8 shadow-lg"
+            variant="default"
+            onClick={() => {
+              setFlowState('reservation');
+              setOrderType('booking');
+            }}
+          >
+            Reserve Table
+          </Button>
         </div>
       )}
 
@@ -868,3 +795,4 @@ const GuestLanding = () => {
 };
 
 export default GuestLanding;
+

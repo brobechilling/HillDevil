@@ -12,7 +12,7 @@ import com.example.backend.dto.response.TableResponse;
 import com.example.backend.entities.AreaTable;
 
 public interface TableRepository extends JpaRepository<AreaTable, UUID> {
-
+    boolean existsByArea_AreaIdAndTag(UUID areaId, String tag);
     @Query("""
         SELECT new com.example.backend.dto.response.TableResponse(
             t.areaTableId,
