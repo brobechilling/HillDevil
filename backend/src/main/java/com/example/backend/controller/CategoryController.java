@@ -20,9 +20,11 @@ public class CategoryController {
     }
 
     @GetMapping("")
-    public ApiResponse<List<CategoryDTO>> getAll() {
+    public ApiResponse<List<CategoryDTO>> getAllByRestaurant(
+            @RequestParam UUID restaurantId
+    ) {
         ApiResponse<List<CategoryDTO>> res = new ApiResponse<>();
-        res.setResult(categoryService.getAll());
+        res.setResult(categoryService.getAllByRestaurant(restaurantId));
         return res;
     }
 

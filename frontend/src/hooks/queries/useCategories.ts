@@ -8,10 +8,11 @@ import {
 } from "@/api/categoryApi";
 import { CategoryDTO, CategoryCreateRequest } from "@/dto/category.dto";
 
-export const useCategories = () => {
+export const useCategories = (restaurantId?: string) => {
   return useQuery<CategoryDTO[]>({
-    queryKey: ["categories"],
-    queryFn: getAllCategories,
+    queryKey: ["categories", restaurantId],
+    queryFn: () => getAllCategories(restaurantId!),
+    enabled: !!restaurantId,
   });
 };
 

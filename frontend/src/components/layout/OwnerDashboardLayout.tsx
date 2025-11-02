@@ -14,7 +14,8 @@ import {
   ChevronRight,
   Sparkles,
   Home,
-  LayoutGrid
+  LayoutGrid,
+  FolderTree
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -73,6 +74,14 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
       label: 'Menu Management',
       description: 'Manage menu items',
       gradient: 'from-purple-500 to-pink-500'
+    },
+    {
+      id: 'categories-customizations',
+      path: '/dashboard/owner/categories-customizations',
+      icon: FolderTree,
+      label: 'Categories & Customizations',
+      description: 'Manage categories and add-ons',
+      gradient: 'from-violet-500 to-purple-500'
     },
     {
       id: 'tables',

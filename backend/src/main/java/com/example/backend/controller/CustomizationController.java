@@ -20,11 +20,14 @@ public class CustomizationController {
     }
 
     @GetMapping("")
-    public ApiResponse<List<CustomizationDTO>> getAll() {
+    public ApiResponse<List<CustomizationDTO>> getAllByRestaurant(
+            @RequestParam UUID restaurantId
+    ) {
         ApiResponse<List<CustomizationDTO>> res = new ApiResponse<>();
-        res.setResult(customizationService.getAll());
+        res.setResult(customizationService.getAllByRestaurant(restaurantId));
         return res;
     }
+
 
     @GetMapping("/{id}")
     public ApiResponse<CustomizationDTO> getById(@PathVariable UUID id) {

@@ -8,10 +8,11 @@ import {
 } from "@/api/customizationApi";
 import { CustomizationDTO, CustomizationCreateRequest } from "@/dto/customization.dto";
 
-export const useCustomizations = () => {
+export const useCustomizations = (restaurantId?: string) => {
   return useQuery<CustomizationDTO[]>({
-    queryKey: ["customizations"],
-    queryFn: getAllCustomizations,
+    queryKey: ["customizations", restaurantId],
+    queryFn: () => getAllCustomizations(restaurantId!),
+    enabled: !!restaurantId,
   });
 };
 

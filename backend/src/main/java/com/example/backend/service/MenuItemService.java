@@ -40,8 +40,8 @@ public class MenuItemService {
         this.mediaService = mediaService;
     }
 
-    public List<MenuItemDTO> getAll() {
-        List<MenuItem> list = menuItemRepository.findAll();
+    public List<MenuItemDTO> getAllByRestaurant(UUID restaurantId) {
+        List<MenuItem> list = menuItemRepository.findAllByRestaurant_RestaurantIdAndStatus(restaurantId, MenuItemStatus.ACTIVE);
 
         if (list.isEmpty()) return Collections.emptyList();
 

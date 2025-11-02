@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring")
 public interface CategoryMapper {
+
     @Mapping(target = "restaurantId", source = "restaurant.restaurantId")
     @Mapping(target = "customizationIds", source = "customizations", qualifiedByName = "mapCustomizationsToIds")
     CategoryDTO toCategoryDTO(Category category);
@@ -32,15 +33,19 @@ public interface CategoryMapper {
 
     @Named("mapCustomizationsToIds")
     default Set<UUID> mapCustomizationsToIds(Set<Customization> customizations) {
-        if (customizations == null) return null;
+        if (customizations == null || customizations.isEmpty()) return Set.of();
+
+        // 🔹 Lọc chỉ customizations đang active (status = true)
         return customizations.stream()
+                .filter(Customization::isStatus)
                 .map(Customization::getCustomizationId)
                 .collect(Collectors.toSet());
     }
 
     @Named("mapIdsToCustomizations")
     default Set<Customization> mapIdsToCustomizations(Set<UUID> ids) {
-        if (ids == null) return null;
+        if (ids == null || ids.isEmpty()) return Set.of();
+
         return ids.stream().map(id -> {
             Customization c = new Customization();
             c.setCustomizationId(id);

@@ -21,9 +21,11 @@ public class MenuItemController {
     }
 
     @GetMapping("")
-    public ApiResponse<List<MenuItemDTO>> getAll() {
+    public ApiResponse<List<MenuItemDTO>> getAllByRestaurant(
+            @RequestParam UUID restaurantId
+    ) {
         ApiResponse<List<MenuItemDTO>> res = new ApiResponse<>();
-        res.setResult(menuItemService.getAll());
+        res.setResult(menuItemService.getAllByRestaurant(restaurantId));
         return res;
     }
 

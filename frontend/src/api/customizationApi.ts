@@ -2,10 +2,13 @@ import { ApiResponse } from "@/dto/apiResponse";
 import { axiosClient } from "./axiosClient";
 import { CustomizationDTO, CustomizationCreateRequest } from "@/dto/customization.dto";
 
-export const getAllCustomizations = async () => {
-  const res = await axiosClient.get<ApiResponse<CustomizationDTO[]>>("/customizations");
+export const getAllCustomizations = async (restaurantId: string) => {
+  const res = await axiosClient.get<ApiResponse<CustomizationDTO[]>>("/customizations", {
+    params: { restaurantId },
+  });
   return res.data.result;
 };
+
 
 export const getCustomizationById = async (id: string) => {
   const res = await axiosClient.get<ApiResponse<CustomizationDTO>>(`/customizations/${id}`);

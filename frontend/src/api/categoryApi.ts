@@ -2,8 +2,10 @@ import { ApiResponse } from "@/dto/apiResponse";
 import { axiosClient } from "./axiosClient";
 import { CategoryDTO, CategoryCreateRequest } from "@/dto/category.dto";
 
-export const getAllCategories = async () => {
-  const res = await axiosClient.get<ApiResponse<CategoryDTO[]>>("/categories");
+export const getAllCategories = async (restaurantId: string) => {
+  const res = await axiosClient.get<ApiResponse<CategoryDTO[]>>("/categories", {
+    params: { restaurantId },
+  });
   return res.data.result;
 };
 

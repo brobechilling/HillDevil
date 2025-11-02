@@ -10,12 +10,14 @@ import {
 } from "@/api/menuItemApi";
 import { MenuItemDTO, MenuItemCreateRequest } from "@/dto/menuItem.dto";
 
-export const useMenuItems = () => {
+export const useMenuItems = (restaurantId?: string) => {
   return useQuery<MenuItemDTO[]>({
-    queryKey: ["menu-items"],
-    queryFn: getAllMenuItems,
+    queryKey: ["menu-items", restaurantId],
+    queryFn: () => getAllMenuItems(restaurantId!),
+    enabled: !!restaurantId,
   });
 };
+
 
 export const useMenuItem = (id?: string) => {
   return useQuery<MenuItemDTO | null>({

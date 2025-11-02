@@ -53,7 +53,7 @@ export const MenuItemDialog = ({
   branchId,
   item,
 }: Props) => {
-  const { data: categories = [] } = useCategories();
+  const { data: categories = [] } = useCategories(restaurantId);
   const createMutation = useCreateMenuItem();
   const updateMutation = useUpdateMenuItem();
 
@@ -93,7 +93,7 @@ export const MenuItemDialog = ({
         reset({
           name: item.name || '',
           description: item.description || '',
-          price: item.price ?? undefined,
+          price: item.price ? parseFloat(item.price) : undefined,
           categoryId: item.categoryId || '',
           hasCustomization: item.hasCustomization || false,
           bestSeller: item.bestSeller || false,
@@ -135,7 +135,7 @@ export const MenuItemDialog = ({
 
       const payload = {
         ...data,
-        price: data.price,
+        price: String(data.price),
         restaurantId,
         customizationIds: [],
       };

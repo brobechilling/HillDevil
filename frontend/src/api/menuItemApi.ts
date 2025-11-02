@@ -2,8 +2,10 @@ import { ApiResponse } from "@/dto/apiResponse";
 import { axiosClient } from "./axiosClient";
 import { MenuItemDTO, MenuItemCreateRequest } from "@/dto/menuItem.dto";
 
-export const getAllMenuItems = async () => {
-  const res = await axiosClient.get<ApiResponse<MenuItemDTO[]>>("/menu-items");
+export const getAllMenuItems = async (restaurantId: string) => {
+  const res = await axiosClient.get<ApiResponse<MenuItemDTO[]>>("/menu-items", {
+    params: { restaurantId },
+  });
   return res.data.result;
 };
 

@@ -9,6 +9,8 @@ import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.CustomizationMapper;
 import com.example.backend.repository.CustomizationRepository;
 import com.example.backend.repository.RestaurantRepository;
+import com.example.backend.repository.MenuItemRepository;
+import com.example.backend.repository.CategoryRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,18 +25,28 @@ public class CustomizationService {
     private final CustomizationRepository customizationRepository;
     private final CustomizationMapper customizationMapper;
     private final RestaurantRepository restaurantRepository;
+    private final MenuItemRepository menuItemRepository;
+    private final CategoryRepository categoryRepository;
     private final Logger logger = LoggerFactory.getLogger(CustomizationService.class);
+
 
     public CustomizationService(CustomizationRepository customizationRepository,
                                 CustomizationMapper customizationMapper,
-                                RestaurantRepository restaurantRepository) {
+                                RestaurantRepository restaurantRepository,
+                                MenuItemRepository menuItemRepository,
+                                CategoryRepository categoryRepository) {
         this.customizationRepository = customizationRepository;
         this.customizationMapper = customizationMapper;
         this.restaurantRepository = restaurantRepository;
+        this.menuItemRepository = menuItemRepository;
+        this.categoryRepository = categoryRepository;
     }
 
-    public List<CustomizationDTO> getAll() {
-        List<Customization> list = customizationRepository.findAll();
+    public List<CustomizationDTO> getAllByRestaurant(UUID restaurantId) {
+        logger.info("customization service - getAllByRestaurant called for {}", restaurantId);
+        List<Customization> list = customizationRepository
+                .findAllByRestaurant_RestaurantIdAndStatusTrue(restaurantId);
+
         return list.isEmpty()
                 ? Collections.emptyList()
                 : list.stream().map(customizationMapper::toCustomizationDTO).toList();
@@ -51,14 +63,29 @@ public class CustomizationService {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
 
-        Customization entity = new Customization();
-        entity.setName(request.getName());
-        entity.setPrice(request.getPrice());
-        entity.setRestaurant(restaurant);
-        entity.setCreatedAt(Instant.now());
+        Customization customization = new Customization();
+        customization.setName(request.getName());
+        customization.setPrice(request.getPrice());
+        customization.setRestaurant(restaurant);
+        customization.setStatus(true);
+        customization.setCreatedAt(Instant.now());
 
-        logger.info("customization created");
-        return customizationMapper.toCustomizationDTO(customizationRepository.save(entity));
+        if (request.getCategoryId() != null) {
+            var category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
+            customization.getCategories().add(category);
+        }
+
+        if (request.getMenuItemId() != null) {
+            var menuItem = menuItemRepository.findById(request.getMenuItemId())
+                    .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
+            customization.getMenuItems().add(menuItem);
+        }
+
+        logger.info("customization created for type: {}",
+                request.getMenuItemId() != null ? "MenuItem" : "Category");
+
+        return customizationMapper.toCustomizationDTO(customizationRepository.save(customization));
     }
 
     @Transactional
@@ -71,7 +98,7 @@ public class CustomizationService {
                     logger.info("customization updated");
                     return customizationMapper.toCustomizationDTO(customizationRepository.save(exist));
                 })
-                .orElse(null); // ✅ Không throw nếu chưa có
+                .orElseThrow(() -> new AppException(ErrorCode.CUSTOMIZATION_NOT_FOUND));
     }
 
     @Transactional
