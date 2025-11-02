@@ -9,8 +9,6 @@ public class CustomizationDTO {
     private String name;
     private BigDecimal price;
     private UUID restaurantId;
-    private Instant createdAt;
-    private Instant updatedAt;
 
     public UUID getCustomizationId() { return customizationId; }
     public void setCustomizationId(UUID customizationId) { this.customizationId = customizationId; }
@@ -23,10 +21,4 @@ public class CustomizationDTO {
 
     public UUID getRestaurantId() { return restaurantId; }
     public void setRestaurantId(UUID restaurantId) { this.restaurantId = restaurantId; }
-
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-
-    public Instant getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }
