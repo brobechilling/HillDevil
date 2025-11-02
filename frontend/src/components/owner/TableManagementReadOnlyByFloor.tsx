@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useTableStore } from '@/store/tableStore';
 import { useTables, useCreateTable, useDeleteTable, useTableQrCode } from '@/hooks/queries/useTables';
 import { useBranches } from '@/hooks/queries/useBranches';
+import { useAreas } from '@/hooks/queries/useAreas'; // THÊM HOOK MỚI
 import { toast } from '@/hooks/use-toast';
 import { TableDTO } from '@/dto/table.dto';
 import { Plus, Trash2, Download, Eye } from 'lucide-react';
+import { axiosClient } from '@/api/axiosClient';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
@@ -52,6 +60,10 @@ export const TableManagementReadOnlyByFloor = ({
     isLoading: isTablesLoading,
     error: tablesError,
   } = useTables(selectedBranch);
+  
+  // THÊM: Lấy danh sách areas
+  const { data: areas = [] } = useAreas(selectedBranch);
+  
   const createTableMutation = useCreateTable();
   const deleteTableMutation = useDeleteTable();
   const { data: qrCodeUrl } = useTableQrCode(selectedTableForQr?.id);
@@ -61,10 +73,14 @@ export const TableManagementReadOnlyByFloor = ({
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<CreateTableFormData>({
     resolver: zodResolver(createTableSchema),
   });
+
+  // Watch areaId để có thể control bằng Select
+  const selectedAreaId = watch('areaId');
 
   // Auto-select first branch if enabled
   useEffect(() => {
@@ -129,10 +145,13 @@ export const TableManagementReadOnlyByFloor = ({
 
   const handleDownloadQr = async (table: TableDTO) => {
     try {
-      const response = await fetch(`/api/owner/tables/${table.id}/qr.png`);
-      if (!response.ok) throw new Error('Failed to download QR code');
-
-      const blob = await response.blob();
+      // Use axiosClient instead of fetch to include Authorization header
+      const response = await axiosClient.get(`/owner/tables/${table.id}/qr.png`, {
+        params: { size: 512 },
+        responseType: 'blob',
+      });
+      
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -170,17 +189,25 @@ export const TableManagementReadOnlyByFloor = ({
     }
   };
 
-  // Group tables by floor
-  const floorMap = new Map<number, TableDTO[]>();
+  // THAY ĐỔI: Group tables by AREA thay vì floor
+  const areaMap = new Map<string, { areaName: string; tables: TableDTO[] }>();
   if (tablesData?.content) {
     tablesData.content.forEach((table) => {
-      const floor = 1; // Default to floor 1 if not provided
-      if (!floorMap.has(floor)) floorMap.set(floor, []);
-      floorMap.get(floor)!.push(table);
+      const areaId = table.areaId || 'unknown';
+      const areaName = table.areaName || 'Unassigned';
+      
+      if (!areaMap.has(areaId)) {
+        areaMap.set(areaId, { areaName, tables: [] });
+      }
+      areaMap.get(areaId)!.tables.push(table);
     });
   }
 
-  const sortedFloors = Array.from(floorMap.keys()).sort((a, b) => a - b);
+  // THAY ĐỔI: Sort by area name
+  const sortedAreaEntries = Array.from(areaMap.entries()).sort((a, b) => 
+    a[1].areaName.localeCompare(b[1].areaName)
+  );
+  
   const displayBranchId = allowBranchSelection ? selectedBranch : initialBranchId;
 
   return (
@@ -410,25 +437,25 @@ export const TableManagementReadOnlyByFloor = ({
                   isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
                 }`}
               >
-                {sortedFloors.map((floor, floorIndex) => {
-                  const tables = floorMap.get(floor) || [];
+                {/* THAY ĐỔI: Loop qua areas thay vì floors */}
+                {sortedAreaEntries.map(([areaId, { areaName, tables }], areaIndex) => {
                   const sortedTables = tables.sort((a, b) =>
                     a.tag.localeCompare(b.tag)
                   );
 
                   return (
                     <div
-                      key={floor}
+                      key={areaId}
                       className="space-y-4"
                       style={{
-                        animation: `slideInUp 0.5s ease-out ${floorIndex * 0.1}s both`,
+                        animation: `slideInUp 0.5s ease-out ${areaIndex * 0.1}s both`,
                       }}
                     >
-                      {/* Floor Header */}
+                      {/* THAY ĐỔI: Area Header thay vì Floor Header */}
                       <div className="flex items-center gap-4">
                         <div className="relative bg-gradient-to-r from-primary to-primary/80 rounded-xl px-6 py-3 shadow-lg transform hover:scale-105 transition-transform duration-300">
                           <h3 className="text-xl font-bold text-primary-foreground">
-                            Floor {floor}
+                            {areaName}
                           </h3>
                           <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-xl opacity-50"></div>
                         </div>
@@ -440,7 +467,7 @@ export const TableManagementReadOnlyByFloor = ({
                         </div>
                       </div>
 
-                      {/* Tables Grid */}
+                      {/* Tables Grid - GIỮ NGUYÊN */}
                       <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-6">
                         {sortedTables.map((table, tableIndex) => (
                           <div
@@ -450,7 +477,7 @@ export const TableManagementReadOnlyByFloor = ({
                             className="relative"
                             style={{
                               animation: `fadeInScale 0.4s ease-out ${
-                                floorIndex * 0.1 + tableIndex * 0.05
+                                areaIndex * 0.1 + tableIndex * 0.05
                               }s both`,
                             }}
                           >
@@ -560,17 +587,40 @@ export const TableManagementReadOnlyByFloor = ({
         </Card>
       )}
 
-      {/* Create Table Dialog */}
+      {/* THAY ĐỔI: Create Table Dialog - Sử dụng Select cho Area */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Table</DialogTitle>
             <DialogDescription>
-              Add a new table to the selected branch
+              Add a new table to the selected area
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit(handleCreateTable)} className="space-y-4">
+            {/* THAY ĐỔI: Select Area thay vì Input */}
+            <div className="space-y-2">
+              <Label htmlFor="areaId">Area *</Label>
+              <Select
+                value={selectedAreaId}
+                onValueChange={(value) => setValue('areaId', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an area" />
+                </SelectTrigger>
+                <SelectContent>
+                  {areas.map((area) => (
+                    <SelectItem key={area.areaId} value={area.areaId}>
+                      {area.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.areaId && (
+                <p className="text-sm text-destructive">{errors.areaId.message}</p>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="tag">Table Name/Tag *</Label>
               <Input
@@ -599,20 +649,6 @@ export const TableManagementReadOnlyByFloor = ({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="areaId">Area *</Label>
-              <Input
-                {...register('areaId')}
-                id="areaId"
-                placeholder="Enter area ID"
-              />
-              {errors.areaId && (
-                <p className="text-sm text-destructive">
-                  {errors.areaId.message}
-                </p>
-              )}
-            </div>
-
             <div className="flex justify-end gap-3 pt-4">
               <Button
                 type="button"
@@ -629,7 +665,7 @@ export const TableManagementReadOnlyByFloor = ({
         </DialogContent>
       </Dialog>
 
-      {/* QR Code Dialog */}
+      {/* QR Code Dialog - GIỮ NGUYÊN */}
       <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -697,7 +733,7 @@ export const TableManagementReadOnlyByFloor = ({
             opacity: 1;
             transform: translateY(0);
           }
-        }
+            }
       `}</style>
     </div>
   );

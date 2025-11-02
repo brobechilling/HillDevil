@@ -64,7 +64,7 @@ public class MenuItem {
 
     // soft delete
     @Column(name = "status")
-    private boolean status;
+    private String status;
 
     @Column(name = "is_bestseller")
     private boolean isBestSeller;
@@ -147,11 +147,11 @@ public class MenuItem {
         this.price = price;
     }
 
-    public boolean isStatus() {
+    public String isStatus() {
         return status;
     }
 
-    public void setStatus(boolean status) {
+    public void setStatus(String status) {
         this.status = status;
     }
 

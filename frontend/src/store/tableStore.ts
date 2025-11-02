@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { BranchDTO } from '@/dto/branch.dto';
 import { TableDTO, TableStatus } from '@/dto/table.dto';
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Branch extends BranchDTO {
   // Extend BranchDTO if needed with additional client-side properties
 }

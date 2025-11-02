@@ -29,3 +29,11 @@ export interface TableListResponse {
   currentPage: number;
   pageSize: number;
 }
+
+export interface QrCodeJsonResponse {
+  tableId: string;
+  tableTag: string;
+  qrCodeBase64: string;
+  orderUrl: string;
+  size: number;
+}

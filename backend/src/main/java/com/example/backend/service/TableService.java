@@ -15,6 +15,7 @@ import com.example.backend.dto.response.TableResponse;
 import com.example.backend.entities.Area;
 import com.example.backend.entities.AreaTable;
 import com.example.backend.entities.TableStatus;
+import com.example.backend.mapper.TableMapper;
 import com.example.backend.repository.AreaRepository;
 import com.example.backend.repository.TableRepository;
 import com.example.backend.utils.QrCodeGenerator;
@@ -26,44 +27,129 @@ public class TableService {
 
     private final TableRepository tableRepository;
     private final AreaRepository areaRepository;
+    private final TableMapper tableMapper;
     private final AppProperties appProps;
 
-    public TableService(TableRepository tableRepository, AreaRepository areaRepository, AppProperties appProps) {
+    public TableService(TableRepository tableRepository, 
+                       AreaRepository areaRepository,
+                       TableMapper tableMapper,
+                       AppProperties appProps) {
         this.tableRepository = tableRepository;
         this.areaRepository = areaRepository;
+        this.tableMapper = tableMapper;
         this.appProps = appProps;
     }
 
+    /**
+     * Lấy danh sách tables của owner theo branch (có phân trang)
+     */
     @Transactional(readOnly = true)
     public Page<TableResponse> getOwnerTables(UUID branchId, int page, int size, String sort) {
         Pageable pageable = buildPageable(page, size, sort);
         return tableRepository.findTablesByBranch(branchId, pageable);
     }
 
+    /**
+     * Lấy thông tin chi tiết 1 table
+     */
+    @Transactional(readOnly = true)
+    public TableResponse getTableById(UUID tableId) {
+        AreaTable table = tableRepository.findByIdWithDetails(tableId)
+                .orElseThrow(() -> new NoSuchElementException("Table not found"));
+        
+        // Map entity sang DTO bằng MapStruct
+        TableResponse response = tableMapper.toTableResponse(table);
+        
+        // Set reservedBy nếu có reservation RESERVED
+        String reservedBy = table.getReservations().stream()
+                .filter(r -> "RESERVED".equals(r.getStatus().toString()))
+                .findFirst()
+                .map(r -> r.getCustomerName())
+                .orElse(null);
+        
+        response.setReservedBy(reservedBy);
+        
+        return response;
+    }
+
+    /**
+     * Lấy danh sách tables theo area
+     */
+    @Transactional(readOnly = true)
+    public List<TableResponse> getTablesByArea(UUID areaId) {
+        List<AreaTable> tables = tableRepository.findAllByAreaId(areaId);
+        
+        return tables.stream()
+                .map(table -> {
+                    TableResponse response = tableMapper.toTableResponse(table);
+                    
+                    // Set reservedBy nếu có
+                    String reservedBy = table.getReservations().stream()
+                            .filter(r -> "RESERVED".equals(r.getStatus().toString()))
+                            .findFirst()
+                            .map(r -> r.getCustomerName())
+                            .orElse(null);
+                    
+                    response.setReservedBy(reservedBy);
+                    return response;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Tạo table mới
+     */
     @Transactional
     public TableResponse createTable(CreateTableRequest req) {
         Area area = areaRepository.findById(req.getAreaId())
                 .orElseThrow(() -> new IllegalArgumentException("Area not found"));
 
-        AreaTable table = new AreaTable();
+        // Map DTO sang entity bằng MapStruct
+        AreaTable table = tableMapper.toEntity(req);
         table.setArea(area);
-        table.setTag(req.getTag());
-        table.setCapacity(req.getCapacity());
         table.setStatus(TableStatus.FREE);
 
-        table = tableRepository.save(table); // để có UUID
-
-        // Không lưu Base64 vào DB theo phương án A (nhẹ DB)
-        return new TableResponse(
-                table.getAreaTableId(),
-                table.getTag(),
-                table.getCapacity(),
-                table.getStatus(),
-                null);
+        table = tableRepository.save(table);
+        
+        return tableMapper.toTableResponse(table);
     }
 
+    /**
+     * Cập nhật thông tin table
+     */
+    @Transactional
+    public TableResponse updateTable(UUID tableId, CreateTableRequest req) {
+        AreaTable table = tableRepository.findById(tableId)
+                .orElseThrow(() -> new NoSuchElementException("Table not found"));
+        
+        // Update entity từ request bằng MapStruct
+        tableMapper.updateEntityFromRequest(req, table);
+        
+        table = tableRepository.save(table);
+        
+        return tableMapper.toTableResponse(table);
+    }
+
+    /**
+     * Cập nhật trạng thái table
+     */
+    @Transactional
+    public TableResponse updateTableStatus(UUID tableId, TableStatus status) {
+        AreaTable table = tableRepository.findById(tableId)
+                .orElseThrow(() -> new NoSuchElementException("Table not found"));
+        
+        table.setStatus(status);
+        table = tableRepository.save(table);
+        
+        return tableMapper.toTableResponse(table);
+    }
+
+    /**
+     * Lấy QR code PNG của table
+     */
     @Transactional(readOnly = true)
     public byte[] getTableQrPng(UUID tableId, int size) {
+        System.out.println("Getting QR for tableId: " + tableId); //DEBUG
         AreaTable t = tableRepository.findById(tableId)
                 .orElseThrow(() -> new NoSuchElementException("Table not found"));
 
@@ -71,6 +157,9 @@ public class TableService {
         return QrCodeGenerator.toPngBytes(orderUrl, Math.max(size, 128));
     }
 
+    /**
+     * Export QR codes PDF cho branch/area
+     */
     @Transactional(readOnly = true)
     public byte[] exportBranchQrPdf(UUID branchId, UUID areaId, int cols, int sizePt) {
         List<AreaTable> tables = tableRepository.findAllByBranchAndArea(branchId, areaId);
@@ -91,12 +180,32 @@ public class TableService {
         return QrPdfExporter.export(title, items, Math.max(cols, 2), sizePt);
     }
 
+    /**
+     * Xóa table
+     */
+    @Transactional
+    public void deleteTable(UUID tableId) {
+        AreaTable table = tableRepository.findById(tableId)
+                .orElseThrow(() -> new NoSuchElementException("Table not found"));
+        
+        // Optional: kiểm tra xem bàn có đang được sử dụng không
+        if (!table.getReservations().isEmpty()) {
+            throw new IllegalStateException("Cannot delete table with active reservations");
+        }
+        
+        tableRepository.delete(table);
+    }
+
+    // ==================== PRIVATE HELPERS ====================
+
     private String buildOrderUrl(UUID tableId) {
         String base = appProps.getBaseUrl();
-        if (base == null || base.isBlank())
-            base = "http://localhost:5000"; // fallback khớp YAML
-        if (base.endsWith("/"))
+        if (base == null || base.isBlank()) {
+            base = "http://localhost:5000";
+        }
+        if (base.endsWith("/")) {
             base = base.substring(0, base.length() - 1);
+        }
         return base + "/order?tableId=" + tableId;
     }
 
@@ -104,27 +213,13 @@ public class TableService {
         if (sort == null || sort.isBlank()) {
             return PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "tag"));
         }
+        
         String[] parts = sort.split(",", 2);
         String field = parts[0].trim();
         Sort.Direction dir = (parts.length > 1 && "desc".equalsIgnoreCase(parts[1].trim()))
                 ? Sort.Direction.DESC
                 : Sort.Direction.ASC;
+        
         return PageRequest.of(page, size, Sort.by(dir, field));
     }
-
-    @Transactional
-    public void deleteTable(UUID tableId) {
-        AreaTable table = tableRepository.findById(tableId)
-                .orElseThrow(() -> new NoSuchElementException("Table not found"));
-
-        // (tùy chọn) kiểm tra xem bàn có đang được sử dụng trong reservation/order
-        // nếu có -> throw exception để không cho xóa
-        // if (!table.getReservations().isEmpty()) {
-        // throw new IllegalStateException("Cannot delete a table with active
-        // reservations");
-        // }
-
-        tableRepository.delete(table);
-    }
-
 }

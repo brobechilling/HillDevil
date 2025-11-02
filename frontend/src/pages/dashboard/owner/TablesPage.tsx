@@ -1,17 +1,29 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/authStore';
+import { useSessionStore } from '@/store/sessionStore';
 import { TableManagementReadOnlyByFloor } from '@/components/owner/TableManagementReadOnlyByFloor';
 import { useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useBranches } from '@/hooks/queries/useBranches';
+import { UserDTO } from '@/dto/user.dto';
+import { ROLE_NAME } from '@/dto/user.dto';
 
 const OwnerTablesPage = () => {
-  const { user } = useAuthStore();
+  const { user } = useSessionStore();
   const navigate = useNavigate();
   const { data: branches = [], isLoading: isBranchesLoading } = useBranches();
 
   useEffect(() => {
-    if (!user || user.role !== 'owner') {
+    // Check if user exists and has RESTAURANT_OWNER role
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    // Handle both UserDTO (from backend) and mock user formats
+    const userRole = (user as UserDTO).role?.name || (user as any).role;
+    const isOwner = userRole === ROLE_NAME.RESTAURANT_OWNER || userRole === 'owner';
+    
+    if (!isOwner) {
       navigate('/login');
       return;
     }

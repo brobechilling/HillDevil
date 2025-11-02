@@ -1,3 +1,4 @@
+// axiosClient.ts
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { ApiResponse } from "@/dto/apiResponse";
 import { RefreshResponse } from "@/dto/auth.dto";
@@ -5,7 +6,15 @@ import { RefreshResponse } from "@/dto/auth.dto";
 let refreshPromise: Promise<string | null> | null = null;
 
 export const setAccessToken = (token: string | null) => {
-    localStorage.setItem("accessToken", token ?? "");
+    if (token) {
+        localStorage.setItem("accessToken", token);
+    } else {
+        localStorage.removeItem("accessToken");
+    }
+};
+
+export const getAccessToken = (): string | null => {
+    return localStorage.getItem("accessToken");
 };
 
 const PUBLIC_ENDPOINTS = [
@@ -27,30 +36,51 @@ const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
 export const axiosClient = axios.create({
     baseURL: baseUrl,
     withCredentials: true,
+    headers: {
+        'Content-Type': 'application/json',
+    },
 });
 
-axiosClient.interceptors.request.use((config) => {
-    const token = localStorage.getItem("accessToken");
-    if (token != "" && !isPublicEndpoint(config.url)) {
-        config.headers.Authorization = `Bearer ${token}`;
+// Request Interceptor
+axiosClient.interceptors.request.use(
+    (config) => {
+        const token = getAccessToken();
+        
+        // Chỉ thêm token nếu:
+        // 1. Token tồn tại và không rỗng
+        // 2. Không phải public endpoint
+        if (token && token.trim() !== "" && !isPublicEndpoint(config.url)) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
     }
-    return config;
-});
+);
 
-
+// Response Interceptor
 axiosClient.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
         const originalRequest = error.config as AxiosRequestConfig & { _retry?: number };
-        if (!originalRequest || !error.response)
+        
+        if (!originalRequest || !error.response) {
             return Promise.reject(error);
+        }
 
         const status = error.response.status;
+        const url = originalRequest.url || "";
+        
+        // Initialize retry counter
         originalRequest._retry = originalRequest._retry || 0;
 
-        if (status === 401 && originalRequest._retry < 3 && !isPublicEndpoint(originalRequest.url || "")) {
+        // Handle 401 Unauthorized
+        if (status === 401 && originalRequest._retry < 3 && !isPublicEndpoint(url)) {
             originalRequest._retry += 1;
 
+            // Nếu đang có refresh promise, đợi nó
             if (!refreshPromise) {
                 refreshPromise = (async () => {
                     try {
@@ -59,11 +89,13 @@ axiosClient.interceptors.response.use(
                             {},
                             { withCredentials: true }
                         );
+                        
                         const newAccessToken = res.data.result.accessToken;
                         setAccessToken(newAccessToken);
-                        axiosClient.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
+                        
                         return newAccessToken;
                     } catch (err) {
+                        // Refresh failed - clear token và redirect
                         setAccessToken(null);
                         window.location.href = "/login";
                         return null;
@@ -74,20 +106,30 @@ axiosClient.interceptors.response.use(
             }
 
             const newToken = await refreshPromise;
-            if (!newToken)
+            
+            if (!newToken) {
                 return Promise.reject(error);
+            }
 
+            // Retry original request với token mới
             originalRequest.headers = originalRequest.headers || {};
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            
             return axiosClient(originalRequest);
         }
 
+        // Nếu retry quá 3 lần vẫn 401 -> logout
         if (status === 401 && originalRequest._retry >= 3) {
             setAccessToken(null);
             window.location.href = "/login";
         }
 
+        // Handle 403 Forbidden
+        if (status === 403) {
+            console.error("Access forbidden - insufficient permissions");
+            // Có thể redirect về trang unauthorized hoặc hiện thông báo
+        }
+
         return Promise.reject(error);
     }
 );
-

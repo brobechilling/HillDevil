@@ -1,6 +1,7 @@
 package com.example.backend.repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -13,6 +14,10 @@ import com.example.backend.entities.AreaTable;
 
 public interface TableRepository extends JpaRepository<AreaTable, UUID> {
 
+    /**
+     * Lấy danh sách tables của branch với phân trang
+     * ✅ Constructor TableResponse(UUID, String, int, TableStatus, String)
+     */
     @Query("""
         SELECT new com.example.backend.dto.response.TableResponse(
             t.areaTableId,
@@ -31,15 +36,56 @@ public interface TableRepository extends JpaRepository<AreaTable, UUID> {
         """)
     Page<TableResponse> findTablesByBranch(@Param("branchId") UUID branchId, Pageable pageable);
 
+    /**
+     * Lấy tất cả tables theo branch và area (cho export PDF)
+     */
     @Query("""
        SELECT t
        FROM AreaTable t
-         JOIN t.area a
-         JOIN a.branch b
+         JOIN FETCH t.area a
+         JOIN FETCH a.branch b
        WHERE b.branchId = :branchId
          AND (:areaId IS NULL OR a.areaId = :areaId)
        ORDER BY a.name ASC, t.tag ASC
     """)
     List<AreaTable> findAllByBranchAndArea(@Param("branchId") UUID branchId,
                                            @Param("areaId") UUID areaId);
+
+    /**
+     * Lấy tables theo areaId
+     */
+    @Query("""
+        SELECT t
+        FROM AreaTable t
+        JOIN FETCH t.area a
+        WHERE a.areaId = :areaId
+        ORDER BY t.tag ASC
+    """)
+    List<AreaTable> findAllByAreaId(@Param("areaId") UUID areaId);
+
+    /**
+     * Lấy table với eager loading (tránh N+1 query)
+     */
+    @Query("""
+        SELECT t
+        FROM AreaTable t
+        LEFT JOIN FETCH t.area a
+        LEFT JOIN FETCH a.branch b
+        LEFT JOIN FETCH t.reservations r
+        WHERE t.areaTableId = :tableId
+    """)
+    Optional<AreaTable> findByIdWithDetails(@Param("tableId") UUID tableId);
+
+    /**
+     * Kiểm tra table có thuộc branch không (dùng cho security)
+     */
+    @Query("""
+        SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END
+        FROM AreaTable t
+        JOIN t.area a
+        JOIN a.branch b
+        WHERE t.areaTableId = :tableId AND b.branchId = :branchId
+    """)
+    boolean existsByIdAndBranchId(@Param("tableId") UUID tableId, 
+                                   @Param("branchId") UUID branchId);
 }
