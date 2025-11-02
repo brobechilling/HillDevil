@@ -232,15 +232,6 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                             </div>
                           )}
 
-                          {/* === BEST SELLER ICON (Chỉ ngôi sao, góc trên phải) === */}
-                          {item.bestSeller && (
-                            <div className="absolute top-2 right-2 z-10">
-                              <div className="w-8 h-8 rounded-full bg-yellow-400/90 backdrop-blur-sm flex items-center justify-center shadow-md animate-pulse">
-                                <Sparkles className="h-4 w-4 text-white" />
-                              </div>
-                            </div>
-                          )}
-
                           {/* === STATUS BADGE (góc trên trái) === */}
                           <div className="absolute top-2 left-2 z-10">
                             <Badge
