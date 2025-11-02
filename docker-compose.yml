@@ -13,6 +13,9 @@ services:
       - PAYOS_API_KEY=${PAYOS_API_KEY}
       - PAYOS_CHECKSUM_KEY=${PAYOS_CHECKSUM_KEY}
       - FRONTEND_BASE_URL=${FRONTEND_BASE_URL}
+      - CLOUD_NAME=${CLOUD_NAME}
+      - CLOUD_API_KEY=${CLOUD_API_KEY}
+      - CLOUD_API_SECRET=${CLOUD_API_SECRET}
     ports:
       - "8080:8080"
     container_name: spring-app-container
