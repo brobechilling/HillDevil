@@ -2,9 +2,12 @@ package com.example.backend.dto.request;
 
 import java.util.UUID;
 
+import com.example.backend.validator.Password;
+
 public class ChangePasswordRequest {
     private String password;
     private UUID userId;
+    @Password
     private String newPassword;
     
     public String getPassword() {

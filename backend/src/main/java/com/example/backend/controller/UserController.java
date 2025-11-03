@@ -93,7 +93,7 @@ public class UserController {
     }
     
     @PostMapping("/changepass")
-    public ApiResponse<Boolean> changePassword(@RequestBody ChangePasswordRequest changePasswordRequest) {
+    public ApiResponse<Boolean> changePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest) {
         ApiResponse<Boolean> apiResponse = new ApiResponse<>();
         apiResponse.setResult(userService.changePassword(changePasswordRequest));
         return apiResponse;
