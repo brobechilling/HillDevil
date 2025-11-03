@@ -9,42 +9,42 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Eye } from "lucide-react";
 import { useBranchMenuItems, useUpdateAvailability } from "@/hooks/queries/useBranchMenuItems";
 import { useCategories } from "@/hooks/queries/useCategories";
+import { useRestaurantByBranch } from "@/hooks/queries/useBranches";
 import { toast } from "@/hooks/use-toast";
 import { ManualOrderDialog } from "./ManualOrderDialog";
 import { BranchMenuItemDTO } from "@/dto/branchMenuItem.dto";
+import { useSessionStore } from "@/store/sessionStore";
+import { isStaffAccountDTO } from "@/utils/typeCast";
+import { MenuItemViewDialog } from "@/components/owner/MenuItemViewDialog";
 
-export const MenuManagement = ({ branchId }: { branchId: string }) => {
+export const MenuManagement = () => {
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | undefined>();
 
-  // === Lấy restaurantId từ localStorage ===
-  const selectedRestaurantRaw =
-    typeof window !== "undefined" ? localStorage.getItem("selected_restaurant") : null;
-  const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
-  const restaurantId = selectedRestaurant?.restaurantId as string | undefined;
+  const { user } = useSessionStore();
+  const branchId = isStaffAccountDTO(user) ? user.branchId : undefined;
+  const isWaiter = isStaffAccountDTO(user) && user.role.name === "WAITER";
 
-  // === Queries ===
+  const { data: restaurantId, isLoading: loadingRestaurant } = useRestaurantByBranch(branchId);
   const {
     data: menuItems = [],
     isLoading: loadingItems,
     isError: errorItems,
   } = useBranchMenuItems(branchId);
-
   const {
     data: categories = [],
     isLoading: loadingCategories,
     isError: errorCategories,
   } = useCategories(restaurantId);
-
   const updateAvailability = useUpdateAvailability(branchId);
 
-  // === Loading & Error States ===
-  const isLoading = loadingItems || loadingCategories;
+  const isLoading = loadingRestaurant || loadingItems || loadingCategories;
   const isError = errorItems || errorCategories;
 
-  // === Xử lý nhóm theo category ===
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>();
     categories.forEach((cat) => map.set(cat.categoryId, cat.name));
@@ -69,7 +69,6 @@ export const MenuManagement = ({ branchId }: { branchId: string }) => {
     });
   }, [groupedItems]);
 
-  // === Toggle availability ===
   const handleToggleAvailability = (item: BranchMenuItemDTO) => {
     updateAvailability.mutate(
       {
@@ -77,21 +76,26 @@ export const MenuManagement = ({ branchId }: { branchId: string }) => {
         available: !item.available,
       },
       {
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
           toast({
             title: "Availability updated",
-            description: `${item.name} is now ${!item.available ? "available" : "unavailable"}.`,
+            description: `${item.name} is now ${variables.available ? "available" : "unavailable"}.`,
           });
         },
         onError: () => {
           toast({
-            title: "Error",
-            description: "Failed to update item availability",
+            title: "❌ Error",
+            description: "Failed to update item availability.",
             variant: "destructive",
           });
         },
       }
     );
+  };
+
+  const handleViewItem = (itemId: string) => {
+    setSelectedItemId(itemId);
+    setViewDialogOpen(true);
   };
 
   // === Render Loading ===
@@ -155,11 +159,10 @@ export const MenuManagement = ({ branchId }: { branchId: string }) => {
             </div>
           </CardContent>
         </Card>
-
         <ManualOrderDialog
           open={orderDialogOpen}
           onOpenChange={setOrderDialogOpen}
-          branchId={branchId}
+          branchId={branchId!}
         />
       </>
     );
@@ -226,7 +229,18 @@ export const MenuManagement = ({ branchId }: { branchId: string }) => {
                         <CardContent className="pt-5">
                           <div className="space-y-3">
                             <div>
-                              <h4 className="font-bold text-lg line-clamp-1">{item.name}</h4>
+                              <div className="flex items-center gap-1">
+                                <h4 className="font-bold text-lg line-clamp-1">{item.name}</h4>
+                                {item.bestSeller && (
+                                  <span
+                                    title="Best Seller"
+                                    className="text-yellow-500 text-base"
+                                    aria-label="Best Seller"
+                                  >
+                                    ⭐
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                                 {item.description || "No description"}
                               </p>
@@ -249,8 +263,21 @@ export const MenuManagement = ({ branchId }: { branchId: string }) => {
                               <Switch
                                 checked={item.available}
                                 onCheckedChange={() => handleToggleAvailability(item)}
-                                disabled={updateAvailability.isPending}
+                                disabled={updateAvailability.isPending && updateAvailability.variables?.menuItemId === item.menuItemId}
                               />
+                            </div>
+
+                            {/* View Button */}
+                            <div className="pt-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => handleViewItem(item.menuItemId)}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </Button>
                             </div>
                           </div>
                         </CardContent>
@@ -264,11 +291,23 @@ export const MenuManagement = ({ branchId }: { branchId: string }) => {
         </CardContent>
       </Card>
 
+      {/* View Dialog */}
+      <MenuItemViewDialog
+        open={viewDialogOpen}
+        onOpenChange={(open) => {
+          setViewDialogOpen(open);
+          if (!open) setSelectedItemId(undefined);
+        }}
+        itemId={selectedItemId}
+        isWaiter={isWaiter}
+      />
+
+      {/* Manual Order Dialog */}
       <ManualOrderDialog
         open={orderDialogOpen}
         onOpenChange={setOrderDialogOpen}
-        branchId={branchId}
+        branchId={branchId!}
       />
     </>
   );
-};  
+};

@@ -41,7 +41,7 @@ export const RestaurantLoginForm = ({ restaurant, onBack }: RestaurantLoginFormP
   const loginStaffMutation = useMutation({
     mutationFn: login,
     onSuccess: (data) => {
-      setSession(data.staff, data.accessToken, restaurant.restaurantId, branchId);
+      setSession(data.staff, data.accessToken);
 
       toast({
         title: 'Login successful',

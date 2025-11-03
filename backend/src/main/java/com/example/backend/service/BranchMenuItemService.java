@@ -23,66 +23,63 @@ public class BranchMenuItemService {
     private final MenuItemMapper menuItemMapper;
     private final MenuItemRepository menuItemRepository;
     private final BranchRepository branchRepository;
+    private final MediaService mediaService;
 
     public BranchMenuItemService(
             BranchMenuItemRepository branchMenuItemRepository,
             MenuItemMapper menuItemMapper,
             MenuItemRepository menuItemRepository,
-            BranchRepository branchRepository
+            BranchRepository branchRepository,
+            MediaService mediaService
     ) {
         this.branchMenuItemRepository = branchMenuItemRepository;
         this.menuItemMapper = menuItemMapper;
         this.menuItemRepository = menuItemRepository;
         this.branchRepository = branchRepository;
+        this.mediaService = mediaService;
     }
 
     public List<BranchMenuItemDTO> getMenuItemsByBranch(UUID branchId) {
         List<BranchMenuItem> branchMenuItems = branchMenuItemRepository.findAllByBranch_BranchId(branchId);
 
-        Map<UUID, BranchMenuItem> branchMenuItemMap = branchMenuItems.stream()
-                .collect(Collectors.toMap(
-                        bmi -> bmi.getMenuItem().getMenuItemId(),
-                        bmi -> bmi
-                ));
-
         UUID restaurantId = branchMenuItems.isEmpty()
                 ? branchMenuItemRepository.findRestaurantIdByBranchId(branchId)
                 : branchMenuItems.getFirst().getBranch().getRestaurant().getRestaurantId();
 
-        List<MenuItem> activeItems =
-                menuItemRepository.findAllByRestaurant_RestaurantIdAndStatus(restaurantId, MenuItemStatus.ACTIVE);
+        List<MenuItem> activeItems = menuItemRepository.findAllByRestaurant_RestaurantIdAndStatus(restaurantId, MenuItemStatus.ACTIVE);
+
+        List<UUID> itemIds = activeItems.stream().map(MenuItem::getMenuItemId).toList();
+        Map<UUID, String> imageMap = mediaService.getLatestImageUrlsForTargets(itemIds, "MENU_ITEM_IMAGE");
+
+        Map<UUID, BranchMenuItem> branchMenuItemMap = branchMenuItems.stream()
+                .collect(Collectors.toMap(b -> b.getMenuItem().getMenuItemId(), b -> b));
 
         return activeItems.stream().map(menuItem -> {
-            MenuItemDTO base = menuItemMapper.toMenuItemDTO(menuItem);
+            BranchMenuItem mapping = branchMenuItemMap.get(menuItem.getMenuItemId());
             BranchMenuItemDTO dto = new BranchMenuItemDTO();
 
-            dto.setMenuItemId(base.getMenuItemId());
-            dto.setName(base.getName());
-            dto.setDescription(base.getDescription());
-            dto.setPrice(base.getPrice());
-            dto.setStatus(base.getStatus());
-            dto.setBestSeller(base.isBestSeller());
-            dto.setHasCustomization(base.isHasCustomization());
-            dto.setRestaurantId(base.getRestaurantId());
-            dto.setCategoryId(base.getCategoryId());
-            dto.setCustomizationIds(base.getCustomizationIds());
-            dto.setImageUrl(base.getImageUrl());
+            dto.setMenuItemId(menuItem.getMenuItemId());
+            dto.setName(menuItem.getName());
+            dto.setDescription(menuItem.getDescription());
+            dto.setPrice(menuItem.getPrice());
+            dto.setStatus(menuItem.getStatus());
+            dto.setBestSeller(menuItem.isBestSeller());
+            dto.setHasCustomization(menuItem.isHasCustomization());
+            dto.setRestaurantId(menuItem.getRestaurant().getRestaurantId());
+            dto.setCategoryId(menuItem.getCategory().getCategoryId());
+            dto.setImageUrl(imageMap.get(menuItem.getMenuItemId()));
 
-            BranchMenuItem mapping = branchMenuItemMap.get(menuItem.getMenuItemId());
             if (mapping != null) {
                 dto.setAvailable(mapping.isAvailable());
                 dto.setBranchMenuItemId(mapping.getBranchMenuItemId());
-                dto.setBranchId(branchId);
             } else {
                 dto.setAvailable(false);
-                dto.setBranchId(branchId);
             }
 
+            dto.setBranchId(branchId);
             return dto;
-        }).collect(Collectors.toList());
+        }).toList();
     }
-
-
 
     public void updateAvailabilityByBranchAndMenuItem(UUID branchId, UUID menuItemId, boolean available) {
         BranchMenuItem entity = branchMenuItemRepository

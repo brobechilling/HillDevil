@@ -74,15 +74,27 @@ export const routes: RouteObject[] = [
   },
   {
     path: '/register/package',
-    element: <RegisterPackage />,
+    element: (
+      <ProtectedRoute>
+        <RegisterPackage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/register/confirm',
-    element: <RegisterConfirm />,
+    element: (
+      <ProtectedRoute>
+        <RegisterConfirm />
+      </ProtectedRoute>
+    ),
   },
   {
-    path: "/payment/:orderCode",
-    element: <PaymentPage />,
+    path: '/payment/:orderCode',
+    element: (
+      <ProtectedRoute>
+        <PaymentPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/branch/:shortCode',
@@ -94,11 +106,19 @@ export const routes: RouteObject[] = [
   },
   {
     path: '/payment/success',
-    element: <PaymentSuccessPage />,
+    element: (
+      <ProtectedRoute>
+        <PaymentSuccessPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/payment/cancel',
-    element: <PaymentCancelPage />,
+    element: (
+      <ProtectedRoute>
+        <PaymentCancelPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/brand-selection',
@@ -108,14 +128,6 @@ export const routes: RouteObject[] = [
       </ProtectedRoute>
     ),
   },
-  // {
-  //   path: '/dashboard',
-  //   element: (
-  //     <ProtectedRoute>
-  //       <Dashboard />
-  //     </ProtectedRoute>
-  //   ),
-  // },
   {
     path: '/dashboard/owner',
     element: (

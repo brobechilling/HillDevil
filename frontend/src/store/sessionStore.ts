@@ -11,15 +11,8 @@ interface SessionState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  restaurantId: string | null;
-  branchId: string | null;
   initialize: () => Promise<void>;
-  setSession: (
-    user: UserDTO | StaffAccountDTO,
-    token: string,
-    restaurantId?: string | null,
-    branchId?: string | null
-  ) => void;
+  setSession: (user: UserDTO | StaffAccountDTO, token: string) => void;
   clearSession: () => void;
 }
 
@@ -28,14 +21,10 @@ export const useSessionStore = create<SessionState>((set) => ({
   token: null,
   isAuthenticated: false,
   isLoading: true,
-  restaurantId: null,
-  branchId: null,
 
   initialize: async () => {
     const storedToken = localStorage.getItem("accessToken");
     const userJson = localStorage.getItem("user");
-    const restaurantId = localStorage.getItem("restaurantId");
-    const branchId = localStorage.getItem("branchId");
 
     if (!storedToken && userJson) {
       try {
@@ -52,8 +41,6 @@ export const useSessionStore = create<SessionState>((set) => ({
           token: newToken,
           isAuthenticated: true,
           isLoading: false,
-          restaurantId: restaurantId ?? null,
-          branchId: branchId ?? null,
         });
         return;
       } catch (err) {
@@ -72,8 +59,6 @@ export const useSessionStore = create<SessionState>((set) => ({
           token: storedToken,
           isAuthenticated: true,
           isLoading: false,
-          restaurantId: restaurantId ?? null,
-          branchId: branchId ?? null,
         });
       } catch (e) {
         console.error("Failed to parse user:", e);
@@ -83,8 +68,6 @@ export const useSessionStore = create<SessionState>((set) => ({
           token: null,
           isAuthenticated: false,
           isLoading: false,
-          restaurantId: null,
-          branchId: null,
         });
       }
     } else {
@@ -93,25 +76,19 @@ export const useSessionStore = create<SessionState>((set) => ({
         token: null,
         isAuthenticated: false,
         isLoading: false,
-        restaurantId: null,
-        branchId: null,
       });
     }
   },
 
-  setSession: (user, token, restaurantId = null, branchId = null) => {
+  setSession: (user, token) => {
     localStorage.setItem("user", JSON.stringify(user));
     localStorage.setItem("accessToken", token);
-    if (restaurantId) localStorage.setItem("restaurantId", restaurantId);
-    if (branchId) localStorage.setItem("branchId", branchId);
     setAccessToken(token);
     set({
       user,
       token,
       isAuthenticated: true,
       isLoading: false,
-      restaurantId,
-      branchId,
     });
   },
 
@@ -122,17 +99,12 @@ export const useSessionStore = create<SessionState>((set) => ({
       console.warn("Logout API failed:", err);
     }
     localStorage.removeItem("user");
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("restaurantId");
-    localStorage.removeItem("branchId");
     setAccessToken(null);
     set({
       user: null,
       token: null,
       isAuthenticated: false,
       isLoading: false,
-      restaurantId: null,
-      branchId: null,
     });
   },
 }));

@@ -69,4 +69,10 @@ public class BranchController {
         return res;
     }
 
+    @GetMapping("/{branchId}/restaurant")
+    public ApiResponse<UUID> getRestaurantByBranchId(@PathVariable UUID branchId) {
+        ApiResponse<UUID> res = new ApiResponse<>();
+        res.setResult(branchService.getRestaurantIdByBranchId(branchId));
+        return res;
+    }
 }

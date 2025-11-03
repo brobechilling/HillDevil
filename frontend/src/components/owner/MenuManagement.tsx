@@ -33,19 +33,16 @@ interface MenuManagementProps {
 }
 
 export const MenuManagement = ({ branchId }: MenuManagementProps) => {
-  const { isLoading: isSessionLoading, initialize } = useSessionStore();
+  const { isLoading: isSessionLoading } = useSessionStore();
 
-  // Resolve restaurant id
   const selectedRestaurantRaw = typeof window !== 'undefined' ? localStorage.getItem('selected_restaurant') : null;
   const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
   const restaurantId: string | undefined = selectedRestaurant?.restaurantId;
 
-  // === Menu data via React Query ===
   const { data: items = [], isLoading: isItemsLoading } = useMenuItems(restaurantId);
   const { data: categories = [] } = useCategories(restaurantId);
   const deleteMutation = useDeleteMenuItem();
 
-  // === UI State ===
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MenuItemDTO | undefined>();

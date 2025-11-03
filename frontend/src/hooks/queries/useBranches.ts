@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getAllBranches, getBranchesByRestaurant } from '@/api/branchApi';
+import { getAllBranches, getBranchesByRestaurant, getRestaurantByBranchId } from '@/api/branchApi';
 import { BranchDTO } from '@/dto/branch.dto';
 
 export const useBranches = () => {
@@ -14,5 +14,13 @@ export const useBranchesByRestaurant = (restaurantId: string | undefined) => {
         queryKey: ['branches', 'restaurant', restaurantId],
         queryFn: () => getBranchesByRestaurant(restaurantId!),
         enabled: !!restaurantId,
+    });
+};
+
+export const useRestaurantByBranch = (branchId: string | undefined) => {
+    return useQuery<string>({
+        queryKey: ['restaurant', 'byBranch', branchId],
+        queryFn: () => getRestaurantByBranchId(branchId!),
+        enabled: !!branchId,
     });
 };
