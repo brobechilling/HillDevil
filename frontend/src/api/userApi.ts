@@ -30,6 +30,6 @@ export const setUserStatus = async (userId: string) => {
 };
 
 export const changePassword = async (changePasswordRequest: ChangePasswordRequest) => {
-  const res = await axiosClient.post<ApiResponse<boolean>>("/users/changepass");
+  const res = await axiosClient.post<ApiResponse<boolean>>("/users/changepass", changePasswordRequest);
   return res.data.result;
 }
