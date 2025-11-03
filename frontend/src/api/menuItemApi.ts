@@ -14,7 +14,6 @@ export const getMenuItemById = async (id: string) => {
   return res.data.result;
 };
 
-/** 🔹 Create menu item (multipart/form-data) */
 export const createMenuItem = async (
   data: MenuItemCreateRequest,
   imageFile?: File
@@ -31,7 +30,6 @@ export const createMenuItem = async (
   return res.data.result;
 };
 
-/** 🔹 Update menu item (multipart/form-data) */
 export const updateMenuItem = async (
   id: string,
   data: MenuItemCreateRequest,
@@ -62,13 +60,14 @@ export const isMenuItemActiveInBranch = async (menuItemId: string, branchId: str
 };
 
 export const setActiveStatus = async (menuItemId: string, active: boolean) => {
-  const res = await axiosClient.put<ApiResponse<void>>(
+  const res = await axiosClient.put<ApiResponse<MenuItemDTO>>(
     `/menu-items/${menuItemId}/status`,
     null,
     { params: { active } }
   );
-  return res.data;
+  return res.data.result;
 };
+
 
 export const updateBestSeller = async (menuItemId: string, bestSeller: boolean) => {
   const res = await axiosClient.put<ApiResponse<MenuItemDTO>>(

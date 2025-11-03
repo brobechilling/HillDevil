@@ -8,12 +8,12 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Eye, ChevronRight, Sparkles } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, ChevronRight, Sparkles, Menu, X } from 'lucide-react';
 import { MenuItemDialog } from './MenuItemDialog';
 import { MenuItemViewDialog } from './MenuItemViewDialog';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { useSessionStore } from '@/store/sessionStore';
-import { useMenuItems, useDeleteMenuItem } from '@/hooks/queries/useMenuItems';
+import { useMenuItems, useDeleteMenuItem, useSetActiveStatus, useUpdateBestSeller } from '@/hooks/queries/useMenuItems';
 import { useCategories } from '@/hooks/queries/useCategories';
 import { MenuItemDTO } from '@/dto/menuItem.dto';
 import {
@@ -42,14 +42,17 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
   const { data: items = [], isLoading: isItemsLoading } = useMenuItems(restaurantId);
   const { data: categories = [] } = useCategories(restaurantId);
   const deleteMutation = useDeleteMenuItem();
-
+  const { mutate: toggleActive } = useSetActiveStatus(restaurantId);
+  const { mutate: updateBestSeller } = useUpdateBestSeller(restaurantId);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MenuItemDTO | undefined>();
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [pendingItemId, setPendingItemId] = useState<string | null>(null);
 
   // === Loading state ===
   if (isSessionLoading || isItemsLoading) {
@@ -142,14 +145,25 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                 Manage your restaurant&apos;s menu items and categories
               </p>
             </div>
-            <Button
-              onClick={handleAdd}
-              className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-              size="lg"
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              Add Menu Item
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Nút toggle sidebar (hiển thị trên mobile & desktop) */}
+              <Button
+                variant="outline"
+                size="icon"
+                className="xl:hidden"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <Button
+                onClick={handleAdd}
+                className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                size="lg"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                Add Menu Item
+              </Button>
+            </div>
           </div>
 
           {Object.keys(groupedItems).length === 0 ? (
@@ -204,7 +218,7 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                           "group relative border border-border/40 bg-card rounded-xl",
                           "hover:shadow-lg hover:shadow-primary/5 transition-all duration-300",
                           "hover:-translate-y-1 hover:border-primary/30",
-                          "flex flex-col h-[380px] overflow-hidden cursor-pointer"
+                          "flex flex-col h-full overflow-hidden"
                         )}
                       >
                         {/* === IMAGE CONTAINER === */}
@@ -238,11 +252,17 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                               {item.status === "ACTIVE" ? "Available" : "Unavailable"}
                             </Badge>
                           </div>
+
+                          {item.bestSeller && (
+                            <div className="absolute top-2 right-2 z-10 text-yellow-400 text-xl drop-shadow-md">
+                              ⭐
+                            </div>
+                          )}
                         </div>
 
                         {/* === CONTENT === */}
-                        <CardContent className="flex flex-col justify-between flex-1 p-5 space-y-3">
-                          <div>
+                        <CardContent className="flex flex-col flex-1 p-5 space-y-4">
+                          <div className="flex-1">
                             <h4 className="font-bold text-lg leading-tight line-clamp-2 group-hover:text-primary transition-colors duration-200">
                               {item.name}
                             </h4>
@@ -251,40 +271,81 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                             </p>
                           </div>
 
-                          <div className="flex items-center justify-between">
-                            <p className="text-2xl font-bold text-primary">
-                              ${parseFloat(item.price).toFixed(2)}
-                            </p>
+                          {/* Price */}
+                          <p className="text-2xl font-bold text-primary">
+                            ${parseFloat(item.price).toFixed(2)}
+                          </p>
+
+                          {/* Buttons: Active / Best Seller */}
+                          <div className="flex flex-col gap-2">
+                            {/* Mark Available / Unavailable */}
+                            <Button
+                              size="sm"
+                              variant={item.status === "ACTIVE" ? "outline" : "default"}
+                              onClick={() => {
+                                setPendingItemId(item.menuItemId);
+                                toggleActive(
+                                  { menuItemId: item.menuItemId, active: item.status !== "ACTIVE" },
+                                  { onSettled: () => setPendingItemId(null) }
+                                );
+                              }}
+                              disabled={pendingItemId === item.menuItemId}
+                              className={cn(
+                                pendingItemId === item.menuItemId && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              {item.status === "ACTIVE" ? "Mark Unavailable" : "Mark Available"}
+                            </Button>
+
+                            {/* Best Seller */}
+                            <Button
+                              size="sm"
+                              variant={item.bestSeller ? "destructive" : "outline"}
+                              onClick={() => {
+                                setPendingItemId(item.menuItemId);
+                                updateBestSeller(
+                                  { menuItemId: item.menuItemId, bestSeller: !item.bestSeller },
+                                  { onSettled: () => setPendingItemId(null) }
+                                );
+                              }}
+                              disabled={pendingItemId === item.menuItemId}
+                              className={cn(
+                                pendingItemId === item.menuItemId && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              {item.bestSeller ? "Unset Best Seller" : "Set Best Seller"}
+                            </Button>
+                          </div>
+
+                          {/* Action Buttons: View / Edit / Delete */}
+                          <div className="flex justify-end gap-1 pt-2 border-t border-border/20">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => { e.stopPropagation(); handleView(item); }}
+                              className="h-8 w-8 hover:bg-primary/10"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                              className="h-8 w-8 hover:bg-primary/10"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => { e.stopPropagation(); setItemToDelete(item.menuItemId); }}
+                              className="h-8 w-8 hover:bg-destructive/10 text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </CardContent>
 
-                        {/* === ACTION BUTTONS (hiện khi hover) === */}
-                        <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-gradient-to-t from-background/95 to-background/70 backdrop-blur-sm border-t border-border/30 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={(e) => { e.stopPropagation(); handleView(item); }}
-                            className="h-8 w-8 hover:bg-primary/10"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
-                            className="h-8 w-8 hover:bg-primary/10"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={(e) => { e.stopPropagation(); setItemToDelete(item.menuItemId); }}
-                            className="h-8 w-8 hover:bg-destructive/10 text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
                       </Card>
                     ))}
                   </div>
@@ -295,94 +356,125 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
         </div>
       </div>
 
-      {/* === SIDEBAR: CATEGORIES === */}
-      <aside className="hidden xl:block w-80 sticky top-24 h-fit animate-in slide-in-from-right-4 duration-500">
-        <Card className="shadow-xl border bg-card/50 backdrop-blur-sm">
-          <CardHeader className="pb-4 bg-gradient-to-br from-primary/5 to-transparent border-b">
-            <CardTitle className="text-xl font-bold text-foreground flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <ChevronRight className="h-4 w-4 text-primary rotate-90" />
-              </div>
-              Categories
-            </CardTitle>
-            <CardDescription className="text-xs mt-1">
-              Navigate through menu categories
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {sidebarCategories.length > 0 ? (
-              <div className="space-y-2">
-                {sidebarCategories.map((cat, index) => {
-                  const label = cat.name;
-                  const itemCount = groupedItems[label]?.length || 0;
-                  const customizationCount = getCategoryCustomizationCount(cat.categoryId);
-                  const isActive = activeCategory === label;
+      {/* === SIDEBAR: CATEGORIES (có thể ẩn/hiện) === */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 right-0 z-40 w-80 bg-background/95 backdrop-blur-sm shadow-2xl transition-transform duration-300 ease-in-out",
+          "xl:relative xl:inset-auto xl:shadow-xl xl:bg-card/50 xl:backdrop-blur-sm xl:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "translate-x-full xl:translate-x-0"
+        )}
+      >
+        <div className="flex flex-col h-full">
+          {/* Header với nút close (mobile) */}
+          <div className="flex items-center justify-between p-4 border-b xl:hidden">
+            <CardTitle className="text-lg font-bold">Categories</CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
 
-                  return (
-                    <div
-                      key={cat.categoryId}
-                      className="relative animate-in fade-in slide-in-from-right-4 duration-300"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <button
-                        onClick={() => scrollToCategory(label)}
-                        className={cn(
-                          "w-full text-left px-4 py-3 rounded-xl transition-all duration-300",
-                          "flex items-center justify-between cursor-pointer group",
-                          "border border-transparent",
-                          isActive
-                            ? "bg-primary text-primary-foreground shadow-lg scale-[1.02] border-primary/20"
-                            : "hover:bg-muted/50 hover:border-border hover:shadow-md hover:translate-x-1"
-                        )}
-                      >
-                        <div className="flex flex-col gap-1 flex-1 min-w-0">
-                          <span className={cn(
-                            "font-semibold text-sm truncate transition-colors",
-                            isActive ? "text-primary-foreground" : "text-foreground"
-                          )}>
-                            {label}
-                          </span>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={cn(
-                              "text-xs font-medium",
-                              isActive ? "text-primary-foreground/80" : "text-muted-foreground"
-                            )}>
-                              {itemCount} {itemCount === 1 ? 'item' : 'items'}
-                            </span>
-                            {customizationCount > 0 && (
-                              <Badge
-                                variant={isActive ? "secondary" : "outline"}
-                                className="text-[10px] h-4 px-1.5 font-medium"
-                              >
-                                {customizationCount} custom
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        <ChevronRight
-                          className={cn(
-                            "h-4 w-4 flex-shrink-0 transition-all duration-300",
-                            isActive
-                              ? "text-primary-foreground translate-x-1"
-                              : "text-muted-foreground group-hover:text-foreground group-hover:translate-x-1"
-                          )}
-                        />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="w-12 h-12 rounded-full bg-muted mx-auto mb-3 flex items-center justify-center">
-                  <ChevronRight className="h-6 w-6 text-muted-foreground rotate-90" />
+          <Card className="flex-1 m-4 xl:m-0 xl:border xl:shadow-none">
+            <CardHeader className="pb-4 bg-gradient-to-br from-primary/5 to-transparent border-b xl:border-b">
+              <CardTitle className="text-xl font-bold text-foreground flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <ChevronRight className="h-4 w-4 text-primary rotate-90" />
                 </div>
-                <p className="text-sm text-muted-foreground font-medium">No categories yet</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                Categories
+              </CardTitle>
+              <CardDescription className="text-xs mt-1">
+                Navigate through menu categories
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4 overflow-y-auto">
+              {sidebarCategories.length > 0 ? (
+                <div className="space-y-2">
+                  {sidebarCategories.map((cat, index) => {
+                    const label = cat.name;
+                    const itemCount = groupedItems[label]?.length || 0;
+                    const customizationCount = getCategoryCustomizationCount(cat.categoryId);
+                    const isActive = activeCategory === label;
+
+                    return (
+                      <div
+                        key={cat.categoryId}
+                        className="relative animate-in fade-in slide-in-from-right-4 duration-300"
+                        style={{ animationDelay: `${index * 50}ms` }}
+                      >
+                        <button
+                          onClick={() => {
+                            scrollToCategory(label);
+                            setSidebarOpen(false); // Đóng sidebar trên mobile sau khi click
+                          }}
+                          className={cn(
+                            "w-full text-left px-4 py-3 rounded-xl transition-all duration-300",
+                            "flex items-center justify-between cursor-pointer group",
+                            "border border-transparent",
+                            isActive
+                              ? "bg-primary text-primary-foreground shadow-lg scale-[1.02] border-primary/20"
+                              : "hover:bg-muted/50 hover:border-border hover:shadow-md hover:translate-x-1"
+                          )}
+                        >
+                          <div className="flex flex-col gap-1 flex-1 min-w-0">
+                            <span className={cn(
+                              "font-semibold text-sm truncate transition-colors",
+                              isActive ? "text-primary-foreground" : "text-foreground"
+                            )}>
+                              {label}
+                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={cn(
+                                "text-xs font-medium",
+                                isActive ? "text-primary-foreground/80" : "text-muted-foreground"
+                              )}>
+                                {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                              </span>
+                              {customizationCount > 0 && (
+                                <Badge
+                                  variant={isActive ? "secondary" : "outline"}
+                                  className="text-[10px] h-4 px-1.5 font-medium"
+                                >
+                                  {customizationCount} custom
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronRight
+                            className={cn(
+                              "h-4 w-4 flex-shrink-0 transition-all duration-300",
+                              isActive
+                                ? "text-primary-foreground translate-x-1"
+                                : "text-muted-foreground group-hover:text-foreground group-hover:translate-x-1"
+                            )}
+                          />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 rounded-full bg-muted mx-auto mb-3 flex items-center justify-center">
+                    <ChevronRight className="h-6 w-6 text-muted-foreground rotate-90" />
+                  </div>
+                  <p className="text-sm text-muted-foreground font-medium">No categories yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </aside>
+
+      {/* Overlay cho mobile khi sidebar mở */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 xl:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* Dialogs */}
       <MenuItemDialog

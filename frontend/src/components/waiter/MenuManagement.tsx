@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Loader2, Eye } from "lucide-react";
+import { Plus, Loader2, Eye, AlertTriangle } from "lucide-react";
 import { useBranchMenuItems, useUpdateAvailability } from "@/hooks/queries/useBranchMenuItems";
 import { useCategories } from "@/hooks/queries/useCategories";
 import { useRestaurantByBranch } from "@/hooks/queries/useBranches";
@@ -139,7 +139,7 @@ export const MenuManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Menu Management</CardTitle>
-                <CardDescription>Manage item availability by category</CardDescription>
+                <CardDescription>Manage item availability and create manual order</CardDescription>
               </div>
               <Button onClick={() => setOrderDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -258,27 +258,55 @@ export const MenuManagement = () => {
                               </Badge>
                             </div>
 
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Availability</span>
-                              <Switch
-                                checked={item.available}
-                                onCheckedChange={() => handleToggleAvailability(item)}
-                                disabled={updateAvailability.isPending && updateAvailability.variables?.menuItemId === item.menuItemId}
-                              />
-                            </div>
+                            {isWaiter ? (
+                              <div className="pt-2 flex flex-col gap-2">
+                                <Button
+                                  variant={item.available ? "outline" : "default"}
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => handleToggleAvailability(item)}
+                                  disabled={
+                                    updateAvailability.isPending &&
+                                    updateAvailability.variables?.menuItemId === item.menuItemId
+                                  }
+                                >
+                                  {updateAvailability.isPending &&
+                                    updateAvailability.variables?.menuItemId === item.menuItemId ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Updating...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <AlertTriangle className="h-3 w-3 mr-2" />
+                                      {item.available ? "Mark Out of Order" : "Mark Available"}
+                                    </>
+                                  )}
+                                </Button>
 
-                            {/* View Button */}
-                            <div className="pt-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full"
-                                onClick={() => handleViewItem(item.menuItemId)}
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Details
-                              </Button>
-                            </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => handleViewItem(item.menuItemId)}
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Details
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Availability</span>
+                                <Switch
+                                  checked={item.available}
+                                  onCheckedChange={() => handleToggleAvailability(item)}
+                                  disabled={
+                                    updateAvailability.isPending &&
+                                    updateAvailability.variables?.menuItemId === item.menuItemId
+                                  }
+                                />
+                              </div>
+                            )}
                           </div>
                         </CardContent>
                       </Card>

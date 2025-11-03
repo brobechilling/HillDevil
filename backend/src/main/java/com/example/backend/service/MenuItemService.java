@@ -41,7 +41,8 @@ public class MenuItemService {
     }
 
     public List<MenuItemDTO> getAllByRestaurant(UUID restaurantId) {
-        List<MenuItem> list = menuItemRepository.findAllByRestaurant_RestaurantIdAndStatus(restaurantId, MenuItemStatus.ACTIVE);
+        List<MenuItemStatus> allowedStatuses = Arrays.asList(MenuItemStatus.ACTIVE, MenuItemStatus.INACTIVE);
+        List<MenuItem> list = menuItemRepository.findAllByRestaurant_RestaurantIdAndStatusIn(restaurantId, allowedStatuses);
 
         if (list.isEmpty()) return Collections.emptyList();
 
@@ -149,12 +150,15 @@ public class MenuItemService {
     }
 
     @Transactional
-    public void setActiveStatus(UUID menuItemId, boolean active) {
+    public MenuItemDTO setActiveStatus(UUID menuItemId, boolean active) {
         MenuItem item = menuItemRepository.findById(menuItemId)
                 .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
+
         item.setStatus(active ? MenuItemStatus.ACTIVE : MenuItemStatus.INACTIVE);
         item.setUpdatedAt(Instant.now());
-        menuItemRepository.save(item);
+
+        MenuItem updated = menuItemRepository.save(item);
+        return menuItemMapper.toMenuItemDTO(updated);
     }
 
     @Transactional

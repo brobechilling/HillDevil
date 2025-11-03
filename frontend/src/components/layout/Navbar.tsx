@@ -90,11 +90,12 @@ export const Navbar = () => {
                   className="flex items-center gap-3 rounded-xl px-3 py-2 h-auto border-muted-foreground/20 hover:bg-muted transition-all"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                      {displayInitial || "U"}
-                    </AvatarFallback>
+                    <img
+                      src="https://res.cloudinary.com/dyrg3lfjf/image/upload/v1762009884/menu_item_image/file_r1egrl.jpg"
+                      alt={displayName}
+                      className="h-full w-full object-cover rounded-full"
+                    />
                   </Avatar>
-
                   <div className="hidden md:flex flex-col items-start leading-tight">
                     <span className="text-sm font-semibold">{displayName}</span>
                     <Badge
