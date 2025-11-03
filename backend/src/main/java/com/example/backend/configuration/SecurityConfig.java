@@ -48,7 +48,7 @@ public class SecurityConfig {
                 
                 // User API
                 .requestMatchers(HttpMethod.GET, "/api/users/{userId}").hasAnyRole(RoleName.ADMIN.name(), RoleName.RESTAURANT_OWNER.name())
-                .requestMatchers(HttpMethod.PUT, "/api/users/").hasAnyRole(RoleName.ADMIN.name(), RoleName.RESTAURANT_OWNER.name())
+                .requestMatchers(HttpMethod.PUT, "/api/users").hasAnyRole(RoleName.ADMIN.name(), RoleName.RESTAURANT_OWNER.name())
                 .requestMatchers(HttpMethod.POST, "/api/users/changepass").hasAnyRole(RoleName.ADMIN.name(), RoleName.RESTAURANT_OWNER.name())
                 .requestMatchers("/api/users/**").hasAnyRole(RoleName.ADMIN.name()) 
 

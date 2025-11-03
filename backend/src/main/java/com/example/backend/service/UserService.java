@@ -78,7 +78,7 @@ public class UserService {
         user.setPhone(userDTO.getPhone());
         user.setUsername(userDTO.getUsername());
         user.setRole(roleRepository.findByName(userDTO.getRole().getName()).orElseThrow(() -> new AppException(ErrorCode.ROLE_NOTEXISTED)));
-        user.setStatus(userDTO.isStatus());
+        // user.setStatus(userDTO.isStatus());
         return userMapper.toUserDto(userRepository.save(user));
     }
     
@@ -100,7 +100,7 @@ public class UserService {
             userRepository.save(user);
             return true;
         }
-        return false;
+        throw new AppException(ErrorCode.PASSWORD_NOTMATCH);
     }
 
 }

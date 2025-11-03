@@ -1,7 +1,11 @@
 import { changePassword, getUsers, setUserStatus, updateUser } from "@/api/userApi";
 import { PageResponse } from "@/dto/pageResponse";
 import { UserDTO } from "@/dto/user.dto";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSessionStore } from "@/store/sessionStore";
+import { useMutation, UseMutationOptions, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from '@/hooks/use-toast';
+import { AxiosError } from "axios";
+import { ApiResponse } from "@/dto/apiResponse";
 
 
 export const useUsersPaginatedQuery = (page: number, size: number) => {
@@ -25,9 +29,47 @@ export const useSetUserStatusMutation = (page: number, size: number) => {
 
 
 export const useChangePasswordd = () => {
+  const { toast } = useToast();
   return useMutation({
     mutationFn: changePassword,
+    onSuccess: () => {
+      toast({
+        title: 'Password updated successfully',
+        description: 'Your account password has been updated successfully',
+      });
+    },
+    onError(error: AxiosError<ApiResponse<null>>) {
+      const message = error.response?.data?.message || "Unexpected error occured. Please try again";
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: message,
+      });
+    },
+  });
+};
 
+export const useUpdateUserProfile = () => {
+  const { updateUser: updatedUserStore } = useSessionStore();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: updateUser,
+    onSuccess: (data)  => {
+      updatedUserStore(data);
+      toast({
+        title: 'Profile Updated',
+        description: 'Your profile has been successfully updated.',
+      });
+    },
+    onError: (error: AxiosError<ApiResponse<null>>) => {
+      const message = error.response?.data?.message || "Unexpected error occured. Please try again";
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: message,
+      });
+    },
+    
   });
 };
 

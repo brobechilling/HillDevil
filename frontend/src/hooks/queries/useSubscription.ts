@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { subscriptionApi } from "@/api/subscriptionApi";
+import { SubscriptionResponse } from "@/dto/subscription.dto";
 
 export const useSubscription = (id: string) => {
   return useQuery({
