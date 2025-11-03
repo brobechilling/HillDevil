@@ -18,8 +18,15 @@ public class MenuItemDTO {
     private UUID restaurantId;
     private UUID categoryId;
     private Set<UUID> customizationIds;
-    private Instant createdAt;
-    private Instant updatedAt;
+    private String imageUrl;
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
 
     // getters/setters
     public UUID getMenuItemId() { return menuItemId; }
@@ -51,10 +58,4 @@ public class MenuItemDTO {
 
     public Set<UUID> getCustomizationIds() { return customizationIds; }
     public void setCustomizationIds(Set<UUID> customizationIds) { this.customizationIds = customizationIds; }
-
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-
-    public Instant getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }

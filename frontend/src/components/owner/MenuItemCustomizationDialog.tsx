@@ -7,28 +7,28 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Loader2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 import { useCustomizations, useCreateCustomization } from '@/hooks/queries/useCustomizations';
-import { useUpdateCategory, useCategory } from '@/hooks/queries/useCategories';
+import { useUpdateMenuItem, useMenuItem } from '@/hooks/queries/useMenuItems';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  categoryId: string;
+  menuItemId: string;
   restaurantId: string;
 }
 
-export const CategoryManagementDialog = ({
+export const MenuItemCustomizationDialog = ({
   open,
   onOpenChange,
-  categoryId,
+  menuItemId,
   restaurantId,
 }: Props) => {
   const { data: allCustomizations = [] } = useCustomizations(restaurantId);
-  const { data: category } = useCategory(categoryId);
+  const { data: menuItem } = useMenuItem(menuItemId);
   const createMutation = useCreateCustomization();
-  const updateCategoryMutation = useUpdateCategory();
+  const updateMenuItemMutation = useUpdateMenuItem();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -37,12 +37,12 @@ export const CategoryManagementDialog = ({
 
   // Load linked customizations
   useEffect(() => {
-    if (open && category?.customizationIds) {
-      setSelectedIds(category.customizationIds);
+    if (open && menuItem?.customizationIds) {
+      setSelectedIds(menuItem.customizationIds);
     } else {
       setSelectedIds([]);
     }
-  }, [open, category]);
+  }, [open, menuItem]);
 
   const handleToggle = (custId: string, checked: boolean) => {
     const newIds = checked
@@ -54,10 +54,20 @@ export const CategoryManagementDialog = ({
   };
 
   const handleSave = () => {
-    if (!category) return;
-    updateCategoryMutation.mutate({
-      id: categoryId,
-      data: { ...category, customizationIds: selectedIds }
+    if (!menuItem) return;
+    updateMenuItemMutation.mutate({
+      id: menuItemId,
+      data: {
+        name: menuItem.name,
+        description: menuItem.description,
+        price: menuItem.price,
+        bestSeller: menuItem.bestSeller,
+        hasCustomization: menuItem.hasCustomization,
+        restaurantId: menuItem.restaurantId,
+        categoryId: menuItem.categoryId,
+        customizationIds: selectedIds,
+      },
+      imageFile: undefined,
     }, {
       onSuccess: () => {
         toast({ 
@@ -78,8 +88,8 @@ export const CategoryManagementDialog = ({
 
   const handleCancel = () => {
     // Reset state when canceling
-    if (category?.customizationIds) {
-      setSelectedIds(category.customizationIds);
+    if (menuItem?.customizationIds) {
+      setSelectedIds(menuItem.customizationIds);
     } else {
       setSelectedIds([]);
     }
@@ -99,27 +109,22 @@ export const CategoryManagementDialog = ({
     }, {
       onSuccess: (newCust) => {
         const newIds = [...selectedIds, newCust.customizationId];
-        if (category) {
-          updateCategoryMutation.mutate({
-            id: categoryId,
-            data: { ...category, customizationIds: newIds }
-          });
-        }
+        setSelectedIds(newIds);
         setNewName('');
         setNewPrice('');
         setShowAddForm(false);
-        toast({ title: 'Added', description: 'Customization created and linked.' });
+        toast({ title: 'Added', description: 'Customization created. Click "Save Changes" to link it.' });
       }
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200">
         <DialogHeader className="pb-4 border-b">
           <DialogTitle className="text-xl font-bold tracking-tight">Manage Customizations</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground mt-1">
-            {category?.name} – Select applicable customizations for this category
+            {menuItem?.name} – Select applicable customizations for this menu item
           </DialogDescription>
         </DialogHeader>
 
@@ -226,9 +231,9 @@ export const CategoryManagementDialog = ({
             <Button 
               onClick={handleSave} 
               className="flex-1 h-9"
-              disabled={updateCategoryMutation.isPending}
+              disabled={updateMenuItemMutation.isPending}
             >
-              {updateCategoryMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {updateMenuItemMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
           </div>
@@ -237,3 +242,4 @@ export const CategoryManagementDialog = ({
     </Dialog>
   );
 };
+

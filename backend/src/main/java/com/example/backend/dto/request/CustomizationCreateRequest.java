@@ -8,6 +8,25 @@ public class CustomizationCreateRequest {
     private BigDecimal price;
     private UUID restaurantId;
 
+    private UUID categoryId;
+    private UUID menuItemId;
+
+    public UUID getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(UUID categoryId) {
+        this.categoryId = categoryId;
+    }
+
+    public UUID getMenuItemId() {
+        return menuItemId;
+    }
+
+    public void setMenuItemId(UUID menuItemId) {
+        this.menuItemId = menuItemId;
+    }
+
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 

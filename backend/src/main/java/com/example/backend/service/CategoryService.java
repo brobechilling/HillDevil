@@ -37,17 +37,18 @@ public class CategoryService {
         this.customizationRepository = customizationRepository;
     }
 
-    public List<CategoryDTO> getAll() {
-        logger.info("category service - getAll called");
-        List<Category> categories = categoryRepository.findAll();
-        if (categories.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return categories.stream().map(categoryMapper::toCategoryDTO).toList();
+    public List<CategoryDTO> getAllByRestaurant(UUID restaurantId) {
+        logger.info("category service - getAllByRestaurant called for {}", restaurantId);
+
+        List<Category> categories = categoryRepository
+                .findAllActiveByRestaurantOrDefault(restaurantId);
+
+        return categories.stream()
+                .map(categoryMapper::toCategoryDTO)
+                .toList();
     }
 
     public CategoryDTO getById(UUID id) {
-        logger.info("category service - getById called");
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
         return categoryMapper.toCategoryDTO(category);
@@ -55,15 +56,14 @@ public class CategoryService {
 
     @Transactional
     public CategoryDTO create(CategoryCreateRequest request) {
-        Restaurant restaurant = null;
-        if (request.getRestaurantId() != null) {
-            restaurant = restaurantRepository.findById(request.getRestaurantId())
-                    .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
-        }
+        Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
+                .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
 
         Category category = new Category();
         category.setName(request.getName());
         category.setRestaurant(restaurant);
+        category.setStatus(true);
+        category.setCreatedAt(Instant.now());
 
         if (request.getCustomizationIds() != null && !request.getCustomizationIds().isEmpty()) {
             Set<Customization> customizations = request.getCustomizationIds().stream()
@@ -73,7 +73,6 @@ public class CategoryService {
             category.setCustomizations(customizations);
         }
 
-        category.setCreatedAt(Instant.now());
         Category saved = categoryRepository.save(category);
         logger.info("category service - created");
         return categoryMapper.toCategoryDTO(saved);
@@ -94,7 +93,8 @@ public class CategoryService {
                     .collect(Collectors.toSet());
             existing.setCustomizations(customizations);
         }
-        logger.info("category service - update");
+
+        logger.info("category service - updated");
         return categoryMapper.toCategoryDTO(categoryRepository.save(existing));
     }
 
@@ -107,3 +107,4 @@ public class CategoryService {
         });
     }
 }
+
