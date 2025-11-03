@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSessionStore } from '@/store/sessionStore';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,11 +26,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { statsApi } from '@/lib/api';
 import { getAllBranches } from '@/api/branchApi';
-import { useQueryClient } from '@tanstack/react-query';
 import { usePackages } from '@/hooks/queries/usePackages';
 import { useOverviewForOwner, useRenewSubscription, useCancelSubscription, useChangePackage } from '@/hooks/queries/useSubscription';
 import {
@@ -44,7 +41,7 @@ import {
   User,
   BarChart3,
   Building,
-  CreditCard,
+  Phone,
   Package as PackageIcon,
   RefreshCw,
   X,
@@ -53,12 +50,13 @@ import {
   AlertCircle,
   MapPin,
 } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { UserDTO } from '@/dto/user.dto';
 import type { PackageFeatureDTO as Package } from '@/dto/packageFeature.dto';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLocation, Link } from 'react-router-dom';
 import ProfileSidebar from '@/components/layout/ProfileSidebar';
+import { isUserDTO } from '@/utils/typeCast';
+import { useChangePasswordd, useUpdateUserProfile } from '@/hooks/queries/useUsers';
+import { ROLE_NAME } from '@/dto/user.dto';
 
 interface ProfileFormData {
   username: string;
@@ -73,22 +71,19 @@ const sidebarItems = [
 ];
 
 const Profile = () => {
-  const { user, isAuthenticated, isLoading, initialize, clearSession } = useSessionStore();
+  const { user, clearSession } = useSessionStore();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [isLoadingStats, setIsLoadingStats] = useState(false);
-  const [stats, setStats] = useState<any>(null);
   const [branches, setBranches] = useState<any[]>([]);
   const [formData, setFormData] = useState<ProfileFormData>({
-    username: (user as UserDTO)?.username || '',
-    email: (user as UserDTO)?.email || '',
-    phone: (user as UserDTO)?.phone || '',
+    username: isUserDTO(user) ? user.username : "",
+    email: isUserDTO(user) ? user.email : "",
+    phone: isUserDTO(user) ? user.phone : "",
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -108,6 +103,8 @@ const Profile = () => {
   const renewMutation = useRenewSubscription();
   const cancelMutation = useCancelSubscription();
   const changePackageMutation = useChangePackage();
+  const updateUserProfileMutation = useUpdateUserProfile();
+  const updatePasswordMutatation = useChangePasswordd();
 
   // Tabs replacement: sidebar state
   const location = useLocation();
@@ -119,37 +116,6 @@ const Profile = () => {
   };
   const activeSection = getSectionFromPath();
 
-  // Initialize session
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
-
-  // Load stats and branches
-  useEffect(() => {
-    const loadData = async () => {
-      if (!user || !isAuthenticated || (user as UserDTO).role.name !== 'RESTAURANT_OWNER') return;
-
-      try {
-        setIsLoadingStats(true);
-        const statsRes = await statsApi.getOwnerStats();
-        setStats(statsRes.data);
-        const branchesData = await getAllBranches();
-        setBranches(branchesData);
-      } catch (error) {
-        console.error('Error loading profile data:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load profile data.',
-        });
-      } finally {
-        setIsLoadingStats(false);
-      }
-    };
-
-    loadData();
-  }, [user, isAuthenticated, toast]);
-
   // Xử lý chọn nhà hàng trong tab subscription
   useEffect(() => {
     if (selectedRestaurantId && overviewData.length > 0) {
@@ -160,55 +126,19 @@ const Profile = () => {
     }
   }, [selectedRestaurantId, overviewData]);
 
-  // Handle loading state
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Loading...</CardTitle>
-            <CardDescription>Please wait while loading your profile information</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || !user || (user as UserDTO).role.name !== 'RESTAURANT_OWNER') {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Access Denied</CardTitle>
-            <CardDescription>
-              {isAuthenticated
-                ? 'This profile page is only accessible to Restaurant Owners.'
-                : 'Please log in to view your profile.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate('/login')} className="w-full">
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const typedUser = user as UserDTO;
+  const typedUser = isUserDTO(user) ? user : null;
 
   const handleEditProfile = () => {
     setFormData({
-      username: typedUser.username || '',
-      email: typedUser.email || '',
-      phone: typedUser.phone || '',
+      username: typedUser?.username || '',
+      email: typedUser?.email || '',
+      phone: typedUser?.phone || '',
     });
     setIsEditDialogOpen(true);
   };
 
-  const handleSaveProfile = () => {
-    if (!formData.username || !formData.email) {
+  const handleSaveProfile = async () => {
+    if (!formData.username || !formData.email || !formData.phone) {
       toast({
         variant: 'destructive',
         title: 'Validation Error',
@@ -216,14 +146,24 @@ const Profile = () => {
       });
       return;
     }
-    toast({
-      title: 'Profile Updated',
-      description: 'Your profile has been successfully updated.',
-    });
-    setIsEditDialogOpen(false);
+    try {
+      await updateUserProfileMutation.mutateAsync({
+        email: formData.email,
+        phone: formData.phone,
+        username: formData.username,
+        role: {
+          name: ROLE_NAME.RESTAURANT_OWNER,
+        },
+        userId: isUserDTO(user) ? user.userId : "",
+        status: true,
+      });
+      setIsEditDialogOpen(false);
+    }
+    catch(error) {
+    }
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
       toast({
         variant: 'destructive',
@@ -240,20 +180,29 @@ const Profile = () => {
       });
       return;
     }
-    if (passwordData.newPassword.length < 6) {
+
+    const passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$/;
+    if (!passwordRegex.test(passwordData.newPassword)) {
       toast({
         variant: 'destructive',
-        title: 'Weak Password',
-        description: 'Password must be at least 6 characters.',
+        title: 'Supa Weak Password',
+        description:
+          'Password must contain at least one digit, one lowercase letter, one uppercase letter, one special character, and be at least 8 characters long.',
       });
       return;
     }
-    toast({
-      title: 'Password Changed',
-      description: 'Your password has been successfully updated.',
-    });
-    setIsChangePasswordOpen(false);
-    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+
+    try {
+      await updatePasswordMutatation.mutateAsync({
+        userId: isUserDTO(user) ? user.userId : "",
+        password: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      setIsChangePasswordOpen(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } 
+    catch (error) {
+    }
   };
 
   const handleLogout = async () => {
@@ -327,71 +276,62 @@ const Profile = () => {
   return (
     <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/30">
       <ProfileSidebar activeKey={activeSection} />
-      {/* Main content with left margin to account for fixed sidebar */}
       <main className="flex-1 overflow-auto ml-72 relative">
         <div className="max-w-4xl mx-auto w-full px-2 md:px-8 py-8 space-y-6 animate-fade-in">
-          {/* Header Card (unchanged) */}
-          <Card className="overflow-hidden border-2">
-            <div className="h-24 bg-gradient-to-r from-primary/20 to-secondary/20"></div>
-            <CardContent className="pt-0">
-              <div className="flex flex-col md:flex-row gap-6 -mt-12 relative z-10">
-                <Avatar className="h-24 w-24 border-4 border-background ring-2 ring-primary/20">
-                  <AvatarImage src="https://via.placeholder.com/150" alt={typedUser.username} />
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground text-2xl font-bold">
-                    {typedUser.username?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 pt-2">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="space-y-2">
-                      <h1 className="text-3xl font-bold">{typedUser.username}</h1>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="default" className="text-sm">Restaurant Owner</Badge>
-                        <span className="text-sm text-muted-foreground">ID: {typedUser.userId}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {/* Edit Profile Dialog (unchanged) */}
-                      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button onClick={handleEditProfile} variant="default" size="sm" className="gap-2">
-                            <Edit2 className="w-4 h-4" /> Edit Profile
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Edit Profile</DialogTitle>
-                            <DialogDescription>Update your profile information</DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="username">Username</Label>
-                              <Input id="username" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="email">Email</Label>
-                              <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="phone">Phone (Optional)</Label>
-                              <Input id="phone" type="tel" value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-                            </div>
-                            <Button onClick={handleSaveProfile} className="w-full">Save Changes</Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                      {/* End Edit Dialog */}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Render main section by sidebar click */}
           {activeSection === 'overview' && (
-            // ...Overview content (from former TabsContent value="overview")...
             <div className="space-y-6">
+              <Card className="overflow-hidden border-2">
+                <div className="h-24 bg-gradient-to-r from-primary/20 to-secondary/20"></div>
+                <CardContent className="pt-0">
+                  <div className="flex flex-col md:flex-row gap-6 -mt-12 relative z-10">
+                    {/* change this avater to default img */}
+                    <Avatar className="h-24 w-24 border-4 border-background ring-2 ring-primary/20">
+                      <AvatarImage src="https://via.placeholder.com/150" alt={typedUser?.username} />
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground text-2xl font-bold">
+                        {typedUser?.username?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 pt-2">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div className="space-y-2">
+                          <h1 className="text-3xl font-bold">{typedUser?.username}</h1>
+                        </div>
+                        <div className="flex gap-2">
+                          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                            <DialogTrigger asChild>
+                              <Button onClick={handleEditProfile} variant="default" size="sm" className="gap-2">
+                                <Edit2 className="w-4 h-4" /> Edit Profile
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>Edit Profile</DialogTitle>
+                                <DialogDescription>Update your profile information</DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="username">Username</Label>
+                                  <Input id="username" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="email">Email</Label>
+                                  <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="phone">Phone </Label>
+                                  <Input id="phone" type="tel" value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                                </div>
+                                <Button onClick={handleSaveProfile} className="w-full">Save Changes</Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
               {/* Contact Info */}
               <Card>
                 <CardHeader>
@@ -401,11 +341,11 @@ const Profile = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-xs uppercase text-muted-foreground">Email Address</Label>
-                      <p className="font-medium flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /> {typedUser.email}</p>
+                      <p className="font-medium flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /> {typedUser?.email}</p>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs uppercase text-muted-foreground">User ID</Label>
-                      <p className="font-medium">{typedUser.userId}</p>
+                      <Label className="text-xs uppercase text-muted-foreground">Phone Number</Label>
+                      <p className="font-medium flex items-center gap-2"><Phone className="w-4 h-4 text-primary" />{typedUser?.phone}</p>
                     </div>
                   </div>
                 </CardContent>

@@ -79,8 +79,8 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
       id: 'categories-customizations',
       path: '/dashboard/owner/categories-customizations',
       icon: FolderTree,
-      label: 'Categories & Customizations',
-      description: 'Manage categories and add-ons',
+      label: 'Manage Categories',
+      description: 'Manage categories, toppings',
       gradient: 'from-violet-500 to-purple-500'
     },
     {

@@ -305,7 +305,7 @@ export const routes: RouteObject[] = [
   {
     path: '/profile',
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute allowedRoles={[ROLE_NAME.RESTAURANT_OWNER, ROLE_NAME.ADMIN]}>
         <Profile />
       </ProtectedRoute>
     ),
