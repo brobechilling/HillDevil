@@ -10,13 +10,11 @@ import { useBranchesByRestaurant } from '@/hooks/queries/useBranches';
 const OwnerOverviewPage = () => {
   const [user, setUser] = useState<UserDTO | null>(null);
   const navigate = useNavigate();
-  const [userBranches, setUserBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (!storedUser) {
-      console.log('OwnerOverviewPage - No user found, redirecting to login');
       navigate('/login');
       return;
     }
@@ -25,14 +23,12 @@ const OwnerOverviewPage = () => {
     setUser(userData);
 
     if (userData.role.name !== 'RESTAURANT_OWNER') {
-      console.log('OwnerOverviewPage - User is not RESTAURANT_OWNER, redirecting to login');
       navigate('/login');
       return;
     }
 
     const selectedRestaurant = localStorage.getItem('selected_restaurant');
     if (!selectedRestaurant) {
-      console.log('OwnerOverviewPage - No restaurant selected, redirecting to brand selection');
       toast({
         variant: 'destructive',
         title: 'No restaurant selected',
@@ -42,9 +38,6 @@ const OwnerOverviewPage = () => {
       return;
     }
 
-    console.log('OwnerOverviewPage - User authenticated and restaurant selected');
-
-    setUserBranches([]);
     setLoading(false);
   }, [navigate]);
 
@@ -53,8 +46,7 @@ const OwnerOverviewPage = () => {
   const restaurantId = selectedRestaurant?.restaurantId;
 
   const branchesQuery = useBranchesByRestaurant(restaurantId);
-  const activeUiBranches = (branchesQuery.data ?? [])
-  .filter(b => b.isActive); 
+  const allBranches = branchesQuery.data ?? [];
 
   const handleBranchUpdate = () => {
     branchesQuery.refetch();
@@ -73,7 +65,13 @@ const OwnerOverviewPage = () => {
     );
   }
 
-  const activeBranch = userBranches[0];
+  if (branchesQuery.isLoading) {
+    return <div className="text-center py-8">Loading branches...</div>;
+  }
+
+  if (branchesQuery.isError) {
+    return <div className="text-center py-8 text-destructive">Failed to load branches.</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -83,8 +81,9 @@ const OwnerOverviewPage = () => {
           Choose Another Restaurant
         </Button>
       </div>
+
       <OverviewDashboard
-        userBranches={activeUiBranches}
+        userBranches={allBranches}  
         onBranchUpdate={handleBranchUpdate}
       />
     </div>

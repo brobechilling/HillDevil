@@ -41,6 +41,7 @@ import BranchSelectionPage from './pages/dashboard/owner/BranchSelectionPage';
 // import OwnerCustomizationsPage from './pages/dashboard/owner/CustomizationsPage';
 import OwnerReportsPage from './pages/dashboard/owner/ReportsPage';
 import OwnerCustomizationPage from './pages/dashboard/owner/CustomizationPage';
+import { CategoryCustomizationManagement } from './pages/dashboard/owner/CategoryCustomizationManagement';
 
 // Waiter nested pages
 import WaiterOrdersPage from './pages/dashboard/waiter/OrdersPage';
@@ -151,14 +152,10 @@ export const routes: RouteObject[] = [
         path: 'staff',
         element: <OwnerStaffPage />,
       },
-      // {
-      //   path: 'categories',
-      //   element: <OwnerCategoriesPage />,
-      // },
-      // {
-      //   path: 'customizations',
-      //   element: <OwnerCustomizationsPage />,
-      // },
+      {
+        path: 'categories-customizations',
+        element: <CategoryCustomizationManagement />,
+      },
       {
         path: 'reports',
         element: <OwnerReportsPage />,

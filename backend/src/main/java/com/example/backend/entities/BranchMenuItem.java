@@ -33,7 +33,7 @@ public class BranchMenuItem {
     private MenuItem menuItem;
 
     @Column(name = "is_available")
-    private boolean isAvailable;
+    private boolean available;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
@@ -64,11 +64,11 @@ public class BranchMenuItem {
     }
 
     public boolean isAvailable() {
-        return isAvailable;
+        return available;
     }
 
     public void setAvailable(boolean isAvailable) {
-        this.isAvailable = isAvailable;
+        this.available = isAvailable;
     }
 
     public Instant getUpdatedAt() {

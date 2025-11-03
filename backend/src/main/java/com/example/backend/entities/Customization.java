@@ -51,6 +51,9 @@ public class Customization {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Column(name = "status")
+    private boolean status;
+
     @Column(name = "price", precision = 10, scale = 2, nullable = false)
     private BigDecimal price = BigDecimal.ZERO;
 
@@ -129,5 +132,11 @@ public class Customization {
         this.orderItemCustomizations = orderItemCustomizations;
     }
 
-    
+    public boolean isStatus() {
+        return status;
+    }
+
+    public void setStatus(boolean status) {
+        this.status = status;
+    }
 }

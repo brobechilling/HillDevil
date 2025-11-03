@@ -1,16 +1,21 @@
 import { useState, useRef } from 'react';
 import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Eye, ChevronRight, Settings } from 'lucide-react';
-import { useMenuStore, MenuItem } from '@/store/menuStore';
-import { useMenuCustomizationStore } from '@/store/customizationStore';
+import { Plus, Edit, Trash2, Eye, ChevronRight, Sparkles } from 'lucide-react';
 import { MenuItemDialog } from './MenuItemDialog';
 import { MenuItemViewDialog } from './MenuItemViewDialog';
-import { CategoryManagementDialog } from '@/components/owner/CategoryManagementDialog';
 import { toast } from '@/hooks/use-toast';
+import { useSessionStore } from '@/store/sessionStore';
+import { useMenuItems, useDeleteMenuItem } from '@/hooks/queries/useMenuItems';
+import { useCategories } from '@/hooks/queries/useCategories';
+import { MenuItemDTO } from '@/dto/menuItem.dto';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,33 +26,56 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 interface MenuManagementProps {
   branchId: string;
 }
 
 export const MenuManagement = ({ branchId }: MenuManagementProps) => {
-  const allItems = useMenuStore((state) => state.items);
-  const items = allItems.filter((i) => i.branchId === branchId);
-  const deleteItem = useMenuStore((state) => state.deleteItem);
-  const { getCategoryCustomizations } = useMenuCustomizationStore();
+  const { isLoading: isSessionLoading, initialize } = useSessionStore();
 
+  // Resolve restaurant id
+  const selectedRestaurantRaw = typeof window !== 'undefined' ? localStorage.getItem('selected_restaurant') : null;
+  const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
+  const restaurantId: string | undefined = selectedRestaurant?.restaurantId;
+
+  // === Menu data via React Query ===
+  const { data: items = [], isLoading: isItemsLoading } = useMenuItems(restaurantId);
+  const { data: categories = [] } = useCategories(restaurantId);
+  const deleteMutation = useDeleteMenuItem();
+
+  // === UI State ===
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<MenuItem | undefined>();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<MenuItemDTO | undefined>();
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('');
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleEdit = (item: MenuItem) => {
+  // === Loading state ===
+  if (isSessionLoading || isItemsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] w-full">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary/20 rounded-full"></div>
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+          </div>
+          <p className="text-sm text-muted-foreground animate-pulse">Loading menu...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // === Handlers ===
+  const handleEdit = (item: MenuItemDTO) => {
     setSelectedItem(item);
     setIsDialogOpen(true);
   };
 
-  const handleView = (item: MenuItem) => {
+  const handleView = (item: MenuItemDTO) => {
     setSelectedItem(item);
     setIsViewDialogOpen(true);
   };
@@ -58,17 +86,15 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
   };
 
   const handleDelete = (id: string) => {
-    deleteItem(id);
-    setItemToDelete(null);
-    toast({
-      title: 'Menu Item Deleted',
-      description: 'The menu item has been removed.',
+    deleteMutation.mutate(id, {
+      onSuccess: () => {
+        setItemToDelete(null);
+        toast({
+          title: 'Menu Item Deleted',
+          description: 'The menu item has been removed.',
+        });
+      },
     });
-  };
-
-  const handleManageCategory = (categoryName: string) => {
-    setSelectedCategory(categoryName);
-    setIsCategoryDialogOpen(true);
   };
 
   const scrollToCategory = (category: string) => {
@@ -76,138 +102,192 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
     const container = scrollContainerRef.current;
     const section = document.getElementById(`category-${category}`);
     if (container && section) {
-      const sectionTop = section.offsetTop;
       container.scrollTo({
-        top: sectionTop - 20,
+        top: section.offsetTop - 20,
         behavior: 'smooth',
       });
     }
+    // Reset active category after scroll animation
+    setTimeout(() => setActiveCategory(''), 2000);
   };
 
-  const groupedItems = items.reduce((acc, item) => {
-    if (!acc[item.category]) acc[item.category] = [];
-    acc[item.category].push(item);
+  // === Group items by category label ===
+  const categoryIdToLabel = new Map<string, string>(
+    (categories || []).map((c) => [c.categoryId, c.name])
+  );
+  const groupedItems = (items || []).reduce((acc, item) => {
+    const label = categoryIdToLabel.get(item.categoryId) || 'Uncategorized';
+    if (!acc[label]) acc[label] = [] as MenuItemDTO[];
+    (acc[label] as MenuItemDTO[]).push(item);
     return acc;
-  }, {} as Record<string, MenuItem[]>);
+  }, {} as Record<string, MenuItemDTO[]>);
 
-  const categories = Array.from(new Set(items.map((i) => i.category)));
+  const sidebarCategories = categories || [];
 
-  const getCategoryCustomizationCount = (categoryName: string) => {
-    return getCategoryCustomizations(categoryName, branchId).length;
+  const getCategoryCustomizationCount = (categoryId: string) => {
+    const cat = (categories || []).find((c) => c.categoryId === categoryId);
+    return cat?.customizationIds?.length || 0;
   };
 
   return (
-    <div className="flex gap-6">
-      {/* === CỘT TRÁI: DANH SÁCH MÓN ĂN === */}
+    <div className="flex gap-6 animate-in fade-in duration-300">
+      {/* === MAIN CONTENT: MENU ITEMS === */}
       <div className="flex-1">
         <div
           ref={scrollContainerRef}
-          className="max-w-6xl mx-auto px-10 pt-10 pb-16 overflow-y-auto h-[calc(100vh-120px)] scroll-smooth"
+          className="max-w-6xl mx-auto px-6 lg:px-10 pt-8 pb-16 overflow-y-auto h-[calc(100vh-120px)] scroll-smooth"
         >
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Menu Management</h1>
-              <p className="text-muted-foreground">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8 animate-in slide-in-from-top-4 duration-500">
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold text-foreground tracking-tight">Menu Management</h1>
+              <p className="text-muted-foreground text-sm">
                 Manage your restaurant&apos;s menu items and categories
               </p>
             </div>
             <Button
-              className="bg-primary hover:bg-primary/90 text-white px-5 py-2 rounded-lg shadow-sm"
               onClick={handleAdd}
+              className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+              size="lg"
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 h-5 w-5" />
               Add Menu Item
             </Button>
           </div>
 
           {Object.keys(groupedItems).length === 0 ? (
-            <div className="text-center py-20 border rounded-xl bg-muted/30">
-              <p className="text-muted-foreground">
-                No menu items yet. Add your first item!
-              </p>
+            <div className="text-center py-20 border-2 border-dashed rounded-2xl bg-muted/30 animate-in fade-in duration-500">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-8 w-8 text-primary" />
+                </div>
+                <div className="space-y-2">
+                  <p className="font-semibold text-lg text-foreground">No menu items yet</p>
+                  <p className="text-muted-foreground text-sm max-w-sm">
+                    Get started by adding your first menu item to showcase your delicious offerings
+                  </p>
+                </div>
+                <Button onClick={handleAdd} className="mt-4">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Your First Item
+                </Button>
+              </div>
             </div>
           ) : (
-            <div className="space-y-16">
-              {Object.entries(groupedItems).map(([category, categoryItems]) => (
+            <div className="space-y-20">
+              {Object.entries(groupedItems).map(([category, categoryItems], categoryIndex) => (
                 <section
                   key={category}
                   id={`category-${category}`}
-                  className="scroll-mt-24"
+                  className="scroll-mt-24 animate-in fade-in slide-in-from-bottom-4 duration-500"
+                  style={{ animationDelay: `${categoryIndex * 100}ms` }}
                 >
-                  <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-xl font-semibold text-primary">{category}</h2>
+                  {/* Category Header */}
+                  <div className="flex items-center justify-between mb-6 pb-3 border-b">
                     <div className="flex items-center gap-3">
-                      <Badge variant="outline">
-                        {categoryItems.length}{' '}
-                        {categoryItems.length === 1 ? 'item' : 'items'}
-                      </Badge>
+                      <div className="w-1 h-8 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-foreground tracking-tight">{category}</h2>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {categoryItems.length} {categoryItems.length === 1 ? 'item' : 'items'} in this category
+                        </p>
+                      </div>
                     </div>
+                    <Badge variant="secondary" className="text-sm font-medium px-3 py-1">
+                      {categoryItems.length}
+                    </Badge>
                   </div>
+
+                  {/* Menu Items Grid */}
                   <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                     {categoryItems.map((item, index) => (
                       <Card
-                        key={item.id}
-                        className="overflow-hidden border-border/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-                        style={{
-                          animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`,
-                        }}
+                        key={item.menuItemId}
+                        className={cn(
+                          "group relative border border-border/40 bg-card rounded-xl",
+                          "hover:shadow-lg hover:shadow-primary/5 transition-all duration-300",
+                          "hover:-translate-y-1 hover:border-primary/30",
+                          "flex flex-col h-[380px] overflow-hidden cursor-pointer"
+                        )}
                       >
-                        {item.imageUrl && (
-                          <div className="aspect-video bg-muted overflow-hidden">
+                        {/* === IMAGE CONTAINER === */}
+                        <div className="relative aspect-video bg-muted/50 overflow-hidden">
+                          {(item as any).imageUrl ? (
                             <img
-                              src={item.imageUrl}
+                              src={(item as any).imageUrl}
                               alt={item.name}
-                              className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                              className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-90"
                               onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
+                                (e.target as HTMLImageElement).style.display = "none";
                               }}
                             />
-                          </div>
-                        )}
-                        <CardContent className="pt-5">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <h4 className="font-bold text-lg">{item.name}</h4>
-                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                {item.description}
-                              </p>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="text-center space-y-1">
+                                <div className="w-10 h-10 rounded-lg bg-muted-foreground/10 mx-auto flex items-center justify-center">
+                                  <Sparkles className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                <p className="text-xs text-muted-foreground">No image</p>
+                              </div>
                             </div>
+                          )}
+
+                          {/* === STATUS BADGE (góc trên trái) === */}
+                          <div className="absolute top-2 left-2 z-10">
                             <Badge
-                              variant={item.available ? 'default' : 'secondary'}
+                              variant={item.status === "ACTIVE" ? "default" : "secondary"}
+                              className="text-[10px] px-2 py-0.5 backdrop-blur-sm bg-background/80"
                             >
-                              {item.available ? 'Available' : 'Unavailable'}
+                              {item.status === "ACTIVE" ? "Available" : "Unavailable"}
                             </Badge>
                           </div>
-                          <div className="flex items-center justify-between mt-4">
-                            <span className="text-xl font-semibold text-primary">
-                              ${item.price.toFixed(2)}
-                            </span>
-                            <div className="flex gap-2">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleView(item)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleEdit(item)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => setItemToDelete(item.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
+                        </div>
+
+                        {/* === CONTENT === */}
+                        <CardContent className="flex flex-col justify-between flex-1 p-5 space-y-3">
+                          <div>
+                            <h4 className="font-bold text-lg leading-tight line-clamp-2 group-hover:text-primary transition-colors duration-200">
+                              {item.name}
+                            </h4>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mt-1 leading-relaxed">
+                              {item.description || "No description"}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <p className="text-2xl font-bold text-primary">
+                              ${parseFloat(item.price).toFixed(2)}
+                            </p>
                           </div>
                         </CardContent>
+
+                        {/* === ACTION BUTTONS (hiện khi hover) === */}
+                        <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-gradient-to-t from-background/95 to-background/70 backdrop-blur-sm border-t border-border/30 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => { e.stopPropagation(); handleView(item); }}
+                            className="h-8 w-8 hover:bg-primary/10"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                            className="h-8 w-8 hover:bg-primary/10"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => { e.stopPropagation(); setItemToDelete(item.menuItemId); }}
+                            className="h-8 w-8 hover:bg-destructive/10 text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </Card>
                     ))}
                   </div>
@@ -218,124 +298,111 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
         </div>
       </div>
 
-      {/* === SIDEBAR PHẢI: CATEGORY === */}
-      <aside className="hidden xl:block w-80 sticky top-24 h-fit">
-        <Card className="shadow-lg border">
-          <CardHeader className="pb-3 bg-background">
-            <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <span className="w-1 h-6 bg-primary rounded-full"></span>
+      {/* === SIDEBAR: CATEGORIES === */}
+      <aside className="hidden xl:block w-80 sticky top-24 h-fit animate-in slide-in-from-right-4 duration-500">
+        <Card className="shadow-xl border bg-card/50 backdrop-blur-sm">
+          <CardHeader className="pb-4 bg-gradient-to-br from-primary/5 to-transparent border-b">
+            <CardTitle className="text-xl font-bold text-foreground flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <ChevronRight className="h-4 w-4 text-primary rotate-90" />
+              </div>
               Categories
             </CardTitle>
-            <CardDescription className="text-xs">
-              Click to view or manage customizations
+            <CardDescription className="text-xs mt-1">
+              Navigate through menu categories
             </CardDescription>
           </CardHeader>
-          <CardContent className="pt-0">
-            {categories.length > 0 ? (
-              <div className="space-y-1">
-                {categories.map((cat) => {
-                  const itemCount = groupedItems[cat]?.length || 0;
-                  const customizationCount = getCategoryCustomizationCount(cat);
-                  const isActive = activeCategory === cat;
+          <CardContent className="pt-4">
+            {sidebarCategories.length > 0 ? (
+              <div className="space-y-2">
+                {sidebarCategories.map((cat, index) => {
+                  const label = cat.name;
+                  const itemCount = groupedItems[label]?.length || 0;
+                  const customizationCount = getCategoryCustomizationCount(cat.categoryId);
+                  const isActive = activeCategory === label;
 
                   return (
-                    <div key={cat} className="relative group">
-                      {/* ✅ Đã đổi từ <button> sang <div role="button"> */}
-                      <div
-                        onClick={() => scrollToCategory(cat)}
-                        role="button"
-                        tabIndex={0}
-                        className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center justify-between cursor-pointer
-                    ${isActive
-                            ? 'bg-primary text-primary-foreground shadow-md scale-105'
-                            : 'hover:bg-muted hover:translate-x-1'
-                          }`}
+                    <div
+                      key={cat.categoryId}
+                      className="relative animate-in fade-in slide-in-from-right-4 duration-300"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <button
+                        onClick={() => scrollToCategory(label)}
+                        className={cn(
+                          "w-full text-left px-4 py-3 rounded-xl transition-all duration-300",
+                          "flex items-center justify-between cursor-pointer group",
+                          "border border-transparent",
+                          isActive
+                            ? "bg-primary text-primary-foreground shadow-lg scale-[1.02] border-primary/20"
+                            : "hover:bg-muted/50 hover:border-border hover:shadow-md hover:translate-x-1"
+                        )}
                       >
-                        <div className="flex flex-col gap-0.5 flex-1">
-                          <span
-                            className={`font-medium ${isActive
-                              ? 'text-primary-foreground'
-                              : 'text-foreground'
-                              }`}
-                          >
-                            {cat}
+                        <div className="flex flex-col gap-1 flex-1 min-w-0">
+                          <span className={cn(
+                            "font-semibold text-sm truncate transition-colors",
+                            isActive ? "text-primary-foreground" : "text-foreground"
+                          )}>
+                            {label}
                           </span>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`text-xs ${isActive
-                                ? 'text-primary-foreground/80'
-                                : 'text-muted-foreground'
-                                }`}
-                            >
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={cn(
+                              "text-xs font-medium",
+                              isActive ? "text-primary-foreground/80" : "text-muted-foreground"
+                            )}>
                               {itemCount} {itemCount === 1 ? 'item' : 'items'}
                             </span>
                             {customizationCount > 0 && (
                               <Badge
-                                variant="secondary"
-                                className="text-xs h-5 px-1.5"
+                                variant={isActive ? "secondary" : "outline"}
+                                className="text-[10px] h-4 px-1.5 font-medium"
                               >
                                 {customizationCount} custom
                               </Badge>
                             )}
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className={`h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity ${isActive
-                              ? 'text-primary-foreground hover:bg-primary-foreground/20'
-                              : ''
-                              }`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleManageCategory(cat);
-                            }}
-                          >
-                            <Settings className="h-3.5 w-3.5" />
-                          </Button>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </div>
+                        <ChevronRight
+                          className={cn(
+                            "h-4 w-4 flex-shrink-0 transition-all duration-300",
+                            isActive
+                              ? "text-primary-foreground translate-x-1"
+                              : "text-muted-foreground group-hover:text-foreground group-hover:translate-x-1"
+                          )}
+                        />
+                      </button>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground italic text-center py-4">
-                No categories yet
-              </p>
+              <div className="text-center py-8">
+                <div className="w-12 h-12 rounded-full bg-muted mx-auto mb-3 flex items-center justify-center">
+                  <ChevronRight className="h-6 w-6 text-muted-foreground rotate-90" />
+                </div>
+                <p className="text-sm text-muted-foreground font-medium">No categories yet</p>
+              </div>
             )}
           </CardContent>
         </Card>
       </aside>
 
-
-      {/* === DIALOGS === */}
+      {/* Dialogs */}
       <MenuItemDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         branchId={branchId}
+        restaurantId={restaurantId!}
         item={selectedItem}
       />
       <MenuItemViewDialog
         open={isViewDialogOpen}
         onOpenChange={setIsViewDialogOpen}
-        item={selectedItem}
+        itemId={selectedItem?.menuItemId}
       />
-      {selectedCategory && (
-        <CategoryManagementDialog
-          open={isCategoryDialogOpen}
-          onOpenChange={setIsCategoryDialogOpen}
-          categoryName={selectedCategory}
-          branchId={branchId}
-        />
-      )}
-      <AlertDialog
-        open={!!itemToDelete}
-        onOpenChange={() => setItemToDelete(null)}
-      >
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Menu Item</AlertDialogTitle>
@@ -347,25 +414,13 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => itemToDelete && handleDelete(itemToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <style>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 };
