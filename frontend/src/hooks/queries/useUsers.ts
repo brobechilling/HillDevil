@@ -1,4 +1,4 @@
-import { getUsers, setUserStatus, updateUser } from "@/api/userApi";
+import { changePassword, getUsers, setUserStatus, updateUser } from "@/api/userApi";
 import { PageResponse } from "@/dto/pageResponse";
 import { UserDTO } from "@/dto/user.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,4 +24,10 @@ export const useSetUserStatusMutation = (page: number, size: number) => {
 };
 
 
-// user update profile/user
+export const useChangePasswordd = () => {
+  return useMutation({
+    mutationFn: changePassword,
+
+  });
+};
+
