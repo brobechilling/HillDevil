@@ -12,20 +12,20 @@ export const useBranchMenuItems = (branchId: string | undefined) => {
 
 export const useUpdateAvailability = (branchId: string | undefined) => {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({
-      branchMenuItemId,
+      menuItemId,
       available,
     }: {
-      branchMenuItemId: string;
+      menuItemId: string;
       available: boolean;
-    }) => updateAvailability(branchMenuItemId, available),
+    }) => updateAvailability(branchId!, menuItemId, available),
 
     onSuccess: () => {
       if (branchId) {
         queryClient.invalidateQueries({ queryKey: ["branch-menu-items", branchId] });
       }
-      queryClient.invalidateQueries({ queryKey: ["branch-menu-items"] });
     },
   });
 };

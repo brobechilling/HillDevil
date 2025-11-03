@@ -7,6 +7,7 @@ import {
   deleteMenuItem,
   isMenuItemActiveInBranch,
   setActiveStatus,
+  updateBestSeller,
 } from "@/api/menuItemApi";
 import { MenuItemDTO, MenuItemCreateRequest } from "@/dto/menuItem.dto";
 
@@ -78,6 +79,18 @@ export const useSetActiveStatus = () => {
       setActiveStatus(menuItemId, active),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["menu-items"] });
+    },
+  });
+};
+
+export const useUpdateBestSeller = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ menuItemId, bestSeller }: { menuItemId: string; bestSeller: boolean }) =>
+      updateBestSeller(menuItemId, bestSeller),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["menu-items"] });
+      queryClient.setQueryData(["menu-items", data.menuItemId], data);
     },
   });
 };

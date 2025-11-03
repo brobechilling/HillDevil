@@ -100,7 +100,7 @@ public class MenuItemService {
                 BranchMenuItem bmi = new BranchMenuItem();
                 bmi.setBranch(branch);
                 bmi.setMenuItem(savedItem);
-                bmi.setAvailable(false);
+                bmi.setAvailable(true); //forgot to auto save true TT
                 branchMenuItemRepository.save(bmi);
             }
         }
@@ -178,5 +178,20 @@ public class MenuItemService {
 
     public boolean isMenuItemActiveInBranch(UUID menuItemId, UUID branchId) {
         return branchMenuItemRepository.existsByBranch_BranchIdAndMenuItem_MenuItemIdAndAvailableTrue(branchId, menuItemId);
+    }
+
+    @Transactional
+    public MenuItemDTO updateBestSeller(UUID menuItemId, boolean bestSeller) {
+        MenuItem item = menuItemRepository.findById(menuItemId)
+                .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
+
+        item.setBestSeller(bestSeller);
+        item.setUpdatedAt(Instant.now());
+
+        MenuItem updated = menuItemRepository.save(item);
+
+        MenuItemDTO dto = menuItemMapper.toMenuItemDTO(updated);
+        dto.setImageUrl(mediaService.getImageUrlByTarget(updated.getMenuItemId(), "MENU_ITEM_IMAGE"));
+        return dto;
     }
 }

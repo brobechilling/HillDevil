@@ -53,15 +53,6 @@ const Login = () => {
           });
         }
         return;
-      // case "BRANCH_MANAGER":
-      //   navigate('/dashboard/manager');
-      //   return;
-      // case "WAITER":
-      //   navigate('/dashboard/waiter');
-      //   return;
-      // case "RECEPTIONIST":
-      //   navigate('/dashboard/receptionist');
-      //   return;
       case "ADMIN":
         navigate('/dashboard/admin');
         return;
@@ -194,11 +185,6 @@ const Login = () => {
                   )}
                   required
                 />
-                {/* Animated bottom border */}
-                {/* <div className={cn(
-                  "absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-primary via-purple-500 to-pink-500 transition-all duration-300",
-                  focusedField === 'password' ? "w-full" : "w-0"
-                )} /> */}
               </div>
             </div>
 

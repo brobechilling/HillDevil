@@ -5,7 +5,6 @@ import Register from './pages/Register';
 import RegisterPackage from './pages/auth/RegisterPackage';
 import RegisterConfirm from './pages/auth/RegisterConfirm';
 import BrandSelection from './pages/auth/BrandSelection';
-import Dashboard from './pages/Dashboard';
 import OwnerDashboard from './pages/dashboard/OwnerDashboard';
 import ManagerDashboard from './pages/dashboard/ManagerDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
@@ -14,7 +13,6 @@ import ReceptionistDashboard from './pages/dashboard/ReceptionistDashboard';
 import GuestLanding from './pages/GuestLanding';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
-import StaffManagerLoginPage from './pages/auth/StaffManagerLogin';
 import RestaurantLoginPage from './pages/auth/RestaurantLoginPage';
 import PaymentPage from "./pages/payment/PaymentPage";
 import PaymentSuccessPage from "./pages/payment/PaymentSuccessPage";
@@ -37,8 +35,6 @@ import OwnerTablesPage from './pages/dashboard/owner/TablesPage';
 import OwnerStaffPage from './pages/dashboard/owner/StaffPage';
 import BranchSelectionPage from './pages/dashboard/owner/BranchSelectionPage';
 
-// import OwnerCategoriesPage from './pages/dashboard/owner/CategoriesPage';
-// import OwnerCustomizationsPage from './pages/dashboard/owner/CustomizationsPage';
 import OwnerReportsPage from './pages/dashboard/owner/ReportsPage';
 import OwnerCustomizationPage from './pages/dashboard/owner/CustomizationPage';
 import { CategoryCustomizationManagement } from './pages/dashboard/owner/CategoryCustomizationManagement';
@@ -170,14 +166,7 @@ export const routes: RouteObject[] = [
       }
     ],
   },
-  // {
-  //   path: '/dashboard/staff',
-  //   element: (
-  //     <ProtectedRoute>
-  //       <StaffDashboard />
-  //     </ProtectedRoute>
-  //   ),
-  // },
+
   {
     path: '/dashboard/manager',
     element: (
@@ -297,10 +286,6 @@ export const routes: RouteObject[] = [
         element: <ReceptionistCommunicationsPage />,
       },
     ],
-  },
-  {
-    path: '/auth/staff-manager-login',
-    element: <StaffManagerLoginPage />,
   },
   {
     path: '/profile',

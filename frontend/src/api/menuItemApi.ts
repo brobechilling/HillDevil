@@ -69,3 +69,12 @@ export const setActiveStatus = async (menuItemId: string, active: boolean) => {
   );
   return res.data;
 };
+
+export const updateBestSeller = async (menuItemId: string, bestSeller: boolean) => {
+  const res = await axiosClient.put<ApiResponse<MenuItemDTO>>(
+    `/menu-items/${menuItemId}/best-seller`,
+    null,
+    { params: { bestSeller } }
+  );
+  return res.data.result;
+};
