@@ -12,11 +12,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCallback } from "react";
+import { ROLE_NAME } from "@/dto/user.dto";
+import { isUserDTO } from "@/utils/typeCast";
 
 export const Navbar = () => {
   const navigate = useNavigate();
 
-  // ✅ Lấy user thật từ sessionStore (API backend)
   const { user, isAuthenticated, clearSession } = useSessionStore();
 
   const handleLogout = useCallback(async () => {
@@ -26,14 +27,14 @@ export const Navbar = () => {
 
   const getRoleBadgeVariant = (role?: string) => {
     switch (role?.toUpperCase()) {
-      case "RESTAURANT_OWNER":
+      case ROLE_NAME.RESTAURANT_OWNER:
         return "default";
-      case "BRANCH_MANAGER":
+      case ROLE_NAME.BRANCH_MANAGER:
         return "secondary";
-      case "WAITER":
-      case "RECEPTIONIST":
+      case ROLE_NAME.WAITER:
+      case ROLE_NAME.RECEPTIONIST:
         return "outline";
-      case "ADMIN":
+      case ROLE_NAME.ADMIN:
         return "destructive";
       default:
         return "outline";
@@ -42,23 +43,22 @@ export const Navbar = () => {
 
   const getRoleLabel = (role?: string) => {
     switch (role?.toUpperCase()) {
-      case "RESTAURANT_OWNER":
+      case ROLE_NAME.RESTAURANT_OWNER:
         return "Owner";
-      case "BRANCH_MANAGER":
+      case ROLE_NAME.BRANCH_MANAGER:
         return "Manager";
-      case "WAITER":
+      case ROLE_NAME.WAITER:
         return "Waiter";
-      case "RECEPTIONIST":
+      case ROLE_NAME.RECEPTIONIST:
         return "Receptionist";
-      case "ADMIN":
+      case ROLE_NAME.ADMIN:
         return "Admin";
       default:
         return "User";
     }
   };
 
-  const displayName =
-    user?.username || user?.email?.split("@")[0] || "User";
+  const displayName = user?.username || "User";
   const displayInitial = displayName.charAt(0).toUpperCase();
   const displayRole = user?.role?.name || "";
 
@@ -111,7 +111,7 @@ export const Navbar = () => {
                 <div className="px-2 py-2">
                   <div className="font-medium">{displayName}</div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {user.email}
+                    {isUserDTO(user) ? user.email : ""}
                   </div>
                   <Badge
                     variant={getRoleBadgeVariant(displayRole)}

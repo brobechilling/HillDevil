@@ -37,7 +37,6 @@ export const useSessionStore = create<SessionState>((set) => ({
     const restaurantId = localStorage.getItem("restaurantId");
     const branchId = localStorage.getItem("branchId");
 
-    // ✅ Nếu không có accessToken, thử refresh ngay
     if (!storedToken && userJson) {
       try {
         const res = await axiosClient.post<ApiResponse<RefreshResponse>>(
@@ -63,7 +62,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       }
     }
 
-    // ✅ Nếu có accessToken, mount luôn session
+    
     if (storedToken && userJson && storedToken !== "") {
       try {
         const parsedUser = JSON.parse(userJson);
