@@ -22,6 +22,13 @@ spring:
     pathmatch:
       matching-strategy: ant-path-matcher
 
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      timeout: 6000
+
 jwt:
   signer-key: ${JWT_SIGNER_KEY}
   issuer: ${JWT_ISSUER}
@@ -60,3 +67,6 @@ cloudinary:
   api_key: ${CLOUD_API_KEY}
   api_secret: ${CLOUD_API_SECRET}
 
+brevo:
+  api_key: ${BREVO_API_KEY}
+  mail_base_url: ${BREVO_MAIL_URL}

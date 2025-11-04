@@ -18,6 +18,7 @@ public enum ErrorCode {
     USER_INACTIVE(2010, "User account is inactive", HttpStatus.BAD_REQUEST),
     STAFFACCOUNT_INACTIVE(2011, "Staff account is inactive", HttpStatus.BAD_REQUEST),
     PASSWORD_NOTMATCH(2012, "Current password does not match", HttpStatus.BAD_REQUEST),
+    EMAIL_EXISTED(2013, "Email already existed", HttpStatus.BAD_REQUEST),
     //Subcriptions handling error: Khoi
     PACKAGE_NOTEXISTED(1010, "The package does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
     FEATURE_NOTEXISTED(1011, "The feature does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
