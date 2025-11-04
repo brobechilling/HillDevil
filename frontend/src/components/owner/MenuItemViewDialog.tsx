@@ -1,4 +1,3 @@
-// src/components/owner/MenuItemViewDialog.tsx
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -13,50 +12,47 @@ import { Settings, Star, Tag } from 'lucide-react';
 import { useMenuItem } from '@/hooks/queries/useMenuItems';
 import { useCategory } from '@/hooks/queries/useCategories';
 import { useCustomizations } from '@/hooks/queries/useCustomizations';
-import { MenuItemCustomizationDialog } from './MenuItemCustomizationDialog';
+import { MenuItemCustomizationDialog } from '../menu/MenuItemCustomizationDialog';
 import { cn } from '@/lib/utils';
 
 interface MenuItemViewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   itemId?: string;
+  isWaiter?: boolean;
 }
 
 export const MenuItemViewDialog = ({
   open,
   onOpenChange,
   itemId,
+  isWaiter = false,
 }: MenuItemViewDialogProps) => {
-  // Resolve restaurant id
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+
+  // Lấy restaurantId từ localStorage (owner context)
   const selectedRestaurantRaw = typeof window !== 'undefined' ? localStorage.getItem('selected_restaurant') : null;
   const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
   const restaurantId: string | undefined = selectedRestaurant?.restaurantId;
 
-  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
-
-  // Lấy MenuItem
   const {
     data: item,
     isLoading: itemLoading,
     error: itemError,
   } = useMenuItem(itemId);
 
-  // Lấy Category
   const {
     data: category,
     isLoading: categoryLoading,
   } = useCategory(item?.categoryId);
 
-  // Lấy tất cả Customizations
   const {
     data: allCustomizations = [],
     isLoading: custLoading,
   } = useCustomizations(restaurantId);
 
-  // Image URL từ BE
   const imageUrl = item?.imageUrl;
 
-  // Map customizationIds → full objects
   const customizations = React.useMemo(() => {
     if (!item?.customizationIds) return [];
     return item.customizationIds
@@ -64,7 +60,6 @@ export const MenuItemViewDialog = ({
       .filter(Boolean);
   }, [item?.customizationIds, allCustomizations]);
 
-  // Không render nếu dialog đóng hoặc không có itemId
   if (!open || !itemId) return null;
 
   // Loading state
@@ -97,7 +92,7 @@ export const MenuItemViewDialog = ({
         <DialogContent>
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
-              <span className="text-2xl">⚠️</span>
+              <span className="text-2xl">Warning</span>
             </div>
             <div className="text-center space-y-2">
               <p className="font-semibold text-foreground">Failed to load menu item</p>
@@ -131,7 +126,7 @@ export const MenuItemViewDialog = ({
                     const parent = target.parentElement;
                     if (parent) {
                       parent.innerHTML =
-                        '<div class="flex items-center justify-center h-full text-muted-foreground"><div class="text-center space-y-2"><div class="w-16 h-16 rounded-lg bg-muted mx-auto flex items-center justify-center"><span class="text-2xl">📷</span></div><p class="text-sm font-medium">Unable to load image</p></div></div>';
+                        '<div class="flex items-center justify-center h-full text-muted-foreground"><div class="text-center space-y-2"><div class="w-16 h-16 rounded-lg bg-muted mx-auto flex items-center justify-center"><span class="text-2xl">Photo</span></div><p class="text-sm font-medium">Unable to load image</p></div></div>';
                     }
                   }}
                 />
@@ -140,7 +135,7 @@ export const MenuItemViewDialog = ({
               <div className="flex items-center justify-center h-72 bg-gradient-to-br from-muted to-muted/50 rounded-xl border-2 border-dashed border-border text-muted-foreground">
                 <div className="text-center space-y-3">
                   <div className="w-20 h-20 rounded-xl bg-muted mx-auto flex items-center justify-center">
-                    <span className="text-4xl">🍽️</span>
+                    <span className="text-4xl">Plate</span>
                   </div>
                   <p className="text-sm font-medium">No image available</p>
                 </div>
@@ -206,16 +201,20 @@ export const MenuItemViewDialog = ({
                   <h4 className="font-semibold text-lg flex items-center gap-2">
                     Customizations
                   </h4>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsManageDialogOpen(true)}
-                    className="shadow-sm hover:shadow-md transition-all hover:scale-105"
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Manage
-                  </Button>
+                  {/* Ẩn nút Manage nếu là waiter */}
+                  {!isWaiter && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsManageDialogOpen(true)}
+                      className="shadow-sm hover:shadow-md transition-all hover:scale-105"
+                    >
+                      <Settings className="mr-2 h-4 w-4" />
+                      Manage
+                    </Button>
+                  )}
                 </div>
+
                 {custLoading ? (
                   <div className="space-y-2">
                     <Skeleton className="h-16 w-full rounded-lg" />
@@ -248,7 +247,9 @@ export const MenuItemViewDialog = ({
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm font-medium text-foreground">No customizations assigned</p>
-                        <p className="text-xs text-muted-foreground">Click "Manage" to add customization options</p>
+                        <p className="text-xs text-muted-foreground">
+                          {isWaiter ? "This item has no customization options." : "Click \"Manage\" to add customization options"}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -259,8 +260,8 @@ export const MenuItemViewDialog = ({
         </div>
       </DialogContent>
 
-      {/* Manage Customizations Dialog */}
-      {itemId && restaurantId && (
+      {/* Manage Customizations Dialog - chỉ hiện cho non-waiter */}
+      {itemId && restaurantId && !isWaiter && (
         <MenuItemCustomizationDialog
           open={isManageDialogOpen}
           onOpenChange={setIsManageDialogOpen}

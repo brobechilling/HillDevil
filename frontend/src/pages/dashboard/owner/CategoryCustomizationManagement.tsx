@@ -1,7 +1,7 @@
 // src/pages/owner/CategoryCustomizationManagement.tsx
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CategoryList } from '@/components/owner/CategoryList';
-import { CustomizationList } from '@/components/owner/CustomizationList';
+import { CategoryList } from '@/components/menu/CategoryList';
+import { CustomizationList } from '@/components/menu/CustomizationList';
 import { FolderTree, Sparkles } from 'lucide-react';
 
 export const CategoryCustomizationManagement = () => {

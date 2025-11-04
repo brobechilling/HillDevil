@@ -12,6 +12,7 @@ export const usePaymentStatus = (orderCode: string) => {
     queryKey: ["payment-status", orderCode],
     queryFn: () => subscriptionPaymentApi.getStatus(orderCode),
     enabled: !!orderCode,
+    staleTime: 1000 * 30, // keep status for 30s when not polling
     refetchInterval: (query) => {
       // ✅ Chỉ polling khi status là PENDING
       const data = query.state.data;

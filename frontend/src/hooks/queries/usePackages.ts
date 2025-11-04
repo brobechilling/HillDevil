@@ -6,6 +6,9 @@ export const usePackages = () => {
   return useQuery({
     queryKey: ["packages"],
     queryFn: packageApi.getAll,
+    // Packages change rarely; keep data fresh for 5 minutes to avoid frequent re-fetches
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -14,6 +17,9 @@ export const usePackage = (id: string) => {
     queryKey: ["package", id],
     queryFn: () => packageApi.getById(id),
     enabled: !!id,
+    // Keep single package result cached for a short while
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 };
 

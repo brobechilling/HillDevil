@@ -25,12 +25,13 @@ public class BranchMenuItemController {
         return res;
     }
 
-    @PutMapping("/{branchMenuItemId}/availability")
-    public ApiResponse<Void> updateAvailability(
-            @PathVariable UUID branchMenuItemId,
+    @PutMapping("/availability")
+    public ApiResponse<Void> updateAvailabilityByBranchAndMenuItem(
+            @RequestParam UUID branchId,
+            @RequestParam UUID menuItemId,
             @RequestParam boolean available
     ) {
-        branchMenuItemService.updateAvailability(branchMenuItemId, available);
+        branchMenuItemService.updateAvailabilityByBranchAndMenuItem(branchId, menuItemId, available);
         return new ApiResponse<>();
     }
 }

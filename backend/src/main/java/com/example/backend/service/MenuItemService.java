@@ -41,7 +41,8 @@ public class MenuItemService {
     }
 
     public List<MenuItemDTO> getAllByRestaurant(UUID restaurantId) {
-        List<MenuItem> list = menuItemRepository.findAllByRestaurant_RestaurantIdAndStatus(restaurantId, MenuItemStatus.ACTIVE);
+        List<MenuItemStatus> allowedStatuses = Arrays.asList(MenuItemStatus.ACTIVE, MenuItemStatus.INACTIVE);
+        List<MenuItem> list = menuItemRepository.findAllByRestaurant_RestaurantIdAndStatusIn(restaurantId, allowedStatuses);
 
         if (list.isEmpty()) return Collections.emptyList();
 
@@ -100,7 +101,7 @@ public class MenuItemService {
                 BranchMenuItem bmi = new BranchMenuItem();
                 bmi.setBranch(branch);
                 bmi.setMenuItem(savedItem);
-                bmi.setAvailable(false);
+                bmi.setAvailable(true); //forgot to auto save true TT
                 branchMenuItemRepository.save(bmi);
             }
         }
@@ -149,12 +150,15 @@ public class MenuItemService {
     }
 
     @Transactional
-    public void setActiveStatus(UUID menuItemId, boolean active) {
+    public MenuItemDTO setActiveStatus(UUID menuItemId, boolean active) {
         MenuItem item = menuItemRepository.findById(menuItemId)
                 .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
+
         item.setStatus(active ? MenuItemStatus.ACTIVE : MenuItemStatus.INACTIVE);
         item.setUpdatedAt(Instant.now());
-        menuItemRepository.save(item);
+
+        MenuItem updated = menuItemRepository.save(item);
+        return menuItemMapper.toMenuItemDTO(updated);
     }
 
     @Transactional
@@ -178,5 +182,20 @@ public class MenuItemService {
 
     public boolean isMenuItemActiveInBranch(UUID menuItemId, UUID branchId) {
         return branchMenuItemRepository.existsByBranch_BranchIdAndMenuItem_MenuItemIdAndAvailableTrue(branchId, menuItemId);
+    }
+
+    @Transactional
+    public MenuItemDTO updateBestSeller(UUID menuItemId, boolean bestSeller) {
+        MenuItem item = menuItemRepository.findById(menuItemId)
+                .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
+
+        item.setBestSeller(bestSeller);
+        item.setUpdatedAt(Instant.now());
+
+        MenuItem updated = menuItemRepository.save(item);
+
+        MenuItemDTO dto = menuItemMapper.toMenuItemDTO(updated);
+        dto.setImageUrl(mediaService.getImageUrlByTarget(updated.getMenuItemId(), "MENU_ITEM_IMAGE"));
+        return dto;
     }
 }

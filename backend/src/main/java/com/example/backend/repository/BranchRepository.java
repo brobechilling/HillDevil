@@ -1,6 +1,7 @@
 package com.example.backend.repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,4 +19,7 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     @Modifying
     @Query("UPDATE Branch b SET b.isActive = false, b.updatedAt = CURRENT_TIMESTAMP WHERE b.restaurant.restaurantId = :restaurantId")
     void deactivateAllByRestaurantId(@Param("restaurantId") UUID restaurantId);
+
+    @Query("SELECT b.restaurant.restaurantId FROM Branch b WHERE b.branchId = :branchId")
+    Optional<UUID> findRestaurantIdByBranchId(@Param("branchId") UUID branchId);
 }
