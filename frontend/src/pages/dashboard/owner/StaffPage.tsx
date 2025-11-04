@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Plus, Search } from 'lucide-react';
+import { Trash2, Plus, Search, Eye } from 'lucide-react';
 import { getLocalStorageObject } from '@/utils/typeCast';
 import { RestaurantDTO } from '@/dto/restaurant.dto';
 import { useSetStaffAccountStatusMutation, useStaffAccountByRestaurantPaginatedQuery } from '@/hooks/queries/useStaff';
@@ -18,6 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
 import { StaffAddDialog } from '@/components/owner/StaffAddDialog';
+import { StaffDetailsDialog } from '@/components/common/StaffDetailsDialog';
 import { useState } from 'react';
 import { useBranchesByRestaurant } from '@/hooks/queries/useBranches';
 
@@ -37,7 +38,9 @@ const OwnerStaffPage = () => {
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffAccountDTO | null>(null);
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
@@ -182,18 +185,30 @@ const OwnerStaffPage = () => {
                       </Badge>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedStaff(staff);
-                      setUpdateDialogOpen(true);
-                    }}
-                    className="mt-2 md:mt-0"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1 text-destructive" />
-                    Delete
-                  </Button>
+                  <div className="flex gap-2 mt-2 md:mt-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedStaffId(staff.staffAccountId);
+                        setDetailsDialogOpen(true);
+                      }}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Details
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedStaff(staff);
+                        setUpdateDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1 text-destructive" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -232,6 +247,12 @@ const OwnerStaffPage = () => {
         onOpenChange={setAddDialogOpen}
         restaurantId={selectedRestaurant?.restaurantId}
         size={size}
+      />
+
+      <StaffDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        staffAccountId={selectedStaffId}
       />
 
       <AlertDialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>

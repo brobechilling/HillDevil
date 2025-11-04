@@ -1,4 +1,4 @@
-import { createStaffAccount, getManagerNumber, getReceptionistNumber, getStaffAccounts, getStaffAccountsByRestaurant, getWaiterNumber, setStaffAccountStatus } from "@/api/staffApi";
+import { createStaffAccount, getManagerNumber, getReceptionistNumber, getStaffAccounts, getStaffAccountsByRestaurant, getStaffAccountById, getWaiterNumber, setStaffAccountStatus } from "@/api/staffApi";
 import { PageResponse } from "@/dto/pageResponse";
 import { StaffAccountDTO } from "@/dto/staff.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,7 +22,18 @@ export const useCreateStaffAccountMutation = (page: number, size: number, id: st
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: createStaffAccount,
-        onSuccess: () => {
+        onSuccess: (data) => {
+            // Lưu password gốc vào localStorage để có thể xem lại sau
+            if (data.staffAccountId && data.password) {
+                const savedPasswordKey = `staff_password_${data.staffAccountId}`;
+                const savedPasswordData = {
+                    password: data.password,
+                    timestamp: Date.now(),
+                    username: data.username,
+                };
+                localStorage.setItem(savedPasswordKey, JSON.stringify(savedPasswordData));
+            }
+            
             // refetch page 1, which will have the add staff
             queryClient.invalidateQueries({ queryKey: ["staffs", 1, size, id] , exact: true});
             queryClient.invalidateQueries({ queryKey: ["statistic", "waiter", id] , exact: true});
@@ -60,5 +71,13 @@ export const useSetStaffAccountStatusMutation = (page: number, size: number, id:
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["staffs", page, size, id] , exact: true}); 
         },
+    });
+};
+
+export const useStaffAccountByIdQuery = (staffAccountId: string | null) => {
+    return useQuery<StaffAccountDTO, Error>({
+        queryKey: ["staff", staffAccountId],
+        queryFn: () => getStaffAccountById(staffAccountId!),
+        enabled: !!staffAccountId,
     });
 };

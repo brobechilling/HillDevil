@@ -17,6 +17,9 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.example.backend.entities.RoleName;
+import com.example.backend.configuration.JwtAuthenticationEntryPoint;
+import com.example.backend.configuration.CustomAccessDeniedHandler;
+import com.example.backend.configuration.MyCustomJwtDecoder;
 
 @Configuration
 @EnableWebSecurity

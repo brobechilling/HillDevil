@@ -226,7 +226,7 @@ const ReservationsPage = () => {
   const getTabColor = (isActive) => {
     return isActive 
       ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
-      : 'bg-card text-muted-foreground border-border hover:bg-muted hover:text-foreground';
+      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white';
   };
 
   const BookingCard = ({ booking, index }) => {
@@ -434,7 +434,7 @@ const ReservationsPage = () => {
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${activeTab === tab.id ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
                 {groupedBookings[tab.id].length}
               </span>
             </button>

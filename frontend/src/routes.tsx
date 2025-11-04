@@ -6,6 +6,7 @@ import RegisterPackage from './pages/auth/RegisterPackage';
 import RegisterConfirm from './pages/auth/RegisterConfirm';
 import BrandSelection from './pages/auth/BrandSelection';
 import Dashboard from './pages/Dashboard';
+import ForgotPassword from './pages/ForgotPassword';
 import OwnerDashboard from './pages/dashboard/OwnerDashboard';
 import ManagerDashboard from './pages/dashboard/ManagerDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
@@ -70,6 +71,10 @@ export const routes: RouteObject[] = [
   {
     path: '/login',
     element: <Login />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPassword />,
   },
   {
     path: '/register',

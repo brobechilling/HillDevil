@@ -7,6 +7,7 @@ public class StaffAccountDTO {
     private UUID staffAccountId;
     private RoleDTO role;
     private String username;
+    private String password;
     private boolean status;
     private UUID branchId;
     
@@ -39,6 +40,12 @@ public class StaffAccountDTO {
     }
     public void setBranchId(UUID branchId) {
         this.branchId = branchId;
+    }
+    public String getPassword() {
+        return password;
+    }
+    public void setPassword(String password) {
+        this.password = password;
     }
     
 }

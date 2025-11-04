@@ -60,7 +60,7 @@ export const StaffAddDialog = ({
     const roleDto: RoleDTO = { name: formData.role, description: "" };
 
     try {
-      await createStaffMutation.mutateAsync({
+      const result = await createStaffMutation.mutateAsync({
         username: formData.username,
         password: formData.password,
         branchId: formData.branchId,
@@ -69,7 +69,7 @@ export const StaffAddDialog = ({
 
       toast({
         title: "Staff member added",
-        description: `${formData.username} has been added successfully.`,
+        description: `${formData.username} has been added successfully. Password has been saved and can be viewed in the Details dialog.`,
       });
 
       onOpenChange(false);

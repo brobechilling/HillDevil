@@ -167,13 +167,14 @@ const Login = () => {
                 <Label htmlFor="password" className="text-sm font-medium">
                   Password
                 </Label>
-                <Link
-                  to="/forgot-password"
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
                   className="text-sm text-primary hover:underline transition-all hover:translate-x-0.5 inline-flex items-center gap-1 group"
                 >
                   Forgot password?
                   <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-                </Link>
+                </button>
               </div>
               <div className="relative group">
                 <Lock className={cn(
