@@ -17,6 +17,7 @@ public enum ErrorCode {
     TOKEN_REUSED(2009, "The refresh token already used", HttpStatus.UNAUTHORIZED),
     USER_INACTIVE(2010, "User account is inactive", HttpStatus.BAD_REQUEST),
     STAFFACCOUNT_INACTIVE(2011, "Staff account is inactive", HttpStatus.BAD_REQUEST),
+    PASSWORD_NOTMATCH(2012, "Current password does not match", HttpStatus.BAD_REQUEST),
     //Subcriptions handling error: Khoi
     PACKAGE_NOTEXISTED(1010, "The package does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
     FEATURE_NOTEXISTED(1011, "The feature does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
@@ -51,6 +52,20 @@ public enum ErrorCode {
     MISSING_BRANCHID(9001, "Missing branchId when login as staff", HttpStatus.BAD_REQUEST),
     RESTAURANT_DELETE_FAILED(3002, "Failed to delete restaurant", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_PASSWORD(9002, "Password must be at least 6 characters long", HttpStatus.BAD_REQUEST),
+
+    // Menu - Category - Customization
+    CATEGORY_NOT_FOUND(4001, "Category not found", HttpStatus.NOT_FOUND),
+    CUSTOMIZATION_NOT_FOUND(4002, "Customization not found", HttpStatus.NOT_FOUND),
+    MENUITEM_NOT_FOUND(4003, "Menu item not found", HttpStatus.NOT_FOUND),
+    BRANCHMENUITEM_NOT_FOUND(4004, "Branch item not found", HttpStatus.NOT_FOUND),
+
+    //Media upload
+    MEDIA_UPLOAD_FAILED(4050, "media upload failed", HttpStatus.INTERNAL_SERVER_ERROR),
+    MEDIA_EMPTY(4051, "File is empty", HttpStatus.BAD_REQUEST),
+    MEDIA_NOT_FOUND(4052, "File not found", HttpStatus.NOT_FOUND),
+    MEDIA_DELETE_FAILED(4053, "File delete failed", HttpStatus.BAD_REQUEST),
+    TARGET_TYPE_NOT_FOUND(4054, "Target type not found", HttpStatus.NOT_FOUND),
+
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
 

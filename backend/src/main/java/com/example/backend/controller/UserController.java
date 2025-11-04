@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.UserDTO;
+import com.example.backend.dto.request.ChangePasswordRequest;
 import com.example.backend.dto.request.SignupRequest;
 import com.example.backend.dto.response.PageResponse;
 import com.example.backend.service.UserService;
@@ -91,5 +92,11 @@ public class UserController {
         return apiResponse;
     }
     
-
+    @PostMapping("/changepass")
+    public ApiResponse<Boolean> changePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest) {
+        ApiResponse<Boolean> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(userService.changePassword(changePasswordRequest));
+        return apiResponse;
+    }
+    
 }

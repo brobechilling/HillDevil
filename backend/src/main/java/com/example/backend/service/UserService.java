@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.backend.dto.UserDTO;
+import com.example.backend.dto.request.ChangePasswordRequest;
 import com.example.backend.dto.request.SignupRequest;
 import com.example.backend.dto.response.PageResponse;
 import com.example.backend.entities.Role;
@@ -77,7 +78,7 @@ public class UserService {
         user.setPhone(userDTO.getPhone());
         user.setUsername(userDTO.getUsername());
         user.setRole(roleRepository.findByName(userDTO.getRole().getName()).orElseThrow(() -> new AppException(ErrorCode.ROLE_NOTEXISTED)));
-        user.setStatus(userDTO.isStatus());
+        // user.setStatus(userDTO.isStatus());
         return userMapper.toUserDto(userRepository.save(user));
     }
     
@@ -89,6 +90,17 @@ public class UserService {
         pageResponse.setTotalElements(pageData.getTotalElements());
         pageResponse.setTotalPages(pageData.getTotalPages());
         return pageResponse;
+    }
+
+    public boolean changePassword(ChangePasswordRequest changePasswordRequest) {
+        User user = userRepository.findById(changePasswordRequest.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
+        if(passwordEncoder.matches(changePasswordRequest.getPassword(), user.getPassword()))
+        {
+            user.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
+            userRepository.save(user);
+            return true;
+        }
+        throw new AppException(ErrorCode.PASSWORD_NOTMATCH);
     }
 
 }

@@ -14,6 +14,7 @@ interface SessionState {
   initialize: () => Promise<void>;
   setSession: (user: UserDTO | StaffAccountDTO, token: string) => void;
   clearSession: () => void;
+  updateUser: (user: UserDTO) => void;
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
@@ -26,7 +27,6 @@ export const useSessionStore = create<SessionState>((set) => ({
     const storedToken = localStorage.getItem("accessToken");
     const userJson = localStorage.getItem("user");
 
-    // ✅ Nếu không có accessToken, thử refresh ngay
     if (!storedToken && userJson) {
       try {
         const res = await axiosClient.post<ApiResponse<RefreshResponse>>(
@@ -50,7 +50,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       }
     }
 
-    // ✅ Nếu có accessToken, kiểm tra hợp lệ & mount
+    
     if (storedToken && userJson && storedToken !== "") {
       try {
         const parsedUser = JSON.parse(userJson);
@@ -106,6 +106,14 @@ export const useSessionStore = create<SessionState>((set) => ({
       token: null,
       isAuthenticated: false,
       isLoading: false,
+    });
+  },
+
+  // update user in memory and local storage
+  updateUser: (updatedUser: UserDTO) => {
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+    set({
+      user: updatedUser,
     });
   },
 }));

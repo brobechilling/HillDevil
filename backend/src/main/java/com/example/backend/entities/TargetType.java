@@ -15,7 +15,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "target_type")
-public class TargetType {
+public class TargetType {   
 
     @Id
     @Column(name = "target_type_id", nullable = false)

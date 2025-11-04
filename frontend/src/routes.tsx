@@ -42,6 +42,7 @@ import BranchSelectionPage from './pages/dashboard/owner/BranchSelectionPage';
 // import OwnerCustomizationsPage from './pages/dashboard/owner/CustomizationsPage';
 import OwnerReportsPage from './pages/dashboard/owner/ReportsPage';
 import OwnerCustomizationPage from './pages/dashboard/owner/CustomizationPage';
+import { CategoryCustomizationManagement } from './pages/dashboard/owner/CategoryCustomizationManagement';
 
 // Waiter nested pages
 import WaiterOrdersPage from './pages/dashboard/waiter/OrdersPage';
@@ -160,14 +161,10 @@ export const routes: RouteObject[] = [
         path: 'staff',
         element: <OwnerStaffPage />,
       },
-      // {
-      //   path: 'categories',
-      //   element: <OwnerCategoriesPage />,
-      // },
-      // {
-      //   path: 'customizations',
-      //   element: <OwnerCustomizationsPage />,
-      // },
+      {
+        path: 'categories-customizations',
+        element: <CategoryCustomizationManagement />,
+      },
       {
         path: 'reports',
         element: <OwnerReportsPage />,
@@ -317,10 +314,28 @@ export const routes: RouteObject[] = [
   {
     path: '/profile',
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute allowedRoles={[ROLE_NAME.RESTAURANT_OWNER, ROLE_NAME.ADMIN]}>
         <Profile />
       </ProtectedRoute>
     ),
+    children: [
+      {
+        index: true,
+        element: <Profile />,
+      },
+      {
+        path: 'overview',
+        element: <Profile />,
+      },
+      {
+        path: 'subscription',
+        element: <Profile />,
+      },
+      {
+        path: 'branches',
+        element: <Profile />,
+      },
+    ],
   },
   {
     path: '/restaurant-login',

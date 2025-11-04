@@ -1,12 +1,23 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Edit, ExternalLink, Plus } from 'lucide-react';
+import { Building2, Edit, ExternalLink, Plus, AlertCircle } from 'lucide-react';
 import { BranchManagementDialog } from './BranchManagementDialog';
 import { toast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { updateBranch } from '@/api/branchApi';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface BranchManagementCardProps {
   branches: any[];
@@ -17,7 +28,15 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<any>(null);
   const [processingIds, setProcessingIds] = useState<Record<string, boolean>>({});
-  const [optimisticState, setOptimisticState] = useState<Record<string, boolean>>({});
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    type: 'single' | 'all';
+    branchId?: string;
+    isActivating?: boolean;
+  }>({ open: false, type: 'single' });
+
+  const activeBranches = branches.filter(b => b.isActive);
+  const inactiveBranches = branches.filter(b => !b.isActive);
 
   const handleEdit = (branch: any) => {
     setSelectedBranch(branch);
@@ -27,6 +46,114 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setSelectedBranch(null);
+  };
+
+  const handleToggleBranch = (branch: any, newStatus: boolean) => {
+    setConfirmDialog({
+      open: true,
+      type: 'single',
+      branchId: branch.branchId,
+      isActivating: newStatus,
+    });
+  };
+
+  const handleToggleAll = (isActivating: boolean) => {
+    setConfirmDialog({
+      open: true,
+      type: 'all',
+      isActivating,
+    });
+  };
+
+  const confirmAction = async () => {
+    const { type, branchId, isActivating } = confirmDialog;
+
+    if (type === 'all') {
+      const targetBranches = isActivating ? inactiveBranches : activeBranches;
+      const updates = targetBranches.map(branch =>
+        updateBranch(branch.branchId, { isActive: isActivating! }).catch(() => null)
+      );
+      await Promise.all(updates);
+      toast({
+        title: 'Success',
+        description: `All branches ${isActivating ? 'activated' : 'deactivated'}.`,
+      });
+    } else if (branchId) {
+      setProcessingIds(s => ({ ...s, [branchId]: true }));
+      try {
+        await updateBranch(branchId, { isActive: isActivating! });
+        toast({
+          title: 'Success',
+          description: `Branch ${isActivating ? 'activated' : 'deactivated'}.`,
+        });
+      } catch (err: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: err?.response?.data?.message || 'Failed to update.',
+        });
+      } finally {
+        setProcessingIds(s => {
+          const copy = { ...s };
+          delete copy[branchId];
+          return copy;
+        });
+      }
+    }
+
+    setConfirmDialog({ open: false, type: 'single' });
+    onUpdate();
+  };
+
+  const renderBranchItem = (branch: any) => {
+    const branchId = String(branch.branchId);
+    const isProcessing = !!processingIds[branchId];
+
+    return (
+      <Card key={branchId} className="border-2">
+        <CardContent className="pt-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-semibold text-lg">{branch.address}</h3>
+                {branch.shortCode && <Badge variant="outline">{branch.shortCode}</Badge>}
+              </div>
+              <p className="text-sm text-muted-foreground mb-1">{branch.address}</p>
+              {branch.branchPhone && (
+                <p className="text-sm text-muted-foreground">{branch.branchPhone}</p>
+              )}
+              {branch.shortCode && (
+                <a
+                  href={`/branch/${branch.shortCode}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline flex items-center gap-1 mt-2"
+                >
+                  View Public Page <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
+
+            <div className="flex gap-2 items-center">
+              <Button variant="outline" size="sm" onClick={() => handleEdit(branch)}>
+                <Edit className="h-4 w-4" />
+              </Button>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {branch.isActive ? 'Active' : 'Inactive'}
+                </span>
+                <Switch
+                  checked={branch.isActive}
+                  disabled={isProcessing}
+                  onCheckedChange={(checked) => handleToggleBranch(branch, checked)}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -57,107 +184,113 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {branches.map((branch) => {
-                const branchId = String(branch.branchId || branch.id); // UUID string làm key
-                const isOptimisticActive = optimisticState[branchId] ?? branch.isActive;
+            <Tabs defaultValue="active" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="active">
+                  Active ({activeBranches.length})
+                </TabsTrigger>
+                <TabsTrigger value="inactive">
+                  Inactive ({inactiveBranches.length})
+                </TabsTrigger>
+              </TabsList>
 
-                return (
-                  <Card key={branchId} className="border-2">
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between">
+              {/* === TAB ACTIVE === */}
+              <TabsContent value="active" className="space-y-4 mt-4">
+                {activeBranches.length > 0 && (
+                  <div className="flex items-center gap-3 p-4 border rounded-lg bg-destructive/5">
+                    <AlertCircle className="h-5 w-5 text-destructive" />
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold text-lg">{branch.name || branch.address}</h3>
-                            {branch.shortCode && (
-                              <Badge variant="outline">{branch.shortCode}</Badge>
-                            )}
+                      <p className="text-sm font-medium">Deactivate All Branches</p>
+                      <p className="text-xs text-muted-foreground">
+                        This will make all branches unavailable for orders.
+                      </p>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-1">{branch.address}</p>
-                          {branch.phone && (
-                            <p className="text-sm text-muted-foreground">{branch.phone}</p>
-                          )}
-                          {branch.shortCode && (
-                            <a
-                              href={`/branch/${branch.shortCode}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-primary hover:underline flex items-center gap-1 mt-2"
-                            >
-                              View Public Page <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
+                    <Switch
+                      onCheckedChange={(checked) => checked && handleToggleAll(false)}
+                      disabled={processingIds['all']}
+                    />
+                  </div>
+                )}
+                <div className="space-y-4">
+                  {activeBranches.map(renderBranchItem)}
                         </div>
+              </TabsContent>
 
-                        <div className="flex gap-2 items-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(branch)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">Active</span>
+              {/* === TAB INACTIVE === */}
+              <TabsContent value="inactive" className="space-y-4 mt-4">
+                {inactiveBranches.length > 0 && (
+                  <div className="flex items-center gap-3 p-4 border rounded-lg bg-emerald-50 dark:bg-emerald-950">
+                    <AlertCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Activate All Branches</p>
+                      <p className="text-xs text-muted-foreground">
+                        This will make all inactive branches available again.
+                      </p>
+                    </div>
                             <Switch
-                              aria-label={`toggle-branch-${branchId}`}
-                              checked={isOptimisticActive}
-                              disabled={!!processingIds[branchId]}
-                              onCheckedChange={async (checked) => {
-                                const id = branch.branchId || branch.id;
-
-                                // Optimistic update
-                                setOptimisticState((s) => ({ ...s, [branchId]: checked }));
-                                setProcessingIds((s) => ({ ...s, [branchId]: true }));
-
-                                try {
-                                  // DÙ BẬT HAY TẮT → đều dùng updateBranch
-                                  await updateBranch(id, { isActive: checked });
-
-                                  toast({
-                                    title: 'Success',
-                                    description: `Branch ${checked ? 'activated' : 'deactivated'}`,
-                                  });
-
-                                  onUpdate(); // Refetch dữ liệu mới
-                                } catch (err: any) {
-                                  console.error('Toggle branch error:', err);
-                                  // Revert optimistic state
-                                  setOptimisticState((s) => ({ ...s, [branchId]: branch.isActive }));
-
-                                  toast({
-                                    variant: 'destructive',
-                                    title: 'Error',
-                                    description: err?.response?.data?.message || 'Could not update branch status',
-                                  });
-                                } finally {
-                                  setProcessingIds((s) => {
-                                    const copy = { ...s };
-                                    delete copy[branchId];
-                                    return copy;
-                                  });
-                                }
-                              }}
+                      onCheckedChange={(checked) => checked && handleToggleAll(true)}
+                      disabled={processingIds['all']}
                             />
                           </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                )}
+
+                {inactiveBranches.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    No inactive branches.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {inactiveBranches.map(renderBranchItem)}
             </div>
+                )}
+              </TabsContent>
+            </Tabs>
           )}
         </CardContent>
       </Card>
 
+      {/* Edit Dialog */}
       <BranchManagementDialog
         open={isDialogOpen}
         onOpenChange={handleDialogClose}
         branch={selectedBranch}
         onSave={onUpdate}
       />
+
+      {/* Confirm Dialog */}
+      <AlertDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(s => ({ ...s, open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmDialog.type === 'all'
+                ? confirmDialog.isActivating
+                  ? 'Activate All Branches?'
+                  : 'Deactivate All Branches?'
+                : confirmDialog.isActivating
+                ? 'Activate Branch?'
+                : 'Deactivate Branch?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDialog.type === 'all'
+                ? confirmDialog.isActivating
+                  ? 'All inactive branches will become active and accept orders.'
+                  : 'All active branches will be deactivated. Customers will not be able to place orders.'
+                : confirmDialog.isActivating
+                ? 'This branch will become active and accept orders again.'
+                : 'This branch will be inactive. Are you sure you want to proceed?'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmAction}>
+              {confirmDialog.isActivating ? 'Activate' : 'Deactivate'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

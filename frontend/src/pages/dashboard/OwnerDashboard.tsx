@@ -20,12 +20,6 @@ const OwnerDashboard = () => {
     const userData = JSON.parse(storedUser) as UserDTO;
     setUser(userData);
 
-    if (userData.role.name !== 'RESTAURANT_OWNER') {
-      console.log('OwnerDashboard - User is not RESTAURANT_OWNER, redirecting to login');
-      navigate('/login');
-      return;
-    }
-
     const selectedRestaurant = localStorage.getItem('selected_restaurant');
     if (!selectedRestaurant) {
       console.log('OwnerDashboard - No restaurant selected, redirecting to brand selection');

@@ -1,4 +1,4 @@
-import { SignupRequest, UserDTO } from "@/dto/user.dto";
+import { ChangePasswordRequest, SignupRequest, UserDTO } from "@/dto/user.dto";
 import { axiosClient } from "./axiosClient";
 import { ApiResponse } from "@/dto/apiResponse";
 import { PageResponse } from "@/dto/pageResponse";
@@ -28,3 +28,8 @@ export const setUserStatus = async (userId: string) => {
   const res = await axiosClient.delete<ApiResponse<UserDTO>>(`/users/${userId}`);
   return res.data.result;
 };
+
+export const changePassword = async (changePasswordRequest: ChangePasswordRequest) => {
+  const res = await axiosClient.post<ApiResponse<boolean>>("/users/changepass", changePasswordRequest);
+  return res.data.result;
+}

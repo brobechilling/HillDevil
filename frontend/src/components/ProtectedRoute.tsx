@@ -1,8 +1,7 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { ROLE_NAME, UserDTO } from '@/dto/user.dto';
-import { StaffAccountDTO } from '@/dto/staff.dto';
-import { useToast } from '@/hooks/use-toast';
+import { useSessionStore } from '@/store/sessionStore';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -10,9 +9,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const userStr = localStorage.getItem('user');
-  const user: UserDTO | StaffAccountDTO | null = userStr ? JSON.parse(userStr) : null;
-  const { toast } = useToast();
+  const { user } = useSessionStore();
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -24,7 +21,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
 
     // need implmenting sth here
     if (!hasPermission) {
-      return <Navigate to="/" replace />;
+      return <Navigate to="/*" replace />;
     }
   }
 
