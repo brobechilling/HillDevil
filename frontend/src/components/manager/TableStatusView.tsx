@@ -205,6 +205,7 @@ export const TableStatusView = ({ branchId }: TableStatusViewProps) => {
           if (!open) setSelectedTable(null);
         }}
         table={selectedTable}
+        branchId={branchId}
       />
     </>
   );

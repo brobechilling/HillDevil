@@ -1,20 +1,29 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/authStore';
-import { TableManagementReadOnlyByFloor } from '@/components/owner/TableManagementReadOnlyByFloor';
-import { useEffect, useState } from 'react';
+import { useSessionStore } from '@/store/sessionStore';
+import { ManagerTableManagementEnhanced } from '@/components/manager/ManagerTableManagementEnhanced';
+import { useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useBranches } from '@/hooks/queries/useBranches';
-import { BranchDTO } from '@/dto/branch.dto';
+import { UserDTO } from '@/dto/user.dto';
+import { ROLE_NAME } from '@/dto/user.dto';
 
 const OwnerTablesPage = () => {
-  const { user } = useAuthStore();
+  const { user } = useSessionStore();
   const navigate = useNavigate();
-  const [activeBranch, setActiveBranch] = useState<BranchDTO | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { data: branches, isLoading: isBranchesLoading } = useBranches();
+  const { data: branches = [], isLoading: isBranchesLoading } = useBranches();
 
   useEffect(() => {
-    if (!user || user.role !== 'owner') {
+    // Check if user exists and has RESTAURANT_OWNER role
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    // Handle both UserDTO (from backend) and mock user formats
+    const userRole = (user as UserDTO).role?.name || (user as any).role;
+    const isOwner = userRole === ROLE_NAME.RESTAURANT_OWNER || userRole === 'owner';
+    
+    if (!isOwner) {
       navigate('/login');
       return;
     }
@@ -34,10 +43,7 @@ const OwnerTablesPage = () => {
       return;
     }
 
-    // Filter branches by restaurant (since we're now using real data)
-    const brandBranches = branches || [];
-
-    if (brandBranches.length === 0) {
+    if (branches.length === 0) {
       toast({
         variant: 'destructive',
         title: 'No branches found',
@@ -46,12 +52,9 @@ const OwnerTablesPage = () => {
       navigate('/brand-selection');
       return;
     }
-
-    setActiveBranch(brandBranches[0]);
-    setLoading(false);
   }, [user, navigate, branches, isBranchesLoading]);
 
-  if (loading || isBranchesLoading) {
+  if (isBranchesLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -59,11 +62,24 @@ const OwnerTablesPage = () => {
     );
   }
 
-  if (!activeBranch) {
-    return null;
-  }
-
-  return <TableManagementReadOnlyByFloor allowBranchSelection={true} />;
+  // Owner sẽ dùng ManagerTableManagementEnhanced với Select Branch
+  // Component này có view reservations, update status, nhưng không có delete/CRUD đầy đủ
+  // Owner có quyền Select Branch và KHÔNG có Add Area/Add Table
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Table Management</h1>
+        <p className="text-muted-foreground mt-2">
+          Manage table status, areas, and view reservations
+        </p>
+      </div>
+      <ManagerTableManagementEnhanced 
+        allowBranchSelection={true} 
+        hideAddButtons={true} 
+        disableStatusChange={true} 
+      />
+    </div>
+  );
 };
 
 export default OwnerTablesPage;

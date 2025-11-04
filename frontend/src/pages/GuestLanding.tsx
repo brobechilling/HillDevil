@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { menuApi } from '@/lib/api';
-// Note: GuestLanding still uses mock data for branches until backend supports getByShortCode
+import { getBranchById } from '@/api/branchApi';
+// Note: GuestLanding now supports both shortCode (from mock) and UUID branchId (from QR codes)
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, MapPin, Phone, Mail, Clock, Plus, Minus, Loader2, Calendar } from 'lucide-react';
@@ -71,7 +72,9 @@ type BranchLite = {
 };
 
 const GuestLanding = () => {
-  const { shortCode, tableId } = useParams<{ shortCode: string; tableId?: string }>();
+  const { shortCode, tableId, areaName, tableName } = useParams<{ shortCode?: string; tableId?: string; areaName?: string; tableName?: string }>();
+  // Support both tableId (UUID) and tableName (from /t/:areaName/:tableName route)
+  const actualTableIdentifier = tableName || tableId;
   const [branch, setBranch] = useState<BranchLite | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItemLite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,19 +88,120 @@ const GuestLanding = () => {
     const loadBranchData = async () => {
       try {
         setLoading(true);
+        
+        // If we have tableName/tableId but no shortCode (from /t/:areaName/:tableName or /t/:tableName route), fetch table first to get branchId
+        if (actualTableIdentifier && !shortCode) {
+          try {
+            let tableApiUrl = '';
+            
+            // If we have both areaName and tableName, use the new format
+            if (areaName && tableName) {
+              tableApiUrl = `http://localhost:8080/api/public/tables/${encodeURIComponent(areaName)}/${encodeURIComponent(tableName)}`;
+            } else {
+              // Otherwise, use the old format (for backward compatibility)
+              tableApiUrl = `http://localhost:8080/api/public/tables/${encodeURIComponent(actualTableIdentifier)}`;
+            }
+            
+            // Fetch table from public endpoint - supports both UUID and table name
+            const tableResponse = await fetch(tableApiUrl);
+            if (tableResponse.ok) {
+              const tableApiResponse = await tableResponse.json();
+              if (tableApiResponse.result?.branchId) {
+                // Use branchId as shortCode to load branch
+                const branchId = tableApiResponse.result.branchId;
+                try {
+                  const apiBranch = await getBranchById(branchId);
+                  if (apiBranch) {
+                    const branchData = {
+                      id: apiBranch.branchId,
+                      branchId: apiBranch.branchId,
+                      brandName: apiBranch.address,
+                      name: apiBranch.address,
+                      address: apiBranch.address,
+                      phone: apiBranch.branchPhone,
+                      email: apiBranch.mail,
+                      shortCode: branchId,
+                    };
+                    setBranch(branchData);
+                    
+                    // Load table number
+                    setTableNumber(tableApiResponse.result.tag || '');
+                    
+                    // Load menu
+                    const menuResponse = await menuApi.getAll(branchData.id);
+                    setMenuItems(menuResponse.data);
+                    
+                    setFlowState('menu');
+                    setOrderType('now');
+                    setLoading(false);
+                    return; // Early return after successful load
+                  }
+                } catch (branchError) {
+                  console.warn('[GuestLanding] Failed to load branch from table:', branchError);
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('[GuestLanding] Failed to fetch table from API:', error);
+          }
+          // If we can't get branchId, show error
+          if (!branch) {
+            throw new Error('Could not determine branch from table identifier. Please use full URL format.');
+          }
+        }
+        
+        if (!shortCode && !tableId) throw new Error('Branch code or table ID not provided');
         if (!shortCode) throw new Error('Branch code not provided');
 
-        // Temporarily use localStorage until backend supports getByShortCode
-        const branches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
-        const branchData = branches.find((b: any) => b.shortCode === shortCode);
-        if (!branchData) throw new Error('Branch not found');
+        // Check if shortCode is a UUID (from QR code with branchId)
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(shortCode);
+        
+        let branchData: any = null;
+        
+        if (isUUID) {
+          // If shortCode is actually a UUID (branchId), try to fetch from API first
+          try {
+            const apiBranch = await getBranchById(shortCode);
+            if (apiBranch) {
+              branchData = {
+                id: apiBranch.branchId,
+                branchId: apiBranch.branchId,
+                brandName: apiBranch.address, // Use address as name for now
+                name: apiBranch.address,
+                address: apiBranch.address,
+                phone: apiBranch.branchPhone,
+                email: apiBranch.mail,
+                shortCode: shortCode, // Use UUID as shortCode for this session
+              };
+              console.log('[GuestLanding] Branch loaded from API:', branchData);
+            }
+          } catch (apiError) {
+            console.warn('[GuestLanding] Failed to load branch from API, trying localStorage:', apiError);
+          }
+          
+          // If API failed, try localStorage by ID
+          if (!branchData) {
+            const branches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
+            branchData = branches.find((b: any) => b.id === shortCode || b.branchId === shortCode);
+          }
+        } else {
+          // If not UUID, treat as shortCode and search in localStorage
+          const branches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
+          branchData = branches.find((b: any) => b.shortCode === shortCode);
+        }
+        
+        if (!branchData) {
+          throw new Error('Branch not found');
+        }
+        
         setBranch(branchData);
 
-        if (tableId) {
-          const tables = JSON.parse(localStorage.getItem('mock_tables') || '[]') as Array<{ id: string; number: string }>;
-          const table = tables.find((t) => t.id === tableId);
+        if (actualTableIdentifier) {
+          // Try to find table in localStorage (for backward compatibility)
+          const tables = JSON.parse(localStorage.getItem('mock_tables') || '[]') as Array<{ id: string; number: string; tag?: string }>;
+          const table = tables.find((t) => t.id === actualTableIdentifier || t.tag === actualTableIdentifier);
           if (table) {
-            setTableNumber(table.number);
+            setTableNumber(table.number || table.tag || '');
           }
         }
 

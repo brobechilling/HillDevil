@@ -23,7 +23,7 @@ import com.example.backend.entities.RoleName;
 public class SecurityConfig {
 
 
-    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated", "/api/staff/**",  "/api/packages/**", "/api/branches/**", "/api/users/mail/**"};
+    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated", "/api/staff/**",  "/api/packages/**", "/api/branches/**", "/api/users/mail/**", "/api/public/**", "/api/public/tables/**"};
     private final String[] ADMIN_ENDPOINTS = {"/api/users/**", "/api/roles/**"};
     private final String[] RESTAURANT_OWNER_ENDPOINTS = {};
     private final String[] BRANCH_MANAGER_ENDPOINTS = {};
@@ -39,11 +39,28 @@ public class SecurityConfig {
         this.myCustomJwtDecoder = myCustomJwtDecoder;
     }
 
+    // SecurityFilterChain for public endpoints - NO JWT validation
     @Bean
+    @org.springframework.core.annotation.Order(1)
+    public SecurityFilterChain publicSecurityFilterChain(HttpSecurity httpSecurity) throws Exception {
+        httpSecurity
+            .securityMatcher("/api/public/**")
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+            .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()));
+
+        return httpSecurity.build();
+    }
+
+    // SecurityFilterChain for protected endpoints - WITH JWT validation
+    @Bean
+    @org.springframework.core.annotation.Order(2)
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.authorizeHttpRequests(request -> 
             request
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // allow preflight request in local
+                .requestMatchers("/actuator/health").permitAll()
+                // Public endpoints (these should not reach here if publicSecurityFilterChain works correctly)
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                 
                 // User API
@@ -55,7 +72,11 @@ public class SecurityConfig {
                 // Role API
                 .requestMatchers("/api/roles/**").hasAnyRole(RoleName.ADMIN.name())
 
-                .requestMatchers("/actuator/health").permitAll()
+                // Table API - Allow both OWNER and MANAGER to update status
+                .requestMatchers(HttpMethod.PATCH, "/api/owner/tables/*/status").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name())
+                .requestMatchers("/api/owner/tables/**").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name())
+
+                // All other /api/** endpoints require authentication
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll());
 
