@@ -19,6 +19,8 @@ services:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      - BREVO_MAIL_URL=${BREVO_MAIL_URL}
     ports:
       - "8080:8080"
     container_name: spring-app-container
