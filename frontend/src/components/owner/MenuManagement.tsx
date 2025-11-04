@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Eye, ChevronRight, Sparkles, Menu, X } from 'lucide-react';
-import { MenuItemDialog } from './MenuItemDialog';
+import { MenuItemDialog } from '../menu/MenuItemDialog';
 import { MenuItemViewDialog } from './MenuItemViewDialog';
 import { toast } from '@/components/ui/use-toast';
 import { useSessionStore } from '@/store/sessionStore';
@@ -27,7 +27,68 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 
+// === Custom Components ===
+
+const StatusSwitch = ({ checked, onChange, disabled }: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean }) => {
+  return (
+    <div className="flex items-center gap-2">
+      <Switch
+        checked={checked}
+        onCheckedChange={onChange}
+        disabled={disabled}
+        className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-300"
+      />
+      <span className={cn(
+        "text-xs font-medium transition-colors",
+        checked ? "text-green-600" : "text-gray-500"
+      )}>
+        {checked ? "Available" : "Unavailable"}
+      </span>
+      {disabled && (
+        <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      )}
+    </div>
+  );
+};
+
+const BestSellerToggle = ({ isBestSeller, onToggle, disabled }: {
+  isBestSeller: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+}) => {
+  return (
+    <button
+      onClick={onToggle}
+      disabled={disabled}
+      className={cn(
+        "relative p-2 rounded-lg transition-all duration-300 group",
+        disabled ? "opacity-50 cursor-not-allowed" : "hover:scale-110 cursor-pointer"
+      )}
+    >
+      <div className="relative">
+        <div className={cn(
+          "absolute inset-0 rounded-lg blur-md transition-opacity duration-300",
+          isBestSeller ? "bg-yellow-400 opacity-60" : "opacity-0"
+        )} />
+        {isBestSeller ? (
+          <Sparkles className="h-5 w-5 text-yellow-500 relative z-10 animate-pulse" />
+        ) : (
+          <Sparkles className="h-5 w-5 text-gray-300 group-hover:text-yellow-400 transition-colors" />
+        )}
+      </div>
+      <span className={cn(
+        "absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap",
+        isBestSeller ? "text-yellow-600" : "text-muted-foreground"
+      )}>
+        {isBestSeller ? "Best Seller" : "Set as Best"}
+      </span>
+    </button>
+  );
+};
+
+// === Main Component ===
 interface MenuManagementProps {
   branchId: string;
 }
@@ -50,9 +111,9 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingItemId, setPendingItemId] = useState<string | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [pendingItemId, setPendingItemId] = useState<string | null>(null);
 
   // === Loading state ===
   if (isSessionLoading || isItemsLoading) {
@@ -107,7 +168,6 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
         behavior: 'smooth',
       });
     }
-    // Reset active category after scroll animation
     setTimeout(() => setActiveCategory(''), 2000);
   };
 
@@ -146,7 +206,6 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {/* Nút toggle sidebar (hiển thị trên mobile & desktop) */}
               <Button
                 variant="outline"
                 size="icon"
@@ -221,6 +280,13 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                           "flex flex-col h-full overflow-hidden"
                         )}
                       >
+                        {/* Loading Overlay */}
+                        {pendingItemId === item.menuItemId && (
+                          <div className="absolute inset-0 bg-background/80 backdrop-blur-[1px] rounded-xl flex items-center justify-center z-20">
+                            <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+
                         {/* === IMAGE CONTAINER === */}
                         <div className="relative aspect-video bg-muted/50 overflow-hidden">
                           {(item as any).imageUrl ? (
@@ -243,7 +309,7 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                             </div>
                           )}
 
-                          {/* === STATUS BADGE (góc trên trái) === */}
+                          {/* Status Badge */}
                           <div className="absolute top-2 left-2 z-10">
                             <Badge
                               variant={item.status === "ACTIVE" ? "default" : "secondary"}
@@ -252,12 +318,6 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                               {item.status === "ACTIVE" ? "Available" : "Unavailable"}
                             </Badge>
                           </div>
-
-                          {item.bestSeller && (
-                            <div className="absolute top-2 right-2 z-10 text-yellow-400 text-xl drop-shadow-md">
-                              ⭐
-                            </div>
-                          )}
                         </div>
 
                         {/* === CONTENT === */}
@@ -276,32 +336,23 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                             ${parseFloat(item.price).toFixed(2)}
                           </p>
 
-                          {/* Buttons: Active / Best Seller */}
-                          <div className="flex flex-col gap-2">
-                            {/* Mark Available / Unavailable */}
-                            <Button
-                              size="sm"
-                              variant={item.status === "ACTIVE" ? "outline" : "default"}
-                              onClick={() => {
+                          {/* === Toggles: Status + Best Seller === */}
+                          <div className="flex items-center justify-between pt-3 border-t border-border/20">
+                            <StatusSwitch
+                              checked={item.status === "ACTIVE"}
+                              onChange={(checked) => {
                                 setPendingItemId(item.menuItemId);
                                 toggleActive(
-                                  { menuItemId: item.menuItemId, active: item.status !== "ACTIVE" },
+                                  { menuItemId: item.menuItemId, active: checked },
                                   { onSettled: () => setPendingItemId(null) }
                                 );
                               }}
                               disabled={pendingItemId === item.menuItemId}
-                              className={cn(
-                                pendingItemId === item.menuItemId && "opacity-50 cursor-not-allowed"
-                              )}
-                            >
-                              {item.status === "ACTIVE" ? "Mark Unavailable" : "Mark Available"}
-                            </Button>
+                            />
 
-                            {/* Best Seller */}
-                            <Button
-                              size="sm"
-                              variant={item.bestSeller ? "destructive" : "outline"}
-                              onClick={() => {
+                            <BestSellerToggle
+                              isBestSeller={item.bestSeller}
+                              onToggle={() => {
                                 setPendingItemId(item.menuItemId);
                                 updateBestSeller(
                                   { menuItemId: item.menuItemId, bestSeller: !item.bestSeller },
@@ -309,16 +360,11 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                                 );
                               }}
                               disabled={pendingItemId === item.menuItemId}
-                              className={cn(
-                                pendingItemId === item.menuItemId && "opacity-50 cursor-not-allowed"
-                              )}
-                            >
-                              {item.bestSeller ? "Unset Best Seller" : "Set Best Seller"}
-                            </Button>
+                            />
                           </div>
 
-                          {/* Action Buttons: View / Edit / Delete */}
-                          <div className="flex justify-end gap-1 pt-2 border-t border-border/20">
+                          {/* === Action Buttons === */}
+                          <div className="flex justify-end gap-1 pt-2">
                             <Button
                               size="icon"
                               variant="ghost"
@@ -345,7 +391,6 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                             </Button>
                           </div>
                         </CardContent>
-
                       </Card>
                     ))}
                   </div>
@@ -356,7 +401,7 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
         </div>
       </div>
 
-      {/* === SIDEBAR: CATEGORIES (có thể ẩn/hiện) === */}
+      {/* === SIDEBAR: CATEGORIES === */}
       <aside
         className={cn(
           "fixed inset-y-0 right-0 z-40 w-80 bg-background/95 backdrop-blur-sm shadow-2xl transition-transform duration-300 ease-in-out",
@@ -365,14 +410,9 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
         )}
       >
         <div className="flex flex-col h-full">
-          {/* Header với nút close (mobile) */}
           <div className="flex items-center justify-between p-4 border-b xl:hidden">
             <CardTitle className="text-lg font-bold">Categories</CardTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(false)}
-            >
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
               <X className="h-5 w-5" />
             </Button>
           </div>
@@ -407,7 +447,7 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                         <button
                           onClick={() => {
                             scrollToCategory(label);
-                            setSidebarOpen(false); // Đóng sidebar trên mobile sau khi click
+                            setSidebarOpen(false);
                           }}
                           className={cn(
                             "w-full text-left px-4 py-3 rounded-xl transition-all duration-300",
@@ -468,7 +508,7 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
         </div>
       </aside>
 
-      {/* Overlay cho mobile khi sidebar mở */}
+      {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30 xl:hidden"

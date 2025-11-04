@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { MenuItemCard } from '@/components/menu/MenuItemCard';
 
 import { useSessionStore } from "@/store/sessionStore";
 import { isStaffAccountDTO } from "@/utils/typeCast";
@@ -179,94 +180,17 @@ export const MenuManagement = () => {
 
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     {items.map((item) => (
-                                        <Card
+                                        <MenuItemCard
                                             key={item.menuItemId}
-                                            className="overflow-hidden border-border/50 hover:shadow-md transition-shadow duration-200"
-                                        >
-                                            {item.imageUrl ? (
-                                                <div className="aspect-video bg-muted relative overflow-hidden">
-                                                    <img
-                                                        src={item.imageUrl}
-                                                        alt={item.name}
-                                                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className="aspect-video bg-muted/50 flex items-center justify-center">
-                                                    <p className="text-xs text-muted-foreground">No image</p>
-                                                </div>
-                                            )}
-
-                                            <CardContent className="pt-5 space-y-3">
-                                                <div>
-                                                    <div className="flex items-center gap-1">
-                                                        <h4 className="font-bold text-lg line-clamp-1">{item.name}</h4>
-                                                        {item.bestSeller && (
-                                                            <span
-                                                                title="Best Seller"
-                                                                className="text-yellow-500 text-base"
-                                                                aria-label="Best Seller"
-                                                            >
-                                                                ⭐
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                                                        {item.description || "No description"}
-                                                    </p>
-                                                </div>
-
-                                                <div className="flex items-center justify-between">
-                                                    <p className="font-bold text-lg text-primary">
-                                                        ${Number(item.price).toFixed(2)}
-                                                    </p>
-                                                    <Badge
-                                                        variant={item.available ? "default" : "destructive"}
-                                                        className="text-xs"
-                                                    >
-                                                        {item.available ? "Available" : "Out of Order"}
-                                                    </Badge>
-                                                </div>
-
-                                                {/* Toggle Availability */}
-                                                <div className="pt-2 flex flex-col gap-2">
-                                                    <Button
-                                                        variant={item.available ? "outline" : "default"}
-                                                        size="sm"
-                                                        className="w-full"
-                                                        onClick={() => handleToggleAvailability(item)}
-                                                        disabled={
-                                                            updateAvailability.isPending &&
-                                                            updateAvailability.variables?.menuItemId === item.menuItemId
-                                                        }
-                                                    >
-                                                        {updateAvailability.isPending &&
-                                                            updateAvailability.variables?.menuItemId === item.menuItemId ? (
-                                                            <>
-                                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                                Updating...
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <AlertTriangle className="h-3 w-3 mr-2" />
-                                                                {item.available ? "Mark Out of Order" : "Mark Available"}
-                                                            </>
-                                                        )}
-                                                    </Button>
-
-                                                    {/* View Details Button */}
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="w-full"
-                                                        onClick={() => handleViewItem(item.menuItemId)}
-                                                    >
-                                                        <Eye className="h-4 w-4 mr-2" />
-                                                        View Details
-                                                    </Button>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
+                                            item={item}
+                                            isWaiter={true}
+                                            isUpdating={
+                                                updateAvailability.isPending &&
+                                                updateAvailability.variables?.menuItemId === item.menuItemId
+                                            }
+                                            onToggleAvailability={handleToggleAvailability}
+                                            onViewDetails={handleViewItem}
+                                        />
                                     ))}
                                 </div>
                             </section>

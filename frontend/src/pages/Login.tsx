@@ -9,8 +9,8 @@ import { UtensilsCrossed, Mail, Lock, Sparkles, ChevronRight } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { AuthenticationRequest } from '@/dto/auth.dto';
-import { useMutation } from '@tanstack/react-query';
-import { login } from '@/api/authApi';
+import { useQueryClient } from '@tanstack/react-query';
+import { useLogin } from '@/hooks/queries/useAuth';
 import { getRestaurantsByOwner } from '@/api/restaurantApi';
 
 const Login = () => {
@@ -20,10 +20,10 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { setSession } = useSessionStore.getState();
+  const qc = useQueryClient();
 
-  const loginMutation = useMutation({
-  mutationFn: login,
-  onSuccess: async (data) => {
+  const loginMutation = useLogin({
+    onSuccess: async (data) => {
     console.log('Login success - User data:', data.user);
 
     // ✅ Lưu vào sessionStore zustand
@@ -32,7 +32,7 @@ const Login = () => {
     switch (data.user.role.name) {
       case "RESTAURANT_OWNER":
         try {
-          const restaurants = await getRestaurantsByOwner(data.user.userId);
+          const restaurants = await qc.fetchQuery({ queryKey: ['restaurants','owner', data.user.userId], queryFn: () => getRestaurantsByOwner(data.user.userId) }) as any[];
           console.log('Login success - Restaurants:', restaurants);
 
           if (restaurants.length === 0) {
@@ -76,7 +76,7 @@ const Login = () => {
       email: email,
       password: password
     };
-    loginMutation.mutate(authenticationRequest);
+  loginMutation.mutate(authenticationRequest);
   };
 
 

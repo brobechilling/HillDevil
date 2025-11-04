@@ -12,7 +12,7 @@ import { Settings, Star, Tag } from 'lucide-react';
 import { useMenuItem } from '@/hooks/queries/useMenuItems';
 import { useCategory } from '@/hooks/queries/useCategories';
 import { useCustomizations } from '@/hooks/queries/useCustomizations';
-import { MenuItemCustomizationDialog } from './MenuItemCustomizationDialog';
+import { MenuItemCustomizationDialog } from '../menu/MenuItemCustomizationDialog';
 import { cn } from '@/lib/utils';
 
 interface MenuItemViewDialogProps {

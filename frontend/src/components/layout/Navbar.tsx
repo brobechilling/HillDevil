@@ -14,6 +14,7 @@ import {
 import { useCallback } from "react";
 import { ROLE_NAME } from "@/dto/user.dto";
 import { isUserDTO } from "@/utils/typeCast";
+import { toast } from "@/components/ui/use-toast";
 
 export const Navbar = () => {
   const navigate = useNavigate();
@@ -23,6 +24,12 @@ export const Navbar = () => {
   const handleLogout = useCallback(async () => {
     await clearSession();
     navigate("/");
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully.",
+      variant: "default",
+      duration: 3000,
+    })
   }, [clearSession, navigate]);
 
   const getRoleBadgeVariant = (role?: string) => {

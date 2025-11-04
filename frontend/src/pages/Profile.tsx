@@ -5,7 +5,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -36,7 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from '@/hooks/use-toast';
-import { getAllBranches } from '@/api/branchApi';
+import { useBranches } from '@/hooks/queries/useBranches';
 import { usePackages } from '@/hooks/queries/usePackages';
 import { useOverviewForOwner, useRenewSubscription, useCancelSubscription, useChangePackage } from '@/hooks/queries/useSubscription';
 import {
@@ -62,8 +61,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import type { PackageFeatureDTO as Package } from '@/dto/packageFeature.dto';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import ProfileSidebar from '@/components/layout/ProfileSidebar';
 import { isUserDTO } from '@/utils/typeCast';
 import { useChangePasswordd, useUpdateUserProfile } from '@/hooks/queries/useUsers';
@@ -86,11 +84,10 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [branches, setBranches] = useState<any[]>([]);
+  const { data: branches = [] } = useBranches();
   const [formData, setFormData] = useState<ProfileFormData>({
     username: isUserDTO(user) ? user.username : "",
     email: isUserDTO(user) ? user.email : "",
@@ -106,11 +103,11 @@ const Profile = () => {
   const [isChangePackageOpen, setIsChangePackageOpen] = useState(false);
   const [selectedNewPackage, setSelectedNewPackage] = useState<string>('');
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
-  const [selectedSubscription, setSelectedSubscription] = useState<any>(null); // Cho tab subscription
+  const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
 
   // React Query hooks
-  const { data: packages = [], isLoading: isLoadingPackages } = usePackages();
-  const { data: overviewData = [], isLoading: isLoadingOverview } = useOverviewForOwner();
+  const { data: packages = [] } = usePackages();
+  const { data: overviewData = [] } = useOverviewForOwner();
   const renewMutation = useRenewSubscription();
   const cancelMutation = useCancelSubscription();
   const changePackageMutation = useChangePackage();
@@ -122,7 +119,6 @@ const Profile = () => {
   const [paymentSearch, setPaymentSearch] = useState('');
   const paymentsPerPage = 5;
 
-  // Tabs replacement: sidebar state
   const location = useLocation();
   const activePath = location.pathname;
   const getSectionFromPath = (): 'overview' | 'subscription' | 'branches' => {
@@ -132,7 +128,6 @@ const Profile = () => {
   };
   const activeSection = getSectionFromPath();
 
-  // Xử lý chọn nhà hàng trong tab subscription
   useEffect(() => {
     if (selectedRestaurantId && overviewData.length > 0) {
       const selected = overviewData.find(sub => sub.restaurantId === selectedRestaurantId);
@@ -176,6 +171,11 @@ const Profile = () => {
       setIsEditDialogOpen(false);
     }
     catch (error) {
+        toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to update profile, please check your inputs',
+      });
     }
   };
 
@@ -218,6 +218,11 @@ const Profile = () => {
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     }
     catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to change password. Please check your current password and try again.',
+      });
     }
   };
 
@@ -778,7 +783,6 @@ const Profile = () => {
           )}
 
           {activeSection === 'branches' && (
-            // ...Branches content (from former TabsContent value="branches") ...
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Building className="w-5 h-5" /> Your Branches</CardTitle>
@@ -786,14 +790,15 @@ const Profile = () => {
               <CardContent>
                 {branches.length > 0 ? (
                   <div className="space-y-3">
-                    {branches.map((branch) => (
-                      <div key={branch.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    {branches.map((branch: any) => (
+                      <div key={branch.branchId} className="flex items-center justify-between p-4 border rounded-lg">
                         <div>
-                          <p className="font-medium">{branch.name}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><MapPin className="w-4 h-4" /> {branch.location}</p>
+                          <p className="font-medium">{branch.address}</p>
+                          <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><MapPin className="w-4 h-4" /> {branch.branchPhone || branch.mail || '—'}</p>
                           <div className="flex gap-2 mt-2">
-                            <Badge variant="outline" className="text-xs">{branch.status}</Badge>
-                            <Badge variant="secondary" className="text-xs">Tables: {branch.tables || 0}</Badge>
+                            <Badge variant={branch.isActive ? 'default' : 'secondary'} className="text-xs">{branch.isActive ? 'Active' : 'Inactive'}</Badge>
+                            <Badge variant="outline" className="text-xs">Opening: {branch.openingTime || '—'}</Badge>
+                            <Badge variant="outline" className="text-xs">Closing: {branch.closingTime || '—'}</Badge>
                           </div>
                         </div>
                         <Button variant="outline" size="sm">Manage</Button>

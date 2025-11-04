@@ -13,8 +13,7 @@ import {
 import { ArrowLeft, User, Lock } from 'lucide-react';
 import { RestaurantDTO } from '@/dto/restaurant.dto';
 import { useBranchesByRestaurant } from '@/hooks/queries/useBranches';
-import { useMutation } from '@tanstack/react-query';
-import { login } from '@/api/authApi';
+import { useLogin } from '@/hooks/queries/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { ROLE_NAME } from '@/dto/user.dto';
 import { BranchDTO } from '@/dto/branch.dto';
@@ -38,15 +37,11 @@ export const RestaurantLoginForm = ({ restaurant, onBack }: RestaurantLoginFormP
 
   const { setSession } = useSessionStore();
 
-  const loginStaffMutation = useMutation({
-    mutationFn: login,
+  const loginStaffMutation = useLogin({
     onSuccess: (data) => {
       setSession(data.staff, data.accessToken);
 
-      toast({
-        title: 'Login successful',
-        description: `Welcome back, ${data.staff.username}!`,
-      });
+      toast({ title: 'Login successful', description: `Welcome back, ${data.staff.username}!` });
 
       switch (data.staff.role.name) {
         case ROLE_NAME.BRANCH_MANAGER:
@@ -63,11 +58,7 @@ export const RestaurantLoginForm = ({ restaurant, onBack }: RestaurantLoginFormP
       }
     },
     onError: () => {
-      toast({
-        title: 'Login Failed',
-        description: 'Invalid username, password, or branch. Please try again.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Login Failed', description: 'Invalid username, password, or branch. Please try again.', variant: 'destructive' });
     },
   });
 
