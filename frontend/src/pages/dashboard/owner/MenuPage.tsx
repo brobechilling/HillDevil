@@ -13,7 +13,6 @@ const OwnerMenuPage = () => {
   const [activeBranch, setActiveBranch] = useState<BranchDTO | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Resolve selected restaurant id from localStorage
   const selectedRestaurantRaw = localStorage.getItem('selected_restaurant');
   const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
   const restaurantId: string | undefined = selectedRestaurant?.restaurantId;

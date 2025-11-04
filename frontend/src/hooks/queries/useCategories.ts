@@ -13,6 +13,10 @@ export const useCategories = (restaurantId?: string) => {
     queryKey: ["categories", restaurantId],
     queryFn: () => getAllCategories(restaurantId!),
     enabled: !!restaurantId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 };
 

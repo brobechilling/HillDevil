@@ -14,6 +14,7 @@ import {
 import { useCallback } from "react";
 import { ROLE_NAME } from "@/dto/user.dto";
 import { isUserDTO } from "@/utils/typeCast";
+import { toast } from "@/components/ui/use-toast";
 
 export const Navbar = () => {
   const navigate = useNavigate();
@@ -23,6 +24,12 @@ export const Navbar = () => {
   const handleLogout = useCallback(async () => {
     await clearSession();
     navigate("/");
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully.",
+      variant: "default",
+      duration: 3000,
+    })
   }, [clearSession, navigate]);
 
   const getRoleBadgeVariant = (role?: string) => {
@@ -90,11 +97,12 @@ export const Navbar = () => {
                   className="flex items-center gap-3 rounded-xl px-3 py-2 h-auto border-muted-foreground/20 hover:bg-muted transition-all"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                      {displayInitial || "U"}
-                    </AvatarFallback>
+                    <img
+                      src="https://res.cloudinary.com/dyrg3lfjf/image/upload/v1762009884/menu_item_image/file_r1egrl.jpg"
+                      alt={displayName}
+                      className="h-full w-full object-cover rounded-full"
+                    />
                   </Avatar>
-
                   <div className="hidden md:flex flex-col items-start leading-tight">
                     <span className="text-sm font-semibold">{displayName}</span>
                     <Badge

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -133,5 +134,20 @@ public class MediaService {
 
         List<Media> medias = mediaRepository.findByTargetIdAndTargetType(targetId, targetType);
         return medias.isEmpty() ? null : medias.get(medias.size() - 1).getUrl();
+    }
+
+    public Map<UUID, String> getLatestImageUrlsForTargets(List<UUID> targetIds, String targetTypeCode) {
+        if (targetIds.isEmpty()) return Map.of();
+
+        TargetType targetType = targetTypeRepository.findByCode(targetTypeCode)
+                .orElseThrow(() -> new AppException(ErrorCode.TARGET_TYPE_NOT_FOUND));
+
+        List<Media> medias = mediaRepository.findByTargetIdInAndTargetType(targetIds, targetType);
+        return medias.stream()
+                .collect(Collectors.toMap(
+                        Media::getTargetId,
+                        Media::getUrl,
+                        (url1, url2) -> url2  // lấy media mới nhất nếu trùng target
+                ));
     }
 }

@@ -17,7 +17,6 @@ type PackageFormData = z.infer<typeof packageSchema>;
 
 const RegisterPackage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, initialize } = useSessionStore();
   const { data: packages, isLoading, error } = usePackages();
 
   const {
@@ -36,10 +35,6 @@ const RegisterPackage = () => {
   const selectedPackage = watch('packageType');
 
   useEffect(() => {
-    initialize();
-  }, [initialize]);
-
-  useEffect(() => {
     if (packages && packages.length > 0) {
       const defaultPackage = packages.find(pkg => pkg.name.toLowerCase().includes('professional')) || packages[0];
       setValue('packageType', defaultPackage.packageId, { shouldValidate: true });
@@ -47,12 +42,7 @@ const RegisterPackage = () => {
   }, [packages, setValue]);
 
   const onSubmit = (data: PackageFormData) => {
-    if (!isAuthenticated) {
-      const returnUrl = `/register/confirm?packageId=${data.packageType}`;
-      navigate(`/register?returnUrl=${encodeURIComponent(returnUrl)}`);
-    } else {
-      navigate(`/register/confirm?packageId=${data.packageType}`);
-    }
+    navigate(`/register/confirm?packageId=${data.packageType}`);
   };
 
   const getPackageIcon = (name: string) => {

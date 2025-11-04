@@ -74,11 +74,22 @@ public class MenuItemController {
     }
 
     @PutMapping("/{menuItemId}/status")
-    public ApiResponse<Void> setActiveStatus(
+    public ApiResponse<MenuItemDTO> setActiveStatus(
             @PathVariable UUID menuItemId,
             @RequestParam boolean active
     ) {
-        menuItemService.setActiveStatus(menuItemId, active);
-        return new ApiResponse<>();
+        ApiResponse<MenuItemDTO> res = new ApiResponse<>();
+        res.setResult(menuItemService.setActiveStatus(menuItemId, active));
+        return res;
+    }
+
+    @PutMapping("/{menuItemId}/best-seller")
+    public ApiResponse<MenuItemDTO> updateBestSeller(
+            @PathVariable UUID menuItemId,
+            @RequestParam boolean bestSeller
+    ) {
+        ApiResponse<MenuItemDTO> res = new ApiResponse<>();
+        res.setResult(menuItemService.updateBestSeller(menuItemId, bestSeller));
+        return res;
     }
 }
