@@ -29,14 +29,14 @@ jobs:
 
             sleep 20
             echo "Performing HTTP health check..."
-            for i in {1..5}; do
+            for i in {1..10}; do
               if curl -fs http://localhost:8080/actuator/health >/dev/null; then
                 echo "Health check passed"
                 exit 0
               fi
-              echo "Waiting for app to become healthy ($i/5)..."
+              echo "Waiting for app to become healthy ($i/10)..."
               sleep 5
             done
-            echo "App failed health check after 3 attempts"
+            echo "App failed health check after 10 attempts"
             sudo docker logs --tail 100 spring-app-container || true
             exit 1
