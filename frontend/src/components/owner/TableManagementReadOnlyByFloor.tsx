@@ -1,14 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTables, useCreateTable, useDeleteTable, useTableQrCode } from '@/hooks/queries/useTables';
 import { useBranches } from '@/hooks/queries/useBranches';
-import { useAreas } from '@/hooks/queries/useAreas'; // THÊM HOOK MỚI
+import { useAreas, useCreateArea } from '@/hooks/queries/useAreas';
 import { toast } from '@/hooks/use-toast';
 import { TableDTO } from '@/dto/table.dto';
 import { Plus, Trash2, Download, Eye } from 'lucide-react';
-import { axiosClient } from '@/api/axiosClient';
+import { axiosClient, getAccessToken } from '@/api/axiosClient';
+import { BranchSelection } from '@/components/common/BranchSelection';
+import { BranchDTO } from '@/dto/branch.dto';
+import { RestaurantDTO } from '@/dto/restaurant.dto';
+import { getLocalStorageObject } from '@/utils/typeCast';
 import {
   Dialog,
   DialogContent,
@@ -29,40 +33,75 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
+// Tạo schema với validation dynamic cho duplicate name
 const createTableSchema = z.object({
-  tag: z.string().min(1, 'Table name is required'),
   capacity: z.coerce.number().min(1, 'Capacity must be at least 1'),
   areaId: z.string().min(1, 'Area is required'),
 });
 
-type CreateTableFormData = z.infer<typeof createTableSchema>;
+type CreateTableFormData = {
+  capacity: number;
+  areaId: string;
+};
 
 interface TableManagementReadOnlyByFloorProps {
   branchId?: string;
   allowBranchSelection?: boolean;
+  hideTitle?: boolean; // Thêm prop để ẩn title nếu đã có title ở page level
+  hideAddButtons?: boolean; // Thêm prop để ẩn Add Area và Add Table buttons
 }
 
 export const TableManagementReadOnlyByFloor = ({
   branchId: initialBranchId,
   allowBranchSelection = false,
+  hideTitle = false,
+  hideAddButtons = false,
 }: TableManagementReadOnlyByFloorProps) => {
-  const [selectedBranch, setSelectedBranch] = useState(initialBranchId || '');
+  const [selectedBranch, setSelectedBranch] = useState<string | undefined>(initialBranchId);
   const [isAnimating, setIsAnimating] = useState(false);
   const [hoveredTable, setHoveredTable] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
   const [selectedTableForQr, setSelectedTableForQr] = useState<TableDTO | null>(null);
   const [isDeleteLoading, setIsDeleteLoading] = useState<string | null>(null);
+  const [isAreaDialogOpen, setIsAreaDialogOpen] = useState(false);
+  const [areaName, setAreaName] = useState('');
+
+  // Kiểm tra token trước khi gọi API
+  const hasToken = useMemo(() => {
+    const token = getAccessToken();
+    return !!token && token.trim() !== '';
+  }, []);
 
   const { data: branches = [] } = useBranches();
+  
+  // Chỉ gọi queries khi có token và branchId hợp lệ
+  const validBranchId = useMemo(() => {
+    return selectedBranch && selectedBranch.trim() !== '' ? selectedBranch : undefined;
+  }, [selectedBranch]);
+  
   const {
     data: tablesData,
     isLoading: isTablesLoading,
     error: tablesError,
-  } = useTables(selectedBranch);
+  } = useTables(validBranchId);
   
-  // THÊM: Lấy danh sách areas
-  const { data: areas = [] } = useAreas(selectedBranch);
+  const { data: areas = [], error: areasError } = useAreas(validBranchId);
+  const createAreaMutation = useCreateArea();
+
+  // Log errors để debug
+  useEffect(() => {
+    if (tablesError) {
+      if ((tablesError as any)?.response?.status !== 401) {
+        console.warn('Tables query error:', tablesError);
+      }
+    }
+    if (areasError) {
+      if ((areasError as any)?.response?.status !== 401) {
+        console.warn('Areas query error:', areasError);
+      }
+    }
+  }, [tablesError, areasError]);
   
   const createTableMutation = useCreateTable();
   const deleteTableMutation = useDeleteTable();
@@ -77,17 +116,61 @@ export const TableManagementReadOnlyByFloor = ({
     formState: { errors },
   } = useForm<CreateTableFormData>({
     resolver: zodResolver(createTableSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
   });
 
-  // Watch areaId để có thể control bằng Select
   const selectedAreaId = watch('areaId');
+
+  // Function để extract số từ table tag (ví dụ: "Table 1" -> 1, "Table 10" -> 10)
+  const extractTableNumber = (tag: string): number | null => {
+    const match = tag.match(/(?:table|bàn)\s*(\d+)/i);
+    return match ? parseInt(match[1], 10) : null;
+  };
+
+  // Tính số bàn tiếp theo dựa trên existing tables
+  const getNextTableNumber = useMemo(() => {
+    if (!tablesData?.content || tablesData.content.length === 0) {
+      return 1; // Chưa có bàn nào, bắt đầu từ Table 1
+    }
+    
+    // Extract tất cả số từ table tags
+    const tableNumbers = tablesData.content
+      .map(table => extractTableNumber(table.tag))
+      .filter((num): num is number => num !== null);
+    
+    if (tableNumbers.length === 0) {
+      return 1; // Không tìm thấy số nào, bắt đầu từ 1
+    }
+    
+    // Tìm số lớn nhất và +1
+    const maxNumber = Math.max(...tableNumbers);
+    return maxNumber + 1;
+  }, [tablesData?.content]);
+
+  // Generate table tag tự động
+  const autoGeneratedTag = useMemo(() => {
+    return `Table ${getNextTableNumber}`;
+  }, [getNextTableNumber]);
 
   // Auto-select first branch if enabled
   useEffect(() => {
     if (allowBranchSelection && !selectedBranch && branches.length > 0) {
-      setSelectedBranch(branches[0].branchId);
+      const timer = setTimeout(() => {
+        if (branches[0]?.branchId) {
+          setSelectedBranch(branches[0].branchId);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [branches, selectedBranch, allowBranchSelection]);
+
+  // Reset selectedBranch nếu là empty string
+  useEffect(() => {
+    if (selectedBranch === '') {
+      setSelectedBranch(undefined);
+    }
+  }, [selectedBranch]);
 
   const handleBranchChange = (branchId: string) => {
     setIsAnimating(true);
@@ -99,22 +182,24 @@ export const TableManagementReadOnlyByFloor = ({
 
   const handleCreateTable = async (data: CreateTableFormData) => {
     try {
+      // Sử dụng auto-generated tag thay vì từ form
       await createTableMutation.mutateAsync({
         areaId: data.areaId,
-        tag: data.tag,
+        tag: autoGeneratedTag, // Tự động generate table name
         capacity: data.capacity,
       });
       toast({
         title: 'Success',
-        description: 'Table created successfully',
+        description: `Table "${autoGeneratedTag}" created successfully`,
       });
       setIsCreateDialogOpen(false);
       reset();
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to create table';
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to create table',
+        description: errorMessage,
       });
     }
   };
@@ -127,12 +212,27 @@ export const TableManagementReadOnlyByFloor = ({
         title: 'Success',
         description: 'Table deleted successfully',
       });
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to delete table',
-      });
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message 
+        || error?.message 
+        || 'Failed to delete table';
+      
+      if (error?.response?.status === 401) {
+        toast({
+          variant: 'destructive',
+          title: 'Authentication Error',
+          description: 'Your session has expired. Please log in again.',
+        });
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: errorMessage,
+        });
+      }
     } finally {
       setIsDeleteLoading(null);
     }
@@ -145,7 +245,6 @@ export const TableManagementReadOnlyByFloor = ({
 
   const handleDownloadQr = async (table: TableDTO) => {
     try {
-      // Use axiosClient instead of fetch to include Authorization header
       const response = await axiosClient.get(`/owner/tables/${table.id}/qr.png`, {
         params: { size: 512 },
         responseType: 'blob',
@@ -189,7 +288,7 @@ export const TableManagementReadOnlyByFloor = ({
     }
   };
 
-  // THAY ĐỔI: Group tables by AREA thay vì floor
+  // Group tables by AREA
   const areaMap = new Map<string, { areaName: string; tables: TableDTO[] }>();
   if (tablesData?.content) {
     tablesData.content.forEach((table) => {
@@ -203,155 +302,35 @@ export const TableManagementReadOnlyByFloor = ({
     });
   }
 
-  // THAY ĐỔI: Sort by area name
+  // Sort by area name
   const sortedAreaEntries = Array.from(areaMap.entries()).sort((a, b) => 
     a[1].areaName.localeCompare(b[1].areaName)
   );
   
-  const displayBranchId = allowBranchSelection ? selectedBranch : initialBranchId;
+  const displayBranchId = allowBranchSelection 
+    ? (selectedBranch && selectedBranch.trim() !== '' ? selectedBranch : undefined)
+    : (initialBranchId && initialBranchId.trim() !== '' ? initialBranchId : undefined);
+
+  // Get restaurant ID from localStorage to filter branches by restaurant
+  const selectedRestaurant: RestaurantDTO | null = useMemo(() => {
+    return getLocalStorageObject<RestaurantDTO>("selected_restaurant");
+  }, []);
 
   return (
     <div className="space-y-6">
       {/* Branch Selection Section */}
-      {allowBranchSelection && branches.length > 0 && (
-        <Card className="relative overflow-hidden border-2 border-primary/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 pointer-events-none" />
-
-          <CardHeader className="relative z-10">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <svg
-                className="w-6 h-6 text-primary"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
-              Select Branch
-            </CardTitle>
-            <CardDescription>Choose a branch to view its tables</CardDescription>
-          </CardHeader>
-
-          <CardContent className="relative z-10">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {branches.map((branch, index) => (
-                <button
-                  key={branch.branchId}
-                  onClick={() => handleBranchChange(branch.branchId)}
-                  className={`
-                    group relative p-6 rounded-xl text-left
-                    transition-all duration-500 transform
-                    ${
-                      selectedBranch === branch.branchId
-                        ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-2xl scale-105 ring-4 ring-primary/30'
-                        : 'bg-card border-2 border-border hover:border-primary/50 hover:shadow-xl hover:scale-102'
-                    }
-                  `}
-                  style={{
-                    animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`,
-                  }}
-                >
-                  <div className="absolute inset-0 opacity-10">
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        backgroundImage:
-                          'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)',
-                        backgroundSize: '24px 24px',
-                      }}
-                    />
-                  </div>
-
-                  <div className="relative z-10 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3
-                          className={`font-bold text-lg mb-1 transition-colors ${
-                            selectedBranch === branch.branchId
-                              ? 'text-primary-foreground'
-                              : 'text-foreground'
-                          }`}
-                        >
-                          Branch {branch.branchId.substring(0, 8)}
-                        </h3>
-                        <p
-                          className={`text-sm ${
-                            selectedBranch === branch.branchId
-                              ? 'text-primary-foreground/80'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          {branch.address || 'No address'}
-                        </p>
-                      </div>
-
-                      {selectedBranch === branch.branchId && (
-                        <div className="flex-shrink-0">
-                          <div className="relative">
-                            <span className="flex h-8 w-8">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-foreground opacity-40"></span>
-                              <span className="relative inline-flex rounded-full h-8 w-8 bg-primary-foreground items-center justify-center">
-                                <svg
-                                  className="w-5 h-5 text-primary"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              </span>
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-3 text-xs">
-                      <div
-                        className={`flex items-center gap-1 ${
-                          selectedBranch === branch.branchId
-                            ? 'text-primary-foreground/70'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                          />
-                        </svg>
-                        <span>{branch.branchPhone || 'N/A'}</span>
-                      </div>
-                    </div>
-
-                    {selectedBranch !== branch.branchId && (
-                      <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none" />
-                    )}
-                  </div>
-
-                  {selectedBranch === branch.branchId && (
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-white/10 to-transparent opacity-50 pointer-events-none" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {allowBranchSelection && (
+        <BranchSelection
+          restaurantId={selectedRestaurant?.restaurantId}
+          selectedBranchId={selectedBranch}
+          onSelectBranch={(branch: BranchDTO) => {
+            handleBranchChange(branch.branchId);
+          }}
+          variant="compact"
+          showFullDetails={false}
+          title="Select Branch"
+          description="Choose a branch to view its tables"
+        />
       )}
 
       {/* Table Management Section */}
@@ -361,23 +340,38 @@ export const TableManagementReadOnlyByFloor = ({
 
           <CardHeader className="relative z-10">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                  Table Management
-                </CardTitle>
-                <CardDescription>
-                  {allowBranchSelection
-                    ? 'Manage tables for selected branch'
-                    : 'View and manage tables'}
-                </CardDescription>
-              </div>
-              <Button
-                onClick={() => setIsCreateDialogOpen(true)}
-                className="gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Table
-              </Button>
+              {!hideTitle && (
+                <div>
+                  <CardTitle className="text-2xl bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                    Table Management
+                  </CardTitle>
+                  <CardDescription>
+                    {allowBranchSelection
+                      ? 'Manage tables for selected branch'
+                      : 'View and manage tables'}
+                  </CardDescription>
+                </div>
+              )}
+              {hideTitle && <div />}
+              {!hideAddButtons && (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setIsAreaDialogOpen(true)}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Area
+                  </Button>
+                  <Button
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    className="gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Table
+                  </Button>
+                </div>
+              )}
             </div>
           </CardHeader>
 
@@ -437,7 +431,6 @@ export const TableManagementReadOnlyByFloor = ({
                   isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
                 }`}
               >
-                {/* THAY ĐỔI: Loop qua areas thay vì floors */}
                 {sortedAreaEntries.map(([areaId, { areaName, tables }], areaIndex) => {
                   const sortedTables = tables.sort((a, b) =>
                     a.tag.localeCompare(b.tag)
@@ -451,7 +444,7 @@ export const TableManagementReadOnlyByFloor = ({
                         animation: `slideInUp 0.5s ease-out ${areaIndex * 0.1}s both`,
                       }}
                     >
-                      {/* THAY ĐỔI: Area Header thay vì Floor Header */}
+                      {/* Area Header */}
                       <div className="flex items-center gap-4">
                         <div className="relative bg-gradient-to-r from-primary to-primary/80 rounded-xl px-6 py-3 shadow-lg transform hover:scale-105 transition-transform duration-300">
                           <h3 className="text-xl font-bold text-primary-foreground">
@@ -467,8 +460,8 @@ export const TableManagementReadOnlyByFloor = ({
                         </div>
                       </div>
 
-                      {/* Tables Grid - GIỮ NGUYÊN */}
-                      <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-6">
+                      {/* Tables Grid */}
+                      <div className="grid gap-8 md:grid-cols-4 lg:grid-cols-6">
                         {sortedTables.map((table, tableIndex) => (
                           <div
                             key={table.id}
@@ -486,8 +479,8 @@ export const TableManagementReadOnlyByFloor = ({
                                 border-2 transition-all duration-300
                                 ${
                                   hoveredTable === table.id
-                                    ? 'border-primary shadow-xl scale-105 -translate-y-2'
-                                    : 'border-border/50 hover:shadow-lg'
+                                    ? 'border-primary shadow-2xl z-50'
+                                    : 'border-border/50 hover:shadow-lg z-10'
                                 }
                                 ${
                                   table.status === 'OCCUPIED'
@@ -495,29 +488,49 @@ export const TableManagementReadOnlyByFloor = ({
                                     : ''
                                 }
                               `}
+                              style={{
+                                position: 'relative',
+                                width: '100%',
+                                height: '140px',
+                                transform: hoveredTable === table.id ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)',
+                                transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                overflow: 'visible',
+                                zIndex: hoveredTable === table.id ? 50 : 10,
+                                willChange: 'transform',
+                              }}
                             >
-                              <CardContent className="pt-4 pb-3 relative">
-                                <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-3xl" />
+                              <CardContent 
+                                className="relative pt-4 pb-3 h-full flex flex-col"
+                                style={{
+                                  overflow: 'visible',
+                                }}
+                              >
+                                <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-3xl pointer-events-none" />
 
-                                <div className="space-y-3 relative">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-bold text-lg bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                                <div className="space-y-2.5 relative flex-1">
+                                  {/* Table Name */}
+                                  <div className="w-full">
+                                    <span 
+                                      className="font-bold text-base bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent break-words"
+                                    >
                                       {table.tag}
                                     </span>
+                                  </div>
+
+                                  {/* Status Badge */}
+                                  <div className="flex items-center justify-start">
                                     <Badge
                                       variant={getStatusColor(table.status)}
-                                      className={`
-                                        text-xs font-semibold transition-transform duration-300
-                                        ${hoveredTable === table.id ? 'scale-110' : ''}
-                                      `}
+                                      className="text-xs font-semibold w-fit"
                                     >
                                       {table.status}
                                     </Badge>
                                   </div>
 
+                                  {/* Seats Info */}
                                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                     <svg
-                                      className="w-4 h-4"
+                                      className="w-4 h-4 flex-shrink-0"
                                       fill="none"
                                       viewBox="0 0 24 24"
                                       stroke="currentColor"
@@ -534,44 +547,71 @@ export const TableManagementReadOnlyByFloor = ({
                                       {table.capacity === 1 ? 'seat' : 'seats'}
                                     </span>
                                   </div>
+                                </div>
 
-                                  {/* Action Buttons */}
-                                  {hoveredTable === table.id && (
-                                    <div className="pt-2 border-t border-border/50 flex gap-1">
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-7 px-2 flex-1"
-                                        onClick={() => handleViewQr(table)}
-                                      >
-                                        <Eye className="w-3 h-3 mr-1" />
-                                        QR
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-7 px-2 flex-1"
-                                        onClick={() => handleDownloadQr(table)}
-                                      >
-                                        <Download className="w-3 h-3 mr-1" />
-                                        DL
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-7 px-2 flex-1 text-destructive hover:text-destructive"
-                                        onClick={() => handleDeleteTable(table.id)}
-                                        disabled={isDeleteLoading === table.id}
-                                      >
-                                        <Trash2 className="w-3 h-3 mr-1" />
-                                        {isDeleteLoading === table.id ? '...' : 'Del'}
-                                      </Button>
-                                    </div>
-                                  )}
+                                {/* Action Buttons Overlay */}
+                                <div 
+                                  className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/95 via-background/90 to-transparent backdrop-blur-sm rounded-b-lg"
+                                  style={{
+                                    opacity: hoveredTable === table.id ? 1 : 0,
+                                    transform: hoveredTable === table.id ? 'translateY(0)' : 'translateY(10px)',
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    pointerEvents: hoveredTable === table.id ? 'auto' : 'none',
+                                  }}
+                                >
+                                  <div className="flex gap-2 justify-center p-2 border-t border-border/30">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-9 w-9 p-0 hover:bg-primary/10 hover:text-primary transition-colors"
+                                      onClick={() => handleViewQr(table)}
+                                      title="View QR Code"
+                                      style={{
+                                        transform: hoveredTable === table.id ? 'scale(1)' : 'scale(0.8)',
+                                        opacity: hoveredTable === table.id ? 1 : 0,
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.05s',
+                                      }}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-9 w-9 p-0 hover:bg-primary/10 hover:text-primary transition-colors"
+                                      onClick={() => handleDownloadQr(table)}
+                                      title="Download QR Code"
+                                      style={{
+                                        transform: hoveredTable === table.id ? 'scale(1)' : 'scale(0.8)',
+                                        opacity: hoveredTable === table.id ? 1 : 0,
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s',
+                                      }}
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                      onClick={() => handleDeleteTable(table.id)}
+                                      disabled={isDeleteLoading === table.id}
+                                      title="Delete Table"
+                                      style={{
+                                        transform: hoveredTable === table.id ? 'scale(1)' : 'scale(0.8)',
+                                        opacity: hoveredTable === table.id ? 1 : 0,
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.15s',
+                                      }}
+                                    >
+                                      {isDeleteLoading === table.id ? (
+                                        <div className="w-4 h-4 border-2 border-destructive border-t-transparent rounded-full animate-spin" />
+                                      ) : (
+                                        <Trash2 className="w-4 h-4" />
+                                      )}
+                                    </Button>
+                                  </div>
                                 </div>
 
                                 {hoveredTable === table.id && (
-                                  <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent rounded-lg pointer-events-none" />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent rounded-lg pointer-events-none" />
                                 )}
                               </CardContent>
                             </Card>
@@ -587,7 +627,92 @@ export const TableManagementReadOnlyByFloor = ({
         </Card>
       )}
 
-      {/* THAY ĐỔI: Create Table Dialog - Sử dụng Select cho Area */}
+      {/* Add Area Dialog */}
+      <Dialog open={isAreaDialogOpen} onOpenChange={setIsAreaDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Area</DialogTitle>
+            <DialogDescription>Create a new area for this branch</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="areaName">Area Name *</Label>
+              <Input
+                id="areaName"
+                value={areaName}
+                onChange={(e) => setAreaName(e.target.value)}
+                placeholder="e.g. Main Dining, Patio, Outdoor"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAreaDialogOpen(false);
+                  setAreaName('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!areaName.trim()) {
+                    toast({
+                      variant: 'destructive',
+                      title: 'Error',
+                      description: 'Area name is required',
+                    });
+                    return;
+                  }
+                  try {
+                    // Validate branchId is UUID before calling API
+                    const isValidUUID = (str: string): boolean => {
+                      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                      return uuidRegex.test(str);
+                    };
+                    
+                    if (!validBranchId || !isValidUUID(validBranchId)) {
+                      toast({
+                        variant: 'destructive',
+                        title: 'Error',
+                        description: 'Invalid branchId. Please select a valid branch.',
+                      });
+                      return;
+                    }
+                    
+                    await createAreaMutation.mutateAsync({
+                      branchId: validBranchId,
+                      name: areaName.trim(),
+                    });
+                    toast({
+                      title: 'Area added',
+                      description: 'New area has been created successfully.',
+                    });
+                    setAreaName('');
+                    setIsAreaDialogOpen(false);
+                  } catch (error: any) {
+                    console.error('Create area error:', error);
+                    const errorMessage =
+                      error?.response?.data?.message ||
+                      error?.message ||
+                      'Failed to create area. Please check if branchId is valid.';
+                    toast({
+                      variant: 'destructive',
+                      title: 'Error',
+                      description: errorMessage,
+                    });
+                  }
+                }}
+                disabled={createAreaMutation.isPending || !areaName.trim()}
+              >
+                {createAreaMutation.isPending ? 'Creating...' : 'Add Area'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Table Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -598,7 +723,7 @@ export const TableManagementReadOnlyByFloor = ({
           </DialogHeader>
 
           <form onSubmit={handleSubmit(handleCreateTable)} className="space-y-4">
-            {/* THAY ĐỔI: Select Area thay vì Input */}
+            {/* Select Area */}
             <div className="space-y-2">
               <Label htmlFor="areaId">Area *</Label>
               <Select
@@ -621,16 +746,15 @@ export const TableManagementReadOnlyByFloor = ({
               )}
             </div>
 
+            {/* Hiển thị table name sẽ được tự động generate */}
             <div className="space-y-2">
-              <Label htmlFor="tag">Table Name/Tag *</Label>
-              <Input
-                {...register('tag')}
-                id="tag"
-                placeholder="e.g., Table 1, Window Seat A"
-              />
-              {errors.tag && (
-                <p className="text-sm text-destructive">{errors.tag.message}</p>
-              )}
+              <Label>Table Name</Label>
+              <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium">
+                {autoGeneratedTag}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Table name will be automatically generated
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -665,7 +789,7 @@ export const TableManagementReadOnlyByFloor = ({
         </DialogContent>
       </Dialog>
 
-      {/* QR Code Dialog - GIỮ NGUYÊN */}
+      {/* QR Code Dialog */}
       <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -733,7 +857,7 @@ export const TableManagementReadOnlyByFloor = ({
             opacity: 1;
             transform: translateY(0);
           }
-            }
+        }
       `}</style>
     </div>
   );

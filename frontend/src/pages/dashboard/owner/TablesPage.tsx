@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useSessionStore } from '@/store/sessionStore';
-import { TableManagementReadOnlyByFloor } from '@/components/owner/TableManagementReadOnlyByFloor';
+import { ManagerTableManagementEnhanced } from '@/components/manager/ManagerTableManagementEnhanced';
 import { useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useBranches } from '@/hooks/queries/useBranches';
@@ -62,7 +62,24 @@ const OwnerTablesPage = () => {
     );
   }
 
-  return <TableManagementReadOnlyByFloor allowBranchSelection={true} />;
+  // Owner sẽ dùng ManagerTableManagementEnhanced với Select Branch
+  // Component này có view reservations, update status, nhưng không có delete/CRUD đầy đủ
+  // Owner có quyền Select Branch và KHÔNG có Add Area/Add Table
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Table Management</h1>
+        <p className="text-muted-foreground mt-2">
+          Manage table status, areas, and view reservations
+        </p>
+      </div>
+      <ManagerTableManagementEnhanced 
+        allowBranchSelection={true} 
+        hideAddButtons={true} 
+        disableStatusChange={true} 
+      />
+    </div>
+  );
 };
 
 export default OwnerTablesPage;

@@ -11,6 +11,7 @@ public class TableResponse {
     private String reservedBy;
     private UUID areaId;      // THÊM nếu cần
     private String areaName;  // THÊM nếu cần
+    private UUID branchId;    // ADD for short URL support
 
     public TableResponse(UUID id, String tag, int capacity, TableStatus status, 
                         String reservedBy, UUID areaId, String areaName) {
@@ -21,6 +22,12 @@ public class TableResponse {
         this.reservedBy = reservedBy;
         this.areaId = areaId;
         this.areaName = areaName;
+    }
+    
+    public TableResponse(UUID id, String tag, int capacity, TableStatus status, 
+                        String reservedBy, UUID areaId, String areaName, UUID branchId) {
+        this(id, tag, capacity, status, reservedBy, areaId, areaName);
+        this.branchId = branchId;
     }
 
     // Constructor cũ để tương thích với repository query
@@ -86,7 +93,15 @@ public class TableResponse {
         this.areaId = areaId; 
     }
     
-    public void setAreaName(String areaName) { 
-        this.areaName = areaName; 
+    public void setAreaName(String areaName) {
+        this.areaName = areaName;
+    }
+    
+    public UUID getBranchId() {
+        return branchId;
+    }
+    
+    public void setBranchId(UUID branchId) {
+        this.branchId = branchId;
     }
 }

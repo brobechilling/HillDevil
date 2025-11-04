@@ -13,6 +13,8 @@ import {
   downloadTableQr,
   downloadBranchQrPdf,
 } from '@/api/tableApi';
+import { useMemo } from 'react';
+import { getAccessToken } from '@/api/axiosClient';
 import { TableDTO, CreateTableRequest, TableStatus, QrCodeJsonResponse } from '@/dto/table.dto';
 
 /**
@@ -24,10 +26,39 @@ export const useTables = (
   size: number = 20,
   sort?: string
 ) => {
+  // Helper function to validate UUID format
+  const isValidUUID = (str: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  };
+
+  // Kiểm tra token và branchId hợp lệ (phải là UUID format)
+  const isValidBranchId = useMemo(() => {
+    if (!branchId || typeof branchId !== 'string') return false;
+    const trimmed = branchId.trim();
+    return trimmed !== '' && isValidUUID(trimmed);
+  }, [branchId]);
+  
+  const hasToken = useMemo(() => {
+    const token = getAccessToken();
+    return !!token && token.trim() !== '';
+  }, []); // Check token mỗi lần component render
+  
   return useQuery({
     queryKey: ['tables', branchId, page, size, sort],
-    queryFn: () => getTablesByBranch(branchId!, page, size, sort),
-    enabled: !!branchId,
+    queryFn: () => {
+      // Double check trước khi gọi API
+      if (!branchId || branchId.trim() === '') {
+        throw new Error('BranchId is required');
+      }
+      if (!isValidUUID(branchId.trim())) {
+        throw new Error('BranchId must be a valid UUID');
+      }
+      return getTablesByBranch(branchId, page, size, sort);
+    },
+    enabled: isValidBranchId && hasToken,
+    retry: false, // Không retry để tránh spam requests khi có lỗi
+    throwOnError: false, // Không throw error để tránh uncaught promise
   });
 };
 
@@ -127,10 +158,15 @@ export const useDeleteTable = () => {
   return useMutation({
     mutationFn: deleteTable,
     onSuccess: () => {
-      // Invalidate all tables queries
+      // Chỉ invalidate khi thực sự thành công
       queryClient.invalidateQueries({
         queryKey: ['tables'],
       });
+    },
+    onError: (error) => {
+      // Log error để debug
+      console.error('Delete table error:', error);
+      // Không invalidate queries khi có lỗi
     },
   });
 };

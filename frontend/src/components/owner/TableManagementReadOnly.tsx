@@ -145,6 +145,7 @@ export const TableManagementReadOnly = ({ branches }: TableManagementReadOnlyPro
           table={qrDialogTable}
           open={!!qrDialogTable}
           onOpenChange={(open) => !open && setQrDialogTable(null)}
+          branchId={selectedBranchId}
         />
       )}
     </div>

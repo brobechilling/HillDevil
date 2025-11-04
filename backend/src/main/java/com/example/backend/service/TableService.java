@@ -69,6 +69,75 @@ public class TableService {
         
         response.setReservedBy(reservedBy);
         
+        // Set branchId từ area.branch for short URL support
+        if (table.getArea() != null && table.getArea().getBranch() != null) {
+            response.setBranchId(table.getArea().getBranch().getBranchId());
+        }
+        
+        return response;
+    }
+    
+    /**
+     * Lấy thông tin table bằng tag (table name) - dùng cho short URL /t/{tableName}
+     * (For backward compatibility)
+     */
+    @Transactional(readOnly = true)
+    public TableResponse getTableByTag(String tag) {
+        // Normalize tag: lowercase, trim, replace hyphens with spaces for matching
+        String normalizedTag = tag.toLowerCase().trim().replace("-", " ");
+        
+        // Try exact match first (case-insensitive)
+        AreaTable table = tableRepository.findByTagIgnoreCase(tag)
+                .orElseGet(() -> {
+                    // If not found, try with normalized tag (replace hyphens)
+                    return tableRepository.findByTagIgnoreCase(normalizedTag)
+                            .orElseThrow(() -> new NoSuchElementException("Table not found with tag: " + tag));
+                });
+        
+        return buildTableResponse(table);
+    }
+    
+    /**
+     * Lấy thông tin table bằng area name và table tag - dùng cho short URL /t/{areaName}/{tableName}
+     */
+    @Transactional(readOnly = true)
+    public TableResponse getTableByAreaNameAndTag(String areaName, String tag) {
+        // Normalize both area name and tag: lowercase, trim, replace hyphens with spaces for matching
+        String normalizedAreaName = areaName.toLowerCase().trim().replace("-", " ");
+        String normalizedTag = tag.toLowerCase().trim().replace("-", " ");
+        
+        // Try exact match first (case-insensitive)
+        AreaTable table = tableRepository.findByAreaNameAndTagIgnoreCase(areaName, tag)
+                .orElseGet(() -> {
+                    // If not found, try with normalized values
+                    return tableRepository.findByAreaNameAndTagIgnoreCase(normalizedAreaName, normalizedTag)
+                            .orElseThrow(() -> new NoSuchElementException("Table not found with area: " + areaName + ", tag: " + tag));
+                });
+        
+        return buildTableResponse(table);
+    }
+    
+    /**
+     * Helper method to build TableResponse from AreaTable
+     */
+    private TableResponse buildTableResponse(AreaTable table) {
+        // Map entity sang DTO bằng MapStruct
+        TableResponse response = tableMapper.toTableResponse(table);
+        
+        // Set reservedBy nếu có reservation RESERVED
+        String reservedBy = table.getReservations().stream()
+                .filter(r -> "RESERVED".equals(r.getStatus().toString()))
+                .findFirst()
+                .map(r -> r.getCustomerName())
+                .orElse(null);
+        
+        response.setReservedBy(reservedBy);
+        
+        // Set branchId từ area.branch for short URL support
+        if (table.getArea() != null && table.getArea().getBranch() != null) {
+            response.setBranchId(table.getArea().getBranch().getBranchId());
+        }
+        
         return response;
     }
 

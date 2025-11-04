@@ -16,7 +16,8 @@ public interface TableRepository extends JpaRepository<AreaTable, UUID> {
 
     /**
      * Lấy danh sách tables của branch với phân trang
-     * ✅ Constructor TableResponse(UUID, String, int, TableStatus, String)
+     * ✅ Constructor TableResponse(UUID, String, int, TableStatus, String, UUID, String)
+     * Bao gồm areaId và areaName để frontend có thể hiển thị đúng tên area
      */
     @Query("""
         SELECT new com.example.backend.dto.response.TableResponse(
@@ -24,14 +25,16 @@ public interface TableRepository extends JpaRepository<AreaTable, UUID> {
             t.tag,
             t.capacity,
             t.status,
-            MAX(r.customerName)
+            MAX(r.customerName),
+            a.areaId,
+            a.name
         )
         FROM AreaTable t
             JOIN t.area a
             JOIN a.branch b
             LEFT JOIN t.reservations r ON r.status = 'RESERVED'
         WHERE b.branchId = :branchId
-        GROUP BY t.areaTableId, t.tag, t.capacity, t.status
+        GROUP BY t.areaTableId, t.tag, t.capacity, t.status, a.areaId, a.name
         ORDER BY t.tag ASC
         """)
     Page<TableResponse> findTablesByBranch(@Param("branchId") UUID branchId, Pageable pageable);
@@ -88,4 +91,33 @@ public interface TableRepository extends JpaRepository<AreaTable, UUID> {
     """)
     boolean existsByIdAndBranchId(@Param("tableId") UUID tableId, 
                                    @Param("branchId") UUID branchId);
+    
+    /**
+     * Tìm table bằng tag (case-insensitive) với eager loading
+     * Dùng cho short URL: /t/{tableName} (old format, for backward compatibility)
+     */
+    @Query("""
+        SELECT t
+        FROM AreaTable t
+        LEFT JOIN FETCH t.area a
+        LEFT JOIN FETCH a.branch b
+        LEFT JOIN FETCH t.reservations r
+        WHERE LOWER(TRIM(t.tag)) = LOWER(TRIM(:tag))
+    """)
+    Optional<AreaTable> findByTagIgnoreCase(@Param("tag") String tag);
+    
+    /**
+     * Tìm table bằng area name và table tag (case-insensitive) với eager loading
+     * Dùng cho short URL: /t/{areaName}/{tableName}
+     */
+    @Query("""
+        SELECT t
+        FROM AreaTable t
+        LEFT JOIN FETCH t.area a
+        LEFT JOIN FETCH a.branch b
+        LEFT JOIN FETCH t.reservations r
+        WHERE LOWER(TRIM(a.name)) = LOWER(TRIM(:areaName))
+          AND LOWER(TRIM(t.tag)) = LOWER(TRIM(:tag))
+    """)
+    Optional<AreaTable> findByAreaNameAndTagIgnoreCase(@Param("areaName") String areaName, @Param("tag") String tag);
 }

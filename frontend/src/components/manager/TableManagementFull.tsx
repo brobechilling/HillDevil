@@ -181,6 +181,7 @@ export const TableManagementFull = ({ branchId }: TableManagementFullProps) => {
           if (!open) setSelectedTable(null);
         }}
         table={selectedTable}
+        branchId={branchId}
       />
 
       <AlertDialog open={!!tableToDelete} onOpenChange={() => setTableToDelete(null)}>

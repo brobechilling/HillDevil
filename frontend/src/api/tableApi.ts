@@ -19,11 +19,16 @@ export const getTablesByBranch = async (
   size: number = 20,
   sort?: string
 ) => {
+  // Validate branchId trước khi gọi API
+  if (!branchId || branchId.trim() === '') {
+    throw new Error('BranchId is required');
+  }
+  
   const res = await axiosClient.get<ApiResponse<PagedTableResponse>>(
     "/owner/tables",
     {
       params: {
-        branchId,
+        branchId: branchId.trim(),
         page,
         size,
         ...(sort && { sort }),
@@ -99,9 +104,13 @@ export const updateTableStatus = async (
  * Xóa table
  */
 export const deleteTable = async (tableId: string): Promise<void> => {
-  await axiosClient.delete<ApiResponse<void>>(
+  const res = await axiosClient.delete<ApiResponse<void>>(
     `/owner/tables/${tableId}`
   );
+  // Kiểm tra response status - nếu không phải success thì throw error
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`Failed to delete table: ${res.status}`);
+  }
 };
 
 /**
