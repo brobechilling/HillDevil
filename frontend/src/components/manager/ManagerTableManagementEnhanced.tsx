@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAreas, useCreateArea, useDeleteArea } from '@/hooks/queries/useAreas';
 import { useTables, useDeleteTable, useUpdateTableStatus, useUpdateTable } from '@/hooks/queries/useTables';
 import { useBranches, useBranchesByRestaurant } from '@/hooks/queries/useBranches';
+import { useQueryClient } from '@tanstack/react-query';
 import { BranchSelection } from '@/components/common/BranchSelection';
 import { BranchDTO } from '@/dto/branch.dto';
 import { TableDTO } from '@/dto/table.dto';
@@ -78,6 +79,7 @@ export const ManagerTableManagementEnhanced = ({
   const { data: areas = [] } = useAreas(validBranchId);
   const createAreaMutation = useCreateArea();
   const deleteAreaMutation = useDeleteArea();
+  const queryClient = useQueryClient();
   
   const { data: tablesData, isLoading: isTablesLoading, error: tablesError, refetch: refetchTables } = useTables(validBranchId);
   const existingTables: TableDTO[] = tablesData?.content || [];
@@ -317,7 +319,8 @@ export const ManagerTableManagementEnhanced = ({
         }
       }
 
-      await updateTableMutation.mutateAsync({
+      // Update table (area, capacity)
+      const updatedTableResponse = await updateTableMutation.mutateAsync({
         tableId: selectedTable.id,
         data: {
           areaId: editFormData.areaId,
@@ -327,12 +330,46 @@ export const ManagerTableManagementEnhanced = ({
       });
 
       // Update status separately if it changed
+      let finalTableData = updatedTableResponse;
       if (editFormData.status !== selectedTable.status) {
-        await updateTableStatusMutation.mutateAsync({
+        finalTableData = await updateTableStatusMutation.mutateAsync({
           tableId: selectedTable.id,
           status: apiStatus,
         });
       }
+
+      // Find area name for the new areaId
+      const newArea = areas.find(a => a.areaId === editFormData.areaId);
+      
+      // Prepare updated table data with area name
+      const updatedTableData = {
+        ...finalTableData,
+        areaId: editFormData.areaId,
+        areaName: newArea?.name || finalTableData.areaName || selectedTable.areaName,
+        capacity: editFormData.capacity,
+        status: apiStatus,
+      };
+
+      // Update selectedTable immediately with response data
+      setSelectedTable(updatedTableData);
+
+      // Update React Query cache directly to update the list view immediately
+      // useTables hook uses queryKey: ['tables', branchId, page, size, sort]
+      // We need to update all matching queries for this branchId
+      // IMPORTANT: Update cache BEFORE invalidateQueries triggers refetch
+      // This ensures the UI shows the new data immediately
+      queryClient.setQueriesData(
+        { queryKey: ['tables', validBranchId] },
+        (oldData: any) => {
+          if (!oldData || !oldData.content) return oldData;
+          return {
+            ...oldData,
+            content: oldData.content.map((table: TableDTO) =>
+              table.id === selectedTable.id ? updatedTableData : table
+            ),
+          };
+        }
+      );
 
       toast({
         title: 'Table updated successfully',

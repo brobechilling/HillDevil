@@ -194,7 +194,19 @@ public class TableService {
         // Update entity từ request bằng MapStruct
         tableMapper.updateEntityFromRequest(req, table);
         
+        // Update area nếu areaId được cung cấp
+        if (req.getAreaId() != null) {
+            Area newArea = areaRepository.findById(req.getAreaId())
+                    .orElseThrow(() -> new IllegalArgumentException("Area not found with id: " + req.getAreaId()));
+            table.setArea(newArea);
+        }
+        
         table = tableRepository.save(table);
+        
+        // Force initialize area để đảm bảo areaName được load khi map
+        if (table.getArea() != null) {
+            table.getArea().getName(); // Trigger lazy loading
+        }
         
         return tableMapper.toTableResponse(table);
     }

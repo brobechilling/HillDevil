@@ -115,12 +115,29 @@ export const useUpdateTable = () => {
   return useMutation({
     mutationFn: ({ tableId, data }: { tableId: string; data: CreateTableRequest }) =>
       updateTable(tableId, data),
-    onSuccess: (data) => {
-      // Invalidate specific table query
+    onSuccess: (updatedTable) => {
+      // Update cache immediately with the response data to avoid showing stale data
+      // This ensures the UI reflects the changes immediately
+      queryClient.setQueriesData(
+        { queryKey: ['tables'] },
+        (oldData: any) => {
+          if (!oldData || !oldData.content) return oldData;
+          return {
+            ...oldData,
+            content: oldData.content.map((table: TableDTO) =>
+              table.id === updatedTable.id ? updatedTable : table
+            ),
+          };
+        }
+      );
+      
+      // Also update the specific table query
+      queryClient.setQueryData(['table', updatedTable.id], updatedTable);
+      
+      // Invalidate queries to refetch in background (but cache already updated above)
       queryClient.invalidateQueries({
-        queryKey: ['table', data.id],
+        queryKey: ['table', updatedTable.id],
       });
-      // Invalidate all tables queries
       queryClient.invalidateQueries({
         queryKey: ['tables'],
       });
@@ -137,12 +154,28 @@ export const useUpdateTableStatus = () => {
   return useMutation({
     mutationFn: ({ tableId, status }: { tableId: string; status: TableStatus }) =>
       updateTableStatus(tableId, status),
-    onSuccess: (data) => {
-      // Invalidate specific table query
+    onSuccess: (updatedTable) => {
+      // Update cache immediately with the response data
+      queryClient.setQueriesData(
+        { queryKey: ['tables'] },
+        (oldData: any) => {
+          if (!oldData || !oldData.content) return oldData;
+          return {
+            ...oldData,
+            content: oldData.content.map((table: TableDTO) =>
+              table.id === updatedTable.id ? updatedTable : table
+            ),
+          };
+        }
+      );
+      
+      // Also update the specific table query
+      queryClient.setQueryData(['table', updatedTable.id], updatedTable);
+      
+      // Invalidate queries to refetch in background (but cache already updated above)
       queryClient.invalidateQueries({
-        queryKey: ['table', data.id],
+        queryKey: ['table', updatedTable.id],
       });
-      // Invalidate all tables queries
       queryClient.invalidateQueries({
         queryKey: ['tables'],
       });
