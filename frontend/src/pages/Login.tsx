@@ -24,9 +24,6 @@ const Login = () => {
   const loginMutation = useMutation({
   mutationFn: login,
   onSuccess: async (data) => {
-    console.log('Login success - User data:', data.user);
-
-    // ✅ Lưu vào sessionStore zustand
     setSession(data.user, data.accessToken);
 
     switch (data.user.role.name) {
@@ -53,15 +50,6 @@ const Login = () => {
           });
         }
         return;
-      // case "BRANCH_MANAGER":
-      //   navigate('/dashboard/manager');
-      //   return;
-      // case "WAITER":
-      //   navigate('/dashboard/waiter');
-      //   return;
-      // case "RECEPTIONIST":
-      //   navigate('/dashboard/receptionist');
-      //   return;
       case "ADMIN":
         navigate('/dashboard/admin');
         return;

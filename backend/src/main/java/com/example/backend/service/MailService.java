@@ -1,6 +1,8 @@
 package com.example.backend.service;
 
 import org.springframework.web.client.RestClient;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import com.example.backend.dto.request.OTPMailRequest;
 import com.example.backend.dto.request.OTPValidateMailRequest;
@@ -21,14 +23,16 @@ public class MailService {
 
     private final RestClient restClient;
     private final OTPService otpService;
+    private final TemplateEngine templateEngine;
 
-    public MailService(@Value("${brevo.mail_base_url}") String baseUrl, @Value("${brevo.api_key}") String apiKey, OTPService otpService) {
+    public MailService(@Value("${brevo.mail_base_url}") String baseUrl, @Value("${brevo.api_key}") String apiKey, OTPService otpService, TemplateEngine templateEngine) {
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader("accept", "application/json")
                 .defaultHeader("api-key", apiKey) 
                 .build();
         this.otpService = otpService;
+        this.templateEngine = templateEngine;
     }
 
     public void sendEmail() {
@@ -59,10 +63,11 @@ public class MailService {
     
     public void sendOTPMail(OTPMailRequest otpMailRequest) {
         String otp = otpService.generateOTPCode(otpMailRequest.getMail());
-        String htmlContent = String.format(
-            "<p>Your OTP code is: <b>%s</b></p>" +
-            "<p>This code will expire in 1 minutes.</p>", otp
-        );
+        // String htmlContent = String.format(
+        //     "<p>Your OTP code is: <b>%s</b></p>" +
+        //     "<p>This code will expire in 1 minutes.</p>", otp
+        // );
+        String htmlContent = generateHtmlContentOTPMail(otpMailRequest.getName(), otp);
         Map<String, Object> requestBody = Map.of(
             "sender", Map.of(
                 "email", OTP_SENDER_EMAIL,
@@ -84,7 +89,10 @@ public class MailService {
 
     }
 
-    public boolean checkOTP(OTPValidateMailRequest otpValidateMailRequest) {
-        return otpService.validateOTPCode(otpValidateMailRequest.getOtp(), otpValidateMailRequest.getEmail());
+    private String generateHtmlContentOTPMail(String name, String otp) {
+        Context context = new Context();
+        context.setVariable("name", name);
+        context.setVariable("otp", otp);
+        return templateEngine.process("otpMail", context);
     }
 }

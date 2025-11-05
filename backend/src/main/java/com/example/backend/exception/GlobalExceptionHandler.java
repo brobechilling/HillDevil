@@ -1,7 +1,6 @@
 package com.example.backend.exception;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -34,8 +33,7 @@ public class GlobalExceptionHandler {
         ApiResponse<Void> apiResponse = new ApiResponse<>();
         apiResponse.setCode(ErrorCode.WE_COOKED.getCode());
         apiResponse.setMessage(ErrorCode.WE_COOKED.getMessage());
-        return
-        ResponseEntity.status(ErrorCode.WE_COOKED.getStatusCode()).body(apiResponse);
+        return ResponseEntity.status(ErrorCode.WE_COOKED.getStatusCode()).body(apiResponse);
     }
 
 }

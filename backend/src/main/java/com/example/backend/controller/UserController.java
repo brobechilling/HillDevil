@@ -112,12 +112,12 @@ public class UserController {
         return apiResponse;
     }
 
-    @PostMapping("/mail/otp")
-    public ApiResponse<Boolean> validateOTP(@RequestBody OTPValidateMailRequest otpValidateMailRequest) {
-        ApiResponse<Boolean> apiResponse = new ApiResponse<>();
-        mailService.sendEmail();
-        apiResponse.setResult(mailService.checkOTP(otpValidateMailRequest));
-        return apiResponse;
-    }
+    // @PostMapping("/mail/otp")
+    // public ApiResponse<Boolean> validateOTP(@RequestBody OTPValidateMailRequest otpValidateMailRequest) {
+    //     ApiResponse<Boolean> apiResponse = new ApiResponse<>();
+    //     mailService.sendEmail();
+    //     apiResponse.setResult(mailService.checkOTP(otpValidateMailRequest));
+    //     return apiResponse;
+    // }
     
 }
