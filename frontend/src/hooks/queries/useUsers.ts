@@ -1,4 +1,4 @@
-import { changePassword, getUsers, setUserStatus, updateUser } from "@/api/userApi";
+import { changePassword, getUsers, sendMailVerification, setUserStatus, updateUser, validateOTP } from "@/api/userApi";
 import { PageResponse } from "@/dto/pageResponse";
 import { UserDTO } from "@/dto/user.dto";
 import { useSessionStore } from "@/store/sessionStore";
@@ -6,7 +6,6 @@ import { useMutation, UseMutationOptions, useQuery, useQueryClient } from "@tans
 import { useToast } from '@/hooks/use-toast';
 import { AxiosError } from "axios";
 import { ApiResponse } from "@/dto/apiResponse";
-
 
 export const useUsersPaginatedQuery = (page: number, size: number) => {
   return useQuery<PageResponse<UserDTO>, Error>({
@@ -73,3 +72,16 @@ export const useUpdateUserProfile = () => {
   });
 };
 
+export const useVerifyMail = () => {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: sendMailVerification,
+  });
+};
+
+
+export const useValidateOTP = () => {
+  return useMutation({
+    mutationFn: validateOTP, 
+  });
+};

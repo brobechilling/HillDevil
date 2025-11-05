@@ -56,7 +56,10 @@ public class UserService {
 
     public UserDTO signUp(SignupRequest signupRequest) {
         // email should be unique
-        userRepository.findByEmail(signupRequest.getEmail()).orElseThrow(() -> new AppException(ErrorCode.EMAIL_EXISTED));
+        if (userRepository.findByEmail(signupRequest.getEmail()).isPresent())
+        {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
+        }
         User newUser = userMapper.signUp(signupRequest);
         newUser.setPassword(passwordEncoder.encode(newUser.getPassword()));
         Role ownerRole = roleRepository.findByName(RoleName.RESTAURANT_OWNER).orElseThrow(() -> new AppException(ErrorCode.ROLE_NOTEXISTED));

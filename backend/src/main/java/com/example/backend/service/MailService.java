@@ -20,6 +20,7 @@ public class MailService {
 
     private static final String OTP_SENDER_NAME = "nhacaidentuchauau";
     private static final String OTP_SENDER_EMAIL = "wuocnguyenn@gmail.com";
+    private static final String EMAIL_VERIFICATION_SUBJECT = "[HILLDEVIL] Verification Email Guide";
 
     private final RestClient restClient;
     private final OTPService otpService;
@@ -58,15 +59,11 @@ public class MailService {
                 .body(requestBody)
                 .retrieve()
                 .toEntity(String.class);
-
     }
     
+    // email verification service
     public void sendOTPMail(OTPMailRequest otpMailRequest) {
         String otp = otpService.generateOTPCode(otpMailRequest.getMail());
-        // String htmlContent = String.format(
-        //     "<p>Your OTP code is: <b>%s</b></p>" +
-        //     "<p>This code will expire in 1 minutes.</p>", otp
-        // );
         String htmlContent = generateHtmlContentOTPMail(otpMailRequest.getName(), otp);
         Map<String, Object> requestBody = Map.of(
             "sender", Map.of(
@@ -78,7 +75,7 @@ public class MailService {
                 "name", otpMailRequest.getName()
             )),
             "htmlContent", htmlContent,
-            "subject", "RESET PASSWORD VALIDATION"
+            "subject", EMAIL_VERIFICATION_SUBJECT
         );
 
         ResponseEntity<String> response = restClient.post() 
