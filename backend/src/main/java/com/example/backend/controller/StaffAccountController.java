@@ -6,9 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.StaffAccountDTO;
 import com.example.backend.dto.request.CreateStaffAccountRequest;
-import com.example.backend.dto.request.ResetPasswordRequest;
 import com.example.backend.dto.response.PageResponse;
-import com.example.backend.dto.response.ResetPasswordResponse;
 import com.example.backend.entities.RoleName;
 import com.example.backend.service.StaffAccountService;
 
@@ -98,21 +96,5 @@ public class StaffAccountController {
         apiResponse.setResult(staffAccountService.getStaffAccountByRestaurantPaginated(page, size, restaurantId));
         return apiResponse;
     }
-    
-    // @GetMapping("/{staffAccountId}")
-    // public ApiResponse<StaffAccountDTO> getStaffAccountById(@PathVariable UUID staffAccountId) {
-    //     ApiResponse<StaffAccountDTO> apiResponse = new ApiResponse<>();
-    //     apiResponse.setResult(staffAccountService.getStaffAccountById(staffAccountId));
-    //     return apiResponse;
-    // }
-    
-    // @PostMapping("/{staffAccountId}/reset-password")
-    // public ApiResponse<ResetPasswordResponse> resetPassword(
-    //         @PathVariable UUID staffAccountId,
-    //         @RequestBody(required = false) ResetPasswordRequest request) {
-    //     ApiResponse<ResetPasswordResponse> apiResponse = new ApiResponse<>();
-    //     apiResponse.setResult(staffAccountService.resetPassword(staffAccountId, request));
-    //     return apiResponse;
-    // }
-    
+        
 }
