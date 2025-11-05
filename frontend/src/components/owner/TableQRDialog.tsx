@@ -48,25 +48,9 @@ export const TableQRDialog = ({ open, onOpenChange, table, branchId }: TableQRDi
     return null;
   }
 
-  // Use shorter URL format with area name and table name: /t/{areaName}/{tableName}
-  // Sanitize function for URL-safe strings
-  const sanitizeForUrl = (str: string) => {
-    return String(str)
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, '-')  // Replace spaces with hyphens
-      .replace(/[^a-z0-9\-]/g, '')  // Remove special characters except hyphens
-      .replace(/-+/g, '-')  // Replace multiple hyphens with single hyphen
-      .replace(/^-|-$/g, '');  // Remove leading/trailing hyphens
-  };
-  
-  const tableName = table.tag || (table as any).number || tableId;
-  const areaName = table.areaName || (table as any).area?.name || 'unassigned';
-  
-  const sanitizedAreaName = sanitizeForUrl(areaName);
-  const sanitizedTableName = sanitizeForUrl(tableName);
-  
-  const tableUrl = `${window.location.origin}/t/${sanitizedAreaName}/${sanitizedTableName}`;
+  // Use new URL format with branchId and tableId: /t/{branchId}/{tableId}
+  // This format is unique and prevents conflicts when multiple branches have same area/table names
+  const tableUrl = `${window.location.origin}/t/${finalBranchId}/${tableId}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(tableUrl);

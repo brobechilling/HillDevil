@@ -14,9 +14,12 @@ import {
   Receipt,
   ChefHat,
   Home,
+  ArrowLeft,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { UserDTO } from '@/dto/user.dto';
+import { ROLE_NAME } from '@/dto/user.dto';
 
 const menuItems = [
   { 
@@ -127,16 +130,28 @@ export const ManagerSidebar = () => {
         </Link>
       </div>
 
-      {isOwnerView && (
-        <div className="px-4 pt-4">
-          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="default" className="text-xs">Owner View</Badge>
+      {(isOwnerView || isOwner) && (
+        <div className="px-4 pt-4 space-y-2">
+          {isOwnerView && (
+            <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="default" className="text-xs">Owner View</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Viewing as manager: {branchName}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Viewing as manager: {branchName}
-            </p>
-          </div>
+          )}
+          {isOwner && (
+            <Button
+              variant="outline"
+              className="w-full justify-start bg-background border-2 border-primary/30 hover:border-primary hover:bg-primary/10 text-foreground font-medium shadow-sm hover:shadow-md transition-all"
+              onClick={() => navigate('/dashboard/owner/overview')}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Owner Dashboard
+            </Button>
+          )}
         </div>
       )}
 

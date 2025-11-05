@@ -110,6 +110,10 @@ export const routes: RouteObject[] = [
     element: <GuestLanding />,
   },
   {
+    path: '/t/:branchId/:tableId',
+    element: <GuestLanding />,
+  },
+  {
     path: '/t/:areaName/:tableName',
     element: <GuestLanding />,
   },

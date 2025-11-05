@@ -98,7 +98,44 @@ public class TableService {
     }
     
     /**
-     * Lấy thông tin table bằng area name và table tag - dùng cho short URL /t/{areaName}/{tableName}
+     * Lấy thông tin table bằng branchId và tableId - dùng cho URL /t/{branchId}/{tableId}
+     * Đây là format mới, unique và không bị trùng lặp
+     */
+    @Transactional(readOnly = true)
+    public TableResponse getTableByBranchIdAndTableId(UUID branchId, UUID tableId) {
+        AreaTable table = tableRepository.findByIdWithDetails(tableId)
+                .orElseThrow(() -> new NoSuchElementException("Table not found with id: " + tableId));
+        
+        // Force initialize area and branch to avoid LazyInitializationException
+        // Access area first to trigger lazy loading
+        if (table.getArea() == null) {
+            throw new NoSuchElementException("Table does not belong to any area");
+        }
+        
+        // Force initialize area by accessing its ID and name (triggers lazy loading)
+        table.getArea().getAreaId();
+        table.getArea().getName(); // Force load area name
+        
+        // Force initialize branch
+        if (table.getArea().getBranch() == null) {
+            throw new NoSuchElementException("Table's area does not belong to any branch");
+        }
+        
+        // Force initialize branch by accessing its ID (triggers lazy loading)
+        // This ensures branch is fully loaded before mapping
+        UUID tableBranchId = table.getArea().getBranch().getBranchId();
+        
+        // Verify table belongs to the specified branch
+        if (!tableBranchId.equals(branchId)) {
+            throw new IllegalArgumentException("Table " + tableId + " does not belong to branch " + branchId + ". Table belongs to branch " + tableBranchId);
+        }
+        
+        // All lazy fields are now loaded, safe to map
+        return buildTableResponse(table);
+    }
+    
+    /**
+     * (For backward compatibility - deprecated, use /t/{branchId}/{tableId} instead)
      */
     @Transactional(readOnly = true)
     public TableResponse getTableByAreaNameAndTag(String areaName, String tag) {
@@ -121,17 +158,31 @@ public class TableService {
      * Helper method to build TableResponse from AreaTable
      */
     private TableResponse buildTableResponse(AreaTable table) {
+        // Force initialize area and branch before mapping to avoid LazyInitializationException
+        if (table.getArea() != null) {
+            table.getArea().getAreaId();
+            table.getArea().getName();
+            if (table.getArea().getBranch() != null) {
+                table.getArea().getBranch().getBranchId();
+            }
+        }
+        
         // Map entity sang DTO bằng MapStruct
         TableResponse response = tableMapper.toTableResponse(table);
         
         // Set reservedBy nếu có reservation RESERVED
-        String reservedBy = table.getReservations().stream()
-                .filter(r -> "RESERVED".equals(r.getStatus().toString()))
-                .findFirst()
-                .map(r -> r.getCustomerName())
-                .orElse(null);
-        
-        response.setReservedBy(reservedBy);
+        // Reservations should be loaded by findByIdWithDetails, but check to be safe
+        try {
+            String reservedBy = table.getReservations().stream()
+                    .filter(r -> "RESERVED".equals(r.getStatus().toString()))
+                    .findFirst()
+                    .map(r -> r.getCustomerName())
+                    .orElse(null);
+            response.setReservedBy(reservedBy);
+        } catch (Exception e) {
+            // If reservations are not loaded, just set null
+            response.setReservedBy(null);
+        }
         
         // Set branchId từ area.branch for short URL support
         if (table.getArea() != null && table.getArea().getBranch() != null) {
@@ -207,7 +258,7 @@ public class TableService {
         if (table.getArea() != null) {
             table.getArea().getName(); // Trigger lazy loading
         }
-        
+
         return tableMapper.toTableResponse(table);
     }
 
