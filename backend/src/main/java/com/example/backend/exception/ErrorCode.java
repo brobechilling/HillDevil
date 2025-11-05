@@ -66,6 +66,12 @@ public enum ErrorCode {
     MEDIA_DELETE_FAILED(4053, "File delete failed", HttpStatus.BAD_REQUEST),
     TARGET_TYPE_NOT_FOUND(4054, "Target type not found", HttpStatus.NOT_FOUND),
 
+    //Order Features
+    ORDER_NOT_EXISTS(5001, "Order not exists", HttpStatus.NOT_FOUND),
+    ORDERLINE_NOT_EXISTS(5002, "Orderline not exists", HttpStatus.NOT_FOUND),
+    TABLE_ALREADY_HAS_PENDING_ORDER(5003, "Table already has pending order", HttpStatus.BAD_REQUEST),
+    ORDER_ALREADY_COMPLETED(5004, "Order already completed", HttpStatus.BAD_REQUEST),
+
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
 
