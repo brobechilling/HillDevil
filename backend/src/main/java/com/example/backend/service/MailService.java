@@ -5,7 +5,6 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import com.example.backend.dto.request.OTPMailRequest;
-import com.example.backend.dto.request.OTPValidateMailRequest;
 
 import java.util.List;
 import java.util.Map;

@@ -73,7 +73,6 @@ export const useUpdateUserProfile = () => {
 };
 
 export const useVerifyMail = () => {
-  const { toast } = useToast();
   return useMutation({
     mutationFn: sendMailVerification,
   });
