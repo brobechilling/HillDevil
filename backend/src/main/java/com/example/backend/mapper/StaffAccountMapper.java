@@ -11,7 +11,6 @@ import com.example.backend.entities.StaffAccount;
 public interface StaffAccountMapper {
 
     @Mapping(target = "branchId", source = "branch.branchId")
-    @Mapping(target = "password", source = "password")
     StaffAccountDTO toStaffAccountDTO(StaffAccount staffAccount);
 
     StaffAccount toStaffAccount(StaffAccountDTO staffAccountDTO);

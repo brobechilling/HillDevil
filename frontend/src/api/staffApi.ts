@@ -49,28 +49,28 @@ export const setStaffAccountStatus = async (staffAccountId: string) => {
   return res.data.result;
 };
 
-export const getStaffAccountById = async (staffAccountId: string) => {
-  const res = await axiosClient.get<ApiResponse<StaffAccountDTO>>(`/staff/${staffAccountId}`);
-  return res.data.result;
-};
+// export const getStaffAccountById = async (staffAccountId: string) => {
+//   const res = await axiosClient.get<ApiResponse<StaffAccountDTO>>(`/staff/${staffAccountId}`);
+//   return res.data.result;
+// };
 
-export interface ResetPasswordResponse {
-  staffAccountId: string;
-  username: string;
-  newPassword: string; // Password gốc (plain text)
-}
+// export interface ResetPasswordResponse {
+//   staffAccountId: string;
+//   username: string;
+//   newPassword: string; // Password gốc (plain text)
+// }
 
-export interface ResetPasswordRequest {
-  newPassword?: string; // Optional: nếu không có thì auto generate
-}
+// export interface ResetPasswordRequest {
+//   newPassword?: string; // Optional: nếu không có thì auto generate
+// }
 
-export const resetStaffPassword = async (
-  staffAccountId: string, 
-  request?: ResetPasswordRequest
-) => {
-  const res = await axiosClient.post<ApiResponse<ResetPasswordResponse>>(
-    `/staff/${staffAccountId}/reset-password`,
-    request || {}
-  );
-  return res.data.result;
-};
+// export const resetStaffPassword = async (
+//   staffAccountId: string, 
+//   request?: ResetPasswordRequest
+// ) => {
+//   const res = await axiosClient.post<ApiResponse<ResetPasswordResponse>>(
+//     `/staff/${staffAccountId}/reset-password`,
+//     request || {}
+//   );
+//   return res.data.result;
+// };

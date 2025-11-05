@@ -99,20 +99,20 @@ public class StaffAccountController {
         return apiResponse;
     }
     
-    @GetMapping("/{staffAccountId}")
-    public ApiResponse<StaffAccountDTO> getStaffAccountById(@PathVariable UUID staffAccountId) {
-        ApiResponse<StaffAccountDTO> apiResponse = new ApiResponse<>();
-        apiResponse.setResult(staffAccountService.getStaffAccountById(staffAccountId));
-        return apiResponse;
-    }
+    // @GetMapping("/{staffAccountId}")
+    // public ApiResponse<StaffAccountDTO> getStaffAccountById(@PathVariable UUID staffAccountId) {
+    //     ApiResponse<StaffAccountDTO> apiResponse = new ApiResponse<>();
+    //     apiResponse.setResult(staffAccountService.getStaffAccountById(staffAccountId));
+    //     return apiResponse;
+    // }
     
-    @PostMapping("/{staffAccountId}/reset-password")
-    public ApiResponse<ResetPasswordResponse> resetPassword(
-            @PathVariable UUID staffAccountId,
-            @RequestBody(required = false) ResetPasswordRequest request) {
-        ApiResponse<ResetPasswordResponse> apiResponse = new ApiResponse<>();
-        apiResponse.setResult(staffAccountService.resetPassword(staffAccountId, request));
-        return apiResponse;
-    }
+    // @PostMapping("/{staffAccountId}/reset-password")
+    // public ApiResponse<ResetPasswordResponse> resetPassword(
+    //         @PathVariable UUID staffAccountId,
+    //         @RequestBody(required = false) ResetPasswordRequest request) {
+    //     ApiResponse<ResetPasswordResponse> apiResponse = new ApiResponse<>();
+    //     apiResponse.setResult(staffAccountService.resetPassword(staffAccountId, request));
+    //     return apiResponse;
+    // }
     
 }

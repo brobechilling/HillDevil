@@ -14,8 +14,8 @@ import {
   downloadBranchQrPdf,
 } from '@/api/tableApi';
 import { useMemo } from 'react';
-import { getAccessToken } from '@/api/axiosClient';
 import { TableDTO, CreateTableRequest, TableStatus, QrCodeJsonResponse } from '@/dto/table.dto';
+import { useSessionStore } from '@/store/sessionStore';
 
 /**
  * Query hook: Lấy danh sách tables theo branch (có phân trang)
@@ -39,8 +39,9 @@ export const useTables = (
     return trimmed !== '' && isValidUUID(trimmed);
   }, [branchId]);
   
+  const { token } = useSessionStore();
+  
   const hasToken = useMemo(() => {
-    const token = getAccessToken();
     return !!token && token.trim() !== '';
   }, []); // Check token mỗi lần component render
   

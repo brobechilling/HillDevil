@@ -9,13 +9,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.example.backend.dto.StaffAccountDTO;
 import com.example.backend.dto.request.CreateStaffAccountRequest;
-import com.example.backend.dto.request.ResetPasswordRequest;
 import com.example.backend.dto.response.PageResponse;
-import com.example.backend.dto.response.ResetPasswordResponse;
 import com.example.backend.entities.Branch;
 import com.example.backend.entities.Role;
 import com.example.backend.entities.RoleName;
@@ -57,18 +54,8 @@ public class StaffAccountService {
         Branch branch = branchRepository.findById(createStaffAccountRequest.getBranchId()).orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
         staffAccount.setRole(role);
         staffAccount.setBranch(branch);
-        
-        // Lưu password gốc trước khi hash để trả về cho client
-        String plainPassword = staffAccount.getPassword();
-        staffAccount.setPassword(passwordEncoder.encode(plainPassword));
-        
-        StaffAccount savedAccount = staffAccountRepository.save(staffAccount);
-        StaffAccountDTO dto = staffAccountMapper.toStaffAccountDTO(savedAccount);
-        
-        // Set password gốc vào DTO để trả về cho client (Manager/Owner có thể xem)
-        dto.setPassword(plainPassword);
-        
-        return dto;
+        staffAccount.setPassword(passwordEncoder.encode(staffAccount.getPassword()));
+        return staffAccountMapper.toStaffAccountDTO(staffAccountRepository.save(staffAccount));
     }
 
     public StaffAccountDTO updateStaffAccount(StaffAccountDTO staffAccountDTO) {
@@ -104,7 +91,6 @@ public class StaffAccountService {
 
     public PageResponse<StaffAccountDTO> getStaffAccountByRestaurantPaginated(int page, int size, UUID restaurantId) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
-        // Validate restaurant exists
         restaurantRepository.findById(restaurantId).orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
         Page<StaffAccount> pageData = staffAccountRepository.findByBranch_Restaurant_RestaurantId(restaurantId, pageable);
         PageResponse<StaffAccountDTO> pageResponse = new PageResponse<>();
@@ -114,62 +100,62 @@ public class StaffAccountService {
         return pageResponse;
     }
 
-    @Transactional(readOnly = true)
-    public StaffAccountDTO getStaffAccountById(UUID staffAccountId) {
-        StaffAccount staffAccount = staffAccountRepository.findByIdWithDetails(staffAccountId)
-                .orElseThrow(() -> new AppException(ErrorCode.STAFFACCOUNT_NOTEXISTED));
-        // Force initialization of lazy-loaded entities before mapping
-        if (staffAccount.getRole() != null) {
-            staffAccount.getRole().getName();
-        }
-        if (staffAccount.getBranch() != null) {
-            staffAccount.getBranch().getBranchId();
-        }
-        return staffAccountMapper.toStaffAccountDTO(staffAccount);
-    }
+    // @Transactional(readOnly = true)
+    // public StaffAccountDTO getStaffAccountById(UUID staffAccountId) {
+    //     StaffAccount staffAccount = staffAccountRepository.findByIdWithDetails(staffAccountId)
+    //             .orElseThrow(() -> new AppException(ErrorCode.STAFFACCOUNT_NOTEXISTED));
+    //     // Force initialization of lazy-loaded entities before mapping
+    //     if (staffAccount.getRole() != null) {
+    //         staffAccount.getRole().getName();
+    //     }
+    //     if (staffAccount.getBranch() != null) {
+    //         staffAccount.getBranch().getBranchId();
+    //     }
+    //     return staffAccountMapper.toStaffAccountDTO(staffAccount);
+    // }
 
-    @Transactional
-    public ResetPasswordResponse resetPassword(UUID staffAccountId, ResetPasswordRequest request) {
-        StaffAccount staffAccount = staffAccountRepository.findById(staffAccountId)
-                .orElseThrow(() -> new AppException(ErrorCode.STAFFACCOUNT_NOTEXISTED));
+    // @Transactional
+    // public ResetPasswordResponse resetPassword(UUID staffAccountId, ResetPasswordRequest request) {
+    //     StaffAccount staffAccount = staffAccountRepository.findById(staffAccountId)
+    //             .orElseThrow(() -> new AppException(ErrorCode.STAFFACCOUNT_NOTEXISTED));
         
-        String newPassword;
+    //     String newPassword;
         
-        // Nếu có custom password trong request thì dùng, nếu không thì auto generate
-        if (request != null && request.hasCustomPassword()) {
-            // Validate custom password (ít nhất 6 ký tự)
-            String customPassword = request.getNewPassword().trim();
-            if (customPassword.length() < 6) {
-                throw new AppException(ErrorCode.INVALID_PASSWORD);
-            }
-            newPassword = customPassword;
-        } else {
-            // Generate a random password
-            newPassword = generateRandomPassword();
-        }
+    //     // Nếu có custom password trong request thì dùng, nếu không thì auto generate
+    //     if (request != null && request.hasCustomPassword()) {
+    //         // Validate custom password (ít nhất 6 ký tự)
+    //         String customPassword = request.getNewPassword().trim();
+    //         if (customPassword.length() < 6) {
+    //             throw new AppException(ErrorCode.INVALID_PASSWORD);
+    //         }
+    //         newPassword = customPassword;
+    //     } else {
+    //         // Generate a random password
+    //         newPassword = generateRandomPassword();
+    //     }
         
-        // Hash and save the new password
-        staffAccount.setPassword(passwordEncoder.encode(newPassword));
-        staffAccountRepository.save(staffAccount);
+    //     // Hash and save the new password
+    //     staffAccount.setPassword(passwordEncoder.encode(newPassword));
+    //     staffAccountRepository.save(staffAccount);
         
-        // Return the plain text password in response
-        ResetPasswordResponse response = new ResetPasswordResponse();
-        response.setStaffAccountId(staffAccount.getStaffAccountId());
-        response.setUsername(staffAccount.getUsername());
-        response.setNewPassword(newPassword);
+    //     // Return the plain text password in response
+    //     ResetPasswordResponse response = new ResetPasswordResponse();
+    //     response.setStaffAccountId(staffAccount.getStaffAccountId());
+    //     response.setUsername(staffAccount.getUsername());
+    //     response.setNewPassword(newPassword);
         
-        return response;
-    }
+    //     return response;
+    // }
     
-    private String generateRandomPassword() {
-        // Generate a random password with 10 characters: mix of uppercase, lowercase, and numbers
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        StringBuilder password = new StringBuilder();
-        java.util.Random random = new java.util.Random();
-        for (int i = 0; i < 10; i++) {
-            password.append(chars.charAt(random.nextInt(chars.length())));
-        }
-        return password.toString();
-    }
+    // private String generateRandomPassword() {
+    //     // Generate a random password with 10 characters: mix of uppercase, lowercase, and numbers
+    //     String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    //     StringBuilder password = new StringBuilder();
+    //     java.util.Random random = new java.util.Random();
+    //     for (int i = 0; i < 10; i++) {
+    //         password.append(chars.charAt(random.nextInt(chars.length())));
+    //     }
+    //     return password.toString();
+    // }
 
 }

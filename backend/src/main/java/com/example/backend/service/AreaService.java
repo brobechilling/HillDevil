@@ -74,9 +74,9 @@ public class AreaService {
             throw e;
         } catch (Exception e) {
             // Log unexpected exceptions
-            System.err.println("Error creating area: " + e.getClass().getName());
-            System.err.println("Message: " + e.getMessage());
-            e.printStackTrace();
+            // System.err.println("Error creating area: " + e.getClass().getName());
+            // System.err.println("Message: " + e.getMessage());
+            // e.printStackTrace();
             throw new AppException(ErrorCode.WE_COOKED);
         }
     }

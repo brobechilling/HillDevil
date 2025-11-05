@@ -8,7 +8,7 @@ import { useAreas, useCreateArea } from '@/hooks/queries/useAreas';
 import { toast } from '@/hooks/use-toast';
 import { TableDTO } from '@/dto/table.dto';
 import { Plus, Trash2, Download, Eye } from 'lucide-react';
-import { axiosClient, getAccessToken } from '@/api/axiosClient';
+import { axiosClient } from '@/api/axiosClient';
 import { BranchSelection } from '@/components/common/BranchSelection';
 import { BranchDTO } from '@/dto/branch.dto';
 import { RestaurantDTO } from '@/dto/restaurant.dto';
@@ -32,6 +32,7 @@ import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useSessionStore } from '@/store/sessionStore';
 
 // Tạo schema với validation dynamic cho duplicate name
 const createTableSchema = z.object({
@@ -66,10 +67,10 @@ export const TableManagementReadOnlyByFloor = ({
   const [isDeleteLoading, setIsDeleteLoading] = useState<string | null>(null);
   const [isAreaDialogOpen, setIsAreaDialogOpen] = useState(false);
   const [areaName, setAreaName] = useState('');
+  const { token } = useSessionStore();
 
   // Kiểm tra token trước khi gọi API
   const hasToken = useMemo(() => {
-    const token = getAccessToken();
     return !!token && token.trim() !== '';
   }, []);
 

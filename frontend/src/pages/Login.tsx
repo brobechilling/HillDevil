@@ -9,8 +9,8 @@ import { UtensilsCrossed, Mail, Lock, Sparkles, ChevronRight } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { AuthenticationRequest } from '@/dto/auth.dto';
-import { useQueryClient } from '@tanstack/react-query';
-import { useLogin } from '@/hooks/queries/useAuth';
+import { useMutation } from '@tanstack/react-query';
+import { login } from '@/api/authApi';
 import { getRestaurantsByOwner } from '@/api/restaurantApi';
 
 const Login = () => {
@@ -20,19 +20,16 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { setSession } = useSessionStore.getState();
-  const qc = useQueryClient();
 
-  const loginMutation = useLogin({
-    onSuccess: async (data) => {
-    console.log('Login success - User data:', data.user);
-
-    // ✅ Lưu vào sessionStore zustand
+  const loginMutation = useMutation({
+  mutationFn: login,
+  onSuccess: async (data) => {
     setSession(data.user, data.accessToken);
 
     switch (data.user.role.name) {
       case "RESTAURANT_OWNER":
         try {
-          const restaurants = await qc.fetchQuery({ queryKey: ['restaurants','owner', data.user.userId], queryFn: () => getRestaurantsByOwner(data.user.userId) }) as any[];
+          const restaurants = await getRestaurantsByOwner(data.user.userId);
           console.log('Login success - Restaurants:', restaurants);
 
           if (restaurants.length === 0) {
@@ -76,7 +73,7 @@ const Login = () => {
       email: email,
       password: password
     };
-  loginMutation.mutate(authenticationRequest);
+    loginMutation.mutate(authenticationRequest);
   };
 
 
@@ -158,14 +155,13 @@ const Login = () => {
                 <Label htmlFor="password" className="text-sm font-medium">
                   Password
                 </Label>
-                <button
-                  type="button"
-                  onClick={() => navigate('/forgot-password')}
+                <Link
+                  to="/forgot-password"
                   className="text-sm text-primary hover:underline transition-all hover:translate-x-0.5 inline-flex items-center gap-1 group"
                 >
                   Forgot password?
                   <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-                </button>
+                </Link>
               </div>
               <div className="relative group">
                 <Lock className={cn(
@@ -186,6 +182,11 @@ const Login = () => {
                   )}
                   required
                 />
+                {/* Animated bottom border */}
+                {/* <div className={cn(
+                  "absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-primary via-purple-500 to-pink-500 transition-all duration-300",
+                  focusedField === 'password' ? "w-full" : "w-0"
+                )} /> */}
               </div>
             </div>
 

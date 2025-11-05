@@ -5,7 +5,6 @@ export interface StaffAccountDTO {
     staffAccountId: string;
     role: RoleDTO;
     username: string;
-    password?: string;
     status: boolean;
     branchId: string;
 }

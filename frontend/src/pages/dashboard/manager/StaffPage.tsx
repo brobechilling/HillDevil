@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Plus, Trash2, Search, Eye } from "lucide-react";
+import { Users, Plus, Trash2, Search } from "lucide-react";
 import {
   useReceptionistNumberQuery,
   useWaiterNumberQuery,
@@ -12,7 +12,6 @@ import {
 import { StaffAccountDTO } from "@/dto/staff.dto";
 import { ROLE_NAME, UserDTO } from "@/dto/user.dto";
 import { StaffManagementDialog } from "@/components/manager/StaffManagementDialog";
-import { StaffDetailsDialog } from "@/components/common/StaffDetailsDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,9 +51,7 @@ export default function StaffPage() {
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffAccountDTO | null>(null);
-  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -215,30 +212,17 @@ export default function StaffPage() {
                       </Badge>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedStaffId(staff.staffAccountId);
-                        setDetailsDialogOpen(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Details
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedStaff(staff);
-                        setUpdateDialogOpen(true);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1 text-destructive" />
-                      Delete
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedStaff(staff);
+                      setUpdateDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1 text-destructive" />
+                    Delete
+                  </Button>
                 </div>
               ))}
             </div>
@@ -277,12 +261,6 @@ export default function StaffPage() {
         onOpenChange={setAddDialogOpen}
         branchId={branchId}
         size={size}
-      />
-
-      <StaffDetailsDialog
-        open={detailsDialogOpen}
-        onOpenChange={setDetailsDialogOpen}
-        staffAccountId={selectedStaffId}
       />
 
       <AlertDialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>

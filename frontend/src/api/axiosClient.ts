@@ -1,21 +1,11 @@
-// axiosClient.ts
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { ApiResponse } from "@/dto/apiResponse";
 import { RefreshResponse } from "@/dto/auth.dto";
 
 let refreshPromise: Promise<string | null> | null = null;
-let isRefreshing = false;
 
 export const setAccessToken = (token: string | null) => {
-    if (token) {
-        localStorage.setItem("accessToken", token);
-    } else {
-        localStorage.removeItem("accessToken");
-    }
-};
-
-export const getAccessToken = (): string | null => {
-    return localStorage.getItem("accessToken");
+    localStorage.setItem("accessToken", token ?? "");
 };
 
 const PUBLIC_ENDPOINTS = [
@@ -27,6 +17,7 @@ const PUBLIC_ENDPOINTS = [
     "/restaurants/paginated",
     "/packages",
     "/branches",
+    "/public"
 ];
 
 const isPublicEndpoint = (url: string = "") =>
@@ -37,53 +28,31 @@ const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
 export const axiosClient = axios.create({
     baseURL: baseUrl,
     withCredentials: true,
-    headers: {
-        'Content-Type': 'application/json',
-    },
 });
 
-// Request Interceptor
-axiosClient.interceptors.request.use(
-    (config) => {
-        const token = getAccessToken();
-        
-        // Chỉ thêm token nếu:
-        // 1. Token tồn tại và không rỗng
-        // 2. Không phải public endpoint
-        if (token && token.trim() !== "" && !isPublicEndpoint(config.url)) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
+axiosClient.interceptors.request.use((config) => {
+    const token = localStorage.getItem("accessToken");
+    if (token != "" && !isPublicEndpoint(config.url)) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
-);
+    return config;
+});
 
-// Response Interceptor
+
 axiosClient.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
         const originalRequest = error.config as AxiosRequestConfig & { _retry?: number };
-        
-        if (!originalRequest || !error.response) {
+        if (!originalRequest || !error.response)
             return Promise.reject(error);
-        }
 
         const status = error.response.status;
-        const url = originalRequest.url || "";
-        
-        // Initialize retry counter
         originalRequest._retry = originalRequest._retry || 0;
 
-        // Handle 401 Unauthorized
-        if (status === 401 && originalRequest._retry < 3 && !isPublicEndpoint(url)) {
+        if (status === 401 && originalRequest._retry < 3 && !isPublicEndpoint(originalRequest.url || "")) {
             originalRequest._retry += 1;
 
-            // Nếu đang có refresh promise, đợi nó
             if (!refreshPromise) {
-                isRefreshing = true;
                 refreshPromise = (async () => {
                     try {
                         const res = await axios.post<ApiResponse<RefreshResponse>>(
@@ -91,19 +60,13 @@ axiosClient.interceptors.response.use(
                             {},
                             { withCredentials: true }
                         );
-                        
                         const newAccessToken = res.data.result.accessToken;
                         setAccessToken(newAccessToken);
-                        
+                        axiosClient.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
                         return newAccessToken;
                     } catch (err) {
-                        // Refresh failed - clear token và redirect
                         setAccessToken(null);
-                        isRefreshing = false;
-                        // Chỉ redirect một lần, không spam
-                        if (!(window.location.pathname === '/login' || window.location.pathname.includes('/login'))) {
-                            window.location.href = "/login";
-                        }
+                        window.location.href = "/login";
                         return null;
                     } finally {
                         refreshPromise = null;
@@ -112,40 +75,17 @@ axiosClient.interceptors.response.use(
             }
 
             const newToken = await refreshPromise;
-            isRefreshing = false;
-            
-            if (!newToken) {
+            if (!newToken)
                 return Promise.reject(error);
-            }
 
-            // Retry original request với token mới
             originalRequest.headers = originalRequest.headers || {};
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            
             return axiosClient(originalRequest);
         }
 
-        // Nếu retry quá 3 lần vẫn 401 -> logout
         if (status === 401 && originalRequest._retry >= 3) {
             setAccessToken(null);
-            isRefreshing = false;
-            // Chỉ redirect một lần, không spam
-            if (!(window.location.pathname === '/login' || window.location.pathname.includes('/login'))) {
-                window.location.href = "/login";
-            }
-        }
-
-        // Handle 403 Forbidden
-        if (status === 403) {
-            console.error("Access forbidden - insufficient permissions");
-            // Có thể redirect về trang unauthorized hoặc hiện thông báo
-        }
-
-        // Suppress 401 errors trong console khi đang refresh token
-        // nhưng vẫn reject error để component có thể xử lý
-        if (status === 401 && isRefreshing) {
-            // Không log 401 khi đang refresh - tránh spam console
-            // Error sẽ được reject để query/mutation có thể xử lý
+            window.location.href = "/login";
         }
 
         return Promise.reject(error);

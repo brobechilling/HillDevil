@@ -37,9 +37,9 @@ public class AreaController {
             return res;
         } catch (Exception e) {
             // Log error for debugging
-            System.err.println("AreaController.createArea error: " + e.getClass().getName());
-            System.err.println("Message: " + e.getMessage());
-            e.printStackTrace();
+            // System.err.println("AreaController.createArea error: " + e.getClass().getName());
+            // System.err.println("Message: " + e.getMessage());
+            // e.printStackTrace();
             throw e; // Re-throw to be handled by GlobalExceptionHandler
         }
     }
