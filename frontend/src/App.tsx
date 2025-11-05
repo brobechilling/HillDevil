@@ -6,13 +6,6 @@ import { routes } from "./routes";
 
 // Helper to render routes recursively
 const renderRoutes = (routes: any[]) => {
-  // Debug: print routes for troubleshooting guest landing route matching
-  try {
-    // eslint-disable-next-line no-console
-    console.debug('APP ROUTES:', routes.map((r) => r.path));
-    // eslint-disable-next-line no-console
-    console.debug('CURRENT PATHNAME:', window?.location?.pathname);
-  } catch (e) { }
   return routes.map((route, index) => {
     if (route.children) {
       return (

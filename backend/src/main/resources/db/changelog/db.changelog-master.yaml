@@ -46,3 +46,9 @@ databaseChangeLog:
   - include:
       file: fix-menu-features-and-seed-data-changelog.sql
       relativeToChangelogFile: true
+
+  - include:
+      file: alter-reservation-area-table-changelog.sql
+      relativeToChangelogFile: true
+
+

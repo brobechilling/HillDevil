@@ -16,21 +16,14 @@ public class PublicPageController {
         this.publicPageService = publicPageService;
     }
 
-    // 1. Lấy restaurant theo slug → trả về danh sách branch
     @GetMapping("/restaurant/{slug}")
     public RestaurantPublicResponse getRestaurant(@PathVariable String slug) {
         return publicPageService.getRestaurantBySlug(slug);
     }
 
-    // 2. Lấy context từ tableId (QR)
-    @GetMapping("/table/{tableId}")
-    public TableContextResponse getTableContext(@PathVariable UUID tableId) {
-        return publicPageService.getTableContext(tableId);
+    @GetMapping("/restaurant/{slug}/menu")
+    public MenuPublicResponse getRestaurantMenu(@PathVariable String slug) {
+        return publicPageService.getRestaurantMenuBySlug(slug);
     }
 
-    // 3. Lấy menu theo branchId
-    @GetMapping("/branch/{branchId}/menu")
-    public MenuPublicResponse getMenu(@PathVariable UUID branchId) {
-        return publicPageService.getBranchMenu(branchId);
-    }
 }

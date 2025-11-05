@@ -22,13 +22,13 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { Package, Calendar, DollarSign, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { useRestaurant } from '@/hooks/queries/useRestaurants';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function RestaurantInfoPage() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [restaurant, setRestaurant] = useState<any | null>(null);
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -39,45 +39,20 @@ export default function RestaurantInfoPage() {
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const selected = JSON.parse(localStorage.getItem('selected_restaurant') || '{}');
-  const restaurantId = selected?.restaurantId || selected?.id;
+  const queryClient = useQueryClient();
+  const stored = localStorage.getItem('selected_restaurant');
+  const restaurantId = stored ? JSON.parse(stored).restaurantId : null;
+  const { data: restaurant, isLoading: loading } = useRestaurant(restaurantId);
 
   const { data: activeSubscription, isLoading: subLoading } = useActiveSubscriptionByRestaurant(restaurantId);
-
-  useEffect(() => {
-    if (!restaurantId) {
-      navigate('/brand-selection');
-      return;
-    }
-
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await getRestaurantById(String(restaurantId));
-        setRestaurant(res);
-        setForm({
-          name: res.name || '',
-          email: res.email || '',
-          restaurantPhone: res.restaurantPhone || '',
-          publicUrl: res.publicUrl || '',
-          description: res.description || '',
-          status: res.status ? 'active' : 'inactive',
-        });
-      } catch (err: any) {
-        toast({ variant: 'destructive', title: 'Load failed', description: err?.message || 'Could not load restaurant data.' });
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [restaurantId, navigate]);
 
   const handleChange = (k: keyof typeof form, v: string) => setForm((s) => ({ ...s, [k]: v }));
 
   const handleUpdate = async () => {
-    if (!restaurant) return;
+    if (!restaurantId) return;
     setSaving(true);
     try {
-      const payload: Partial<any> = {
+      const payload = {
         name: form.name,
         email: form.email,
         restaurantPhone: form.restaurantPhone,
@@ -85,9 +60,9 @@ export default function RestaurantInfoPage() {
         description: form.description,
         status: form.status === 'active',
       };
-      const updated = await updateRestaurant(String(restaurant.restaurantId || restaurant.id), payload);
-      setRestaurant(updated);
-      localStorage.setItem('selected_restaurant', JSON.stringify(updated));
+
+      await updateRestaurant(restaurantId, payload as any);
+      await queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
       toast({ title: 'Updated', description: 'Restaurant updated successfully.' });
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Update failed', description: err?.message || 'Failed to update.' });
@@ -96,14 +71,15 @@ export default function RestaurantInfoPage() {
     }
   };
 
+
   const handleDelete = async () => {
-    if (!restaurant) return;
+    if (!restaurantId) return;
     setDeleting(true);
     try {
-      await deleteRestaurant(String(restaurant.restaurantId || restaurant.id));
-      toast({ title: 'Deleted', description: 'Restaurant and all subscriptions have been cancelled.' });
-      localStorage.removeItem('selected_restaurant');
-      navigate('/dashboard/owner');
+      await deleteRestaurant(restaurantId);
+      toast({ title: 'Deleted', description: 'Restaurant deleted successfully.' });
+      localStorage.removeItem('selected_restaurant_id');
+      navigate('/brand-selection');
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Delete failed', description: err?.message || 'Failed to delete.' });
     } finally {
@@ -111,6 +87,7 @@ export default function RestaurantInfoPage() {
       setShowDeleteConfirm(false);
     }
   };
+
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -126,6 +103,20 @@ export default function RestaurantInfoPage() {
         return <Badge variant="outline">{status}</Badge>;
     }
   };
+
+  useEffect(() => {
+    if (restaurant) {
+      setForm({
+        name: restaurant.name || '',
+        email: restaurant.email || '',
+        restaurantPhone: restaurant.restaurantPhone || '',
+        publicUrl: restaurant.publicUrl || '',
+        description: restaurant.description || '',
+        status: restaurant.status ? 'active' : 'inactive',
+      });
+    }
+  }, [restaurant]);
+
 
   if (loading) {
     return (

@@ -63,6 +63,8 @@ public enum ErrorCode {
     MEDIA_DELETE_FAILED(4053, "File delete failed", HttpStatus.BAD_REQUEST),
     TARGET_TYPE_NOT_FOUND(4054, "Target type not found", HttpStatus.NOT_FOUND),
 
+    // Reservation errors
+    RESERVATION_NOT_FOUND(5001, "Reservation not found", HttpStatus.NOT_FOUND),
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
 

@@ -1,22 +1,21 @@
 package com.example.backend.dto.response;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
 public class MenuPublicResponse {
-    private UUID branchId;
+    private UUID restaurantId;
     private List<MenuItemDTO> items;
 
     public MenuPublicResponse() {
     }
 
-    public UUID getBranchId() {
-        return branchId;
+    public UUID getRestaurantId() {
+        return restaurantId;
     }
 
-    public void setBranchId(UUID branchId) {
-        this.branchId = branchId;
+    public void setRestaurantId(UUID restaurantId) {
+        this.restaurantId = restaurantId;
     }
 
     public List<MenuItemDTO> getItems() {
@@ -34,6 +33,7 @@ public class MenuPublicResponse {
         private BigDecimal price;
         private boolean bestSeller;
         private String category;
+        private String imageUrl;
 
         public MenuItemDTO() {
         }
@@ -84,6 +84,14 @@ public class MenuPublicResponse {
 
         public void setCategory(String category) {
             this.category = category;
+        }
+
+        public String getImageUrl() {
+            return imageUrl;
+        }
+        
+        public void setImageUrl(String imageUrl) {
+            this.imageUrl = imageUrl;
         }
     }
 }

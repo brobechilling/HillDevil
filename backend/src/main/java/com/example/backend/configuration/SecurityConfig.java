@@ -22,93 +22,100 @@ import com.example.backend.entities.RoleName;
 @EnableWebSecurity
 public class SecurityConfig {
 
+        private final String[] PUBLIC_ENDPOINTS = { "/api/auth/token", "/api/auth/logout", "/api/auth/refresh",
+                        "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated",
+                        "/api/staff/**", "/api/packages/**", "/api/branches/**", "/api/public/**"};
+        private final String[] ADMIN_ENDPOINTS = { "/api/users/**", "/api/roles/**" };
+        private final String[] RESTAURANT_OWNER_ENDPOINTS = {};
+        private final String[] BRANCH_MANAGER_ENDPOINTS = {};
+        private final String[] WAITER_ENDPOINTS = {};
+        private final String[] RECEPTIONIST_ENDPOINTS = {};
 
-    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated", "/api/staff/**",  "/api/packages/**", "/api/branches/**", "/api/public/**"};
-    private final String[] ADMIN_ENDPOINTS = {"/api/users/**", "/api/roles/**"};
-    private final String[] RESTAURANT_OWNER_ENDPOINTS = {};
-    private final String[] BRANCH_MANAGER_ENDPOINTS = {};
-    private final String[] WAITER_ENDPOINTS = {};
-    private final String[] RECEPTIONIST_ENDPOINTS = {};
+        @Value("${jwt.signer-key}")
+        private String signerKey;
+        private final MyCustomJwtDecoder myCustomJwtDecoder;
 
+        public SecurityConfig(MyCustomJwtDecoder myCustomJwtDecoder) {
+                this.myCustomJwtDecoder = myCustomJwtDecoder;
+        }
 
-    @Value("${jwt.signer-key}")
-    private String signerKey;
-    private final MyCustomJwtDecoder myCustomJwtDecoder;
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
+                httpSecurity.authorizeHttpRequests(request -> request
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // allow preflight request in
+                                                                                        // local
+                                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
 
-    public SecurityConfig(MyCustomJwtDecoder myCustomJwtDecoder) {
-        this.myCustomJwtDecoder = myCustomJwtDecoder;
-    }
+                                // User API
+                                .requestMatchers(HttpMethod.GET, "/api/users/{userId}")
+                                .hasAnyRole(RoleName.ADMIN.name(), RoleName.RESTAURANT_OWNER.name())
+                                .requestMatchers(HttpMethod.PUT, "/api/users/")
+                                .hasAnyRole(RoleName.ADMIN.name(), RoleName.RESTAURANT_OWNER.name())
+                                .requestMatchers(HttpMethod.POST, "/api/users/changepass")
+                                .hasAnyRole(RoleName.ADMIN.name(), RoleName.RESTAURANT_OWNER.name())
+                                .requestMatchers("/api/users/**").hasAnyRole(RoleName.ADMIN.name())
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.authorizeHttpRequests(request -> 
-            request
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // allow preflight request in local
-                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                
-                // User API
-                .requestMatchers(HttpMethod.GET, "/api/users/{userId}").hasAnyRole(RoleName.ADMIN.name(), RoleName.RESTAURANT_OWNER.name())
-                .requestMatchers(HttpMethod.PUT, "/api/users/").hasAnyRole(RoleName.ADMIN.name(), RoleName.RESTAURANT_OWNER.name())
-                .requestMatchers(HttpMethod.POST, "/api/users/changepass").hasAnyRole(RoleName.ADMIN.name(), RoleName.RESTAURANT_OWNER.name())
-                .requestMatchers("/api/users/**").hasAnyRole(RoleName.ADMIN.name()) 
+                                // Role API
+                                .requestMatchers("/api/roles/**").hasAnyRole(RoleName.ADMIN.name())
 
-                // Role API
-                .requestMatchers("/api/roles/**").hasAnyRole(RoleName.ADMIN.name())
+                                .requestMatchers("/actuator/health").permitAll()
+                                .requestMatchers("/api/**").authenticated()
+                                .anyRequest().permitAll());
 
-                .requestMatchers("/actuator/health").permitAll()
-                .requestMatchers("/api/**").authenticated()
-                .anyRequest().permitAll());
+                // config jwt authentication provider so that authentication filter can check
+                // the Authorization: Bearer token in the header of the request
+                httpSecurity.oauth2ResourceServer(oauth2 -> oauth2
+                                .jwt(jwtConfig -> jwtConfig.decoder(myCustomJwtDecoder)
+                                                .jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                                .authenticationEntryPoint(new JwtAuthenticationEntryPoint()));
+                httpSecurity
+                                .exceptionHandling(exception -> exception
+                                                .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
+                                                .accessDeniedHandler(new CustomAccessDeniedHandler()));
+                httpSecurity.csrf(AbstractHttpConfigurer::disable);
+                httpSecurity.cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
-            // config jwt authentication provider so that authentication filter can check the Authorization: Bearer token in the header of the request
-        httpSecurity.oauth2ResourceServer(oauth2 -> 
-            oauth2.jwt(jwtConfig -> jwtConfig.decoder(myCustomJwtDecoder).jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
-            );
-        httpSecurity.exceptionHandling(exception -> 
-            exception.authenticationEntryPoint(new JwtAuthenticationEntryPoint()).accessDeniedHandler(new CustomAccessDeniedHandler()));
-        httpSecurity.csrf(AbstractHttpConfigurer::disable);
-        httpSecurity.cors(cors -> cors.configurationSource(corsConfigurationSource()));
-        
-        return httpSecurity.build();
-    }
+                return httpSecurity.build();
+        }
 
-    @Bean
-    JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        jwtGrantedAuthoritiesConverter.setAuthorityPrefix(""); 
-        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
-        return jwtAuthenticationConverter;
-    }
+        @Bean
+        JwtAuthenticationConverter jwtAuthenticationConverter() {
+                JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
+                jwtGrantedAuthoritiesConverter.setAuthorityPrefix("");
+                JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+                jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
+                return jwtAuthenticationConverter;
+        }
 
-    // @Bean
-    // public CorsFilter corsFilter() {
-    //     CorsConfiguration corsConfiguration = new CorsConfiguration();
-    //     corsConfiguration.setAllowedOrigins(List.of(
-    //         "https://hilldevil.space",
-    //         "http://localhost:5000" 
-    //     ));
-    //     corsConfiguration.addAllowedHeader("*");
-    //     corsConfiguration.addAllowedMethod("*");
-    //     corsConfiguration.setAllowCredentials(true);
-    //     UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
-    //     urlBasedCorsConfigurationSource.registerCorsConfiguration("/api/**", corsConfiguration);
-    //     return new CorsFilter(urlBasedCorsConfigurationSource);
-    // } 
+        // @Bean
+        // public CorsFilter corsFilter() {
+        // CorsConfiguration corsConfiguration = new CorsConfiguration();
+        // corsConfiguration.setAllowedOrigins(List.of(
+        // "https://hilldevil.space",
+        // "http://localhost:5000"
+        // ));
+        // corsConfiguration.addAllowedHeader("*");
+        // corsConfiguration.addAllowedMethod("*");
+        // corsConfiguration.setAllowCredentials(true);
+        // UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new
+        // UrlBasedCorsConfigurationSource();
+        // urlBasedCorsConfigurationSource.registerCorsConfiguration("/api/**",
+        // corsConfiguration);
+        // return new CorsFilter(urlBasedCorsConfigurationSource);
+        // }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of(
-            "https://hilldevil.space",
-            "http://localhost:5000"
-        ));
-        corsConfiguration.addAllowedHeader("*");
-        corsConfiguration.addAllowedMethod("*");
-        corsConfiguration.setAllowCredentials(true);
-        
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfiguration);
-        return source;
-    }
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration corsConfiguration = new CorsConfiguration();
+                corsConfiguration.setAllowedOrigins(List.of(
+                                "https://hilldevil.space",
+                                "http://localhost:5000"));
+                corsConfiguration.addAllowedHeader("*");
+                corsConfiguration.addAllowedMethod("*");
+                corsConfiguration.setAllowCredentials(true);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", corsConfiguration);
+                return source;
+        }
 }

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Calendar, Clock, Users } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useBookingStore, BookingItem } from '@/store/bookingStore';
+import { reservationApi } from '@/api/reservationApi';
 
 const bookingSchema = z.object({
   guestName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -26,11 +27,11 @@ interface ReservationBookingFormProps {
   onBookingComplete?: () => void;
 }
 
-export function ReservationBookingForm({ 
-  branchId, 
-  branchName, 
-  selectedItems = [], 
-  onBookingComplete 
+export function ReservationBookingForm({
+  branchId,
+  branchName,
+  selectedItems = [],
+  onBookingComplete
 }: ReservationBookingFormProps) {
   const addBooking = useBookingStore((state) => state.addBooking);
 
@@ -44,26 +45,50 @@ export function ReservationBookingForm({
   });
 
   const onSubmit = (data: BookingFormData) => {
-    addBooking({
+    // Prepare payload for backend CreateReservationRequest
+    const startTime = `${data.bookingDate}T${data.bookingTime}:00`;
+    const payload = {
       branchId,
-      branchName,
-      guestName: data.guestName,
-      guestEmail: data.guestEmail,
-      guestPhone: data.guestPhone,
-      bookingDate: data.bookingDate,
-      bookingTime: data.bookingTime,
-      numberOfGuests: data.numberOfGuests,
-      items: selectedItems,
-    });
+      areaTableId: null,
+      startTime,
+      customerName: data.guestName,
+      customerPhone: data.guestPhone,
+      customerEmail: data.guestEmail,
+      guestNumber: data.numberOfGuests,
+      note: selectedItems && selectedItems.length > 0 ? `Pre-order items: ${selectedItems.map(i => `${i.name}x${i.quantity}`).join(', ')}` : undefined,
+    } as any;
 
-    toast({
-      title: 'Reservation Confirmed!',
-      description: 'Your table reservation has been submitted. We\'ll send you a confirmation email shortly.',
-      duration: 8000,
-    });
+    (async () => {
+      try {
+        // Call backend public reservation endpoint
+        await reservationApi.createPublic(payload);
 
-    reset();
-    onBookingComplete?.();
+        // keep local booking store in sync
+        addBooking({
+          branchId,
+          branchName,
+          guestName: data.guestName,
+          guestEmail: data.guestEmail,
+          guestPhone: data.guestPhone,
+          bookingDate: data.bookingDate,
+          bookingTime: data.bookingTime,
+          numberOfGuests: data.numberOfGuests,
+          items: selectedItems,
+        });
+
+        toast({
+          title: 'Reservation Confirmed!',
+          description: "Your table reservation has been submitted. We'll send you a confirmation email shortly.",
+          duration: 8000,
+        });
+
+        reset();
+        onBookingComplete?.();
+      } catch (err: any) {
+        console.error('Create reservation failed', err);
+        toast({ title: 'Reservation Failed', description: err?.response?.data?.message || 'Please try again later.' });
+      }
+    })();
   };
 
   return (

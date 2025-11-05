@@ -4,15 +4,24 @@ import com.example.backend.dto.response.MenuPublicResponse;
 import com.example.backend.dto.response.RestaurantPublicResponse;
 import com.example.backend.entities.Branch;
 import com.example.backend.entities.MenuItem;
+import com.example.backend.entities.Restaurant;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface PublicPageMapper {
+    @Mapping(source = "restaurantId", target = "restaurantId")
+    @Mapping(source = "name", target = "name")
+    @Mapping(source = "restaurantPhone", target = "phone") 
+    @Mapping(source = "email", target = "email")           
+    @Mapping(source = "description", target = "description")
+    @Mapping(source = "branches", target = "branches")
+    RestaurantPublicResponse restaurantToRestaurantPublicResponse(Restaurant restaurant);
 
     @Mapping(source = "branchId", target = "branchId")
     @Mapping(source = "branchPhone", target = "phone")
     @Mapping(source = "mail", target = "email")
+    @Mapping(source = "address", target = "address")
     @Mapping(source = "openingTime", target = "openingTime")
     @Mapping(source = "closingTime", target = "closingTime")
     RestaurantPublicResponse.BranchInfo branchToBranchInfo(Branch branch);

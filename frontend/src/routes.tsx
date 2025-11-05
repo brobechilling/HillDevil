@@ -11,7 +11,7 @@ import ManagerDashboard from './pages/dashboard/ManagerDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import WaiterDashboard from './pages/dashboard/WaiterDashboard';
 import ReceptionistDashboard from './pages/dashboard/ReceptionistDashboard';
-import GuestLanding from './pages/GuestLanding';
+import GuestLanding from './pages/ReservationGuestLanding';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import StaffManagerLoginPage from './pages/auth/StaffManagerLogin';
@@ -88,24 +88,13 @@ export const routes: RouteObject[] = [
     path: "/payment/:orderCode",
     element: <PaymentPage />,
   },
-  // Public guest landing routes: use restaurant slug from DB (e.g. /seouly)
   {
+    
     path: '/:restaurantSlug',
     element: <GuestLanding />,
   },
-  {
-    path: '/:restaurantSlug/branch/:branchId',
-    element: <GuestLanding />,
-  },
-  // Note: branch-specific route removed to keep selection on the same page
-  // QR / table-based routes are temporarily disabled. Use slug-only routes for guest landing.
   // {
-  //   path: '/:restaurantSlug/table/:tableId',
-  //   element: <GuestLanding />,
-  // },
-  // {
-  //   // optional: support explicit branch and table in path
-  //   path: '/:restaurantSlug/:branchId/:tableId',
+  //   path: '/:restaurantSlug/branch/:branchId',
   //   element: <GuestLanding />,
   // },
   {
