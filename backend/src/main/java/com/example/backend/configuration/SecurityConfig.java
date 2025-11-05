@@ -26,7 +26,7 @@ import com.example.backend.configuration.MyCustomJwtDecoder;
 public class SecurityConfig {
 
 
-    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated", "/api/staff/**",  "/api/packages/**", "/api/branches/**", "/api/public/**", "/api/public/tables/**"};
+    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated", "/api/staff/**",  "/api/packages/**", "/api/branches/**", "/api/public/**", "/api/public/tables/**", "/api/users/mail/**"};
     private final String[] ADMIN_ENDPOINTS = {"/api/users/**", "/api/roles/**"};
     private final String[] RESTAURANT_OWNER_ENDPOINTS = {};
     private final String[] BRANCH_MANAGER_ENDPOINTS = {};

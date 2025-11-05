@@ -15,7 +15,6 @@ import ReceptionistDashboard from './pages/dashboard/ReceptionistDashboard';
 import GuestLanding from './pages/GuestLanding';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
-import StaffManagerLoginPage from './pages/auth/StaffManagerLogin';
 import RestaurantLoginPage from './pages/auth/RestaurantLoginPage';
 import PaymentPage from "./pages/payment/PaymentPage";
 import PaymentSuccessPage from "./pages/payment/PaymentSuccessPage";
@@ -38,8 +37,6 @@ import OwnerTablesPage from './pages/dashboard/owner/TablesPage';
 import OwnerStaffPage from './pages/dashboard/owner/StaffPage';
 import BranchSelectionPage from './pages/dashboard/owner/BranchSelectionPage';
 
-// import OwnerCategoriesPage from './pages/dashboard/owner/CategoriesPage';
-// import OwnerCustomizationsPage from './pages/dashboard/owner/CustomizationsPage';
 import OwnerReportsPage from './pages/dashboard/owner/ReportsPage';
 import OwnerCustomizationPage from './pages/dashboard/owner/CustomizationPage';
 import { CategoryCustomizationManagement } from './pages/dashboard/owner/CategoryCustomizationManagement';
@@ -83,15 +80,27 @@ export const routes: RouteObject[] = [
   },
   {
     path: '/register/package',
-    element: <RegisterPackage />,
+    element: (
+      <ProtectedRoute>
+        <RegisterPackage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/register/confirm',
-    element: <RegisterConfirm />,
+    element: (
+      <ProtectedRoute>
+        <RegisterConfirm />
+      </ProtectedRoute>
+    ),
   },
   {
-    path: "/payment/:orderCode",
-    element: <PaymentPage />,
+    path: '/payment/:orderCode',
+    element: (
+      <ProtectedRoute>
+        <PaymentPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/branch/:shortCode',
@@ -107,11 +116,19 @@ export const routes: RouteObject[] = [
   },
   {
     path: '/payment/success',
-    element: <PaymentSuccessPage />,
+    element: (
+      <ProtectedRoute>
+        <PaymentSuccessPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/payment/cancel',
-    element: <PaymentCancelPage />,
+    element: (
+      <ProtectedRoute>
+        <PaymentCancelPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/brand-selection',
@@ -121,14 +138,6 @@ export const routes: RouteObject[] = [
       </ProtectedRoute>
     ),
   },
-  // {
-  //   path: '/dashboard',
-  //   element: (
-  //     <ProtectedRoute>
-  //       <Dashboard />
-  //     </ProtectedRoute>
-  //   ),
-  // },
   {
     path: '/dashboard/owner',
     element: (
@@ -179,14 +188,7 @@ export const routes: RouteObject[] = [
       }
     ],
   },
-  // {
-  //   path: '/dashboard/staff',
-  //   element: (
-  //     <ProtectedRoute>
-  //       <StaffDashboard />
-  //     </ProtectedRoute>
-  //   ),
-  // },
+
   {
     path: '/dashboard/manager',
     element: (
@@ -306,10 +308,6 @@ export const routes: RouteObject[] = [
         element: <ReceptionistCommunicationsPage />,
       },
     ],
-  },
-  {
-    path: '/auth/staff-manager-login',
-    element: <StaffManagerLoginPage />,
   },
   {
     path: '/profile',

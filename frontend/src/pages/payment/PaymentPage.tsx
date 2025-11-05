@@ -8,8 +8,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, CreditCard, Loader2, XCircle, AlertCircle } from "lucide-react";
-import { useSessionStore } from "@/store/sessionStore";
+import { CreditCard, Loader2, AlertCircle } from "lucide-react";
 import { subscriptionPaymentApi } from "@/api/subscriptionPaymentApi";
 import { usePaymentStatus } from "@/hooks/queries/useSubscriptionPayment";
 import { toast } from "@/hooks/use-toast";
@@ -19,41 +18,24 @@ import { QRCodeCanvas } from "qrcode.react";
 
 const PaymentPage = () => {
   const navigate = useNavigate();
-  const { orderCode } = useParams(); // ✅ Lấy từ URL path: /payment/:orderCode
+  const { orderCode } = useParams();
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const { user, isAuthenticated, initialize } = useSessionStore();
+
   const [loading, setLoading] = useState(true);
   const [payment, setPayment] = useState<SubscriptionPaymentResponse | null>(null);
 
   const restaurantName = searchParams.get("restaurantName") || "";
   const initialPayment = location.state as SubscriptionPaymentResponse | null;
 
-  // ✅ Sử dụng hook để polling
-  const { data: polledPayment, isLoading: isPolling } = usePaymentStatus(orderCode || "");
+  const { data: polledPayment } = usePaymentStatus(orderCode || "");
 
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
-
-  useEffect(() => {
-    if (!isAuthenticated || !user) {
-      const returnUrl = `/payment?orderCode=${orderCode}&restaurantName=${encodeURIComponent(
-        restaurantName
-      )}`;
-      navigate(`/register?returnUrl=${encodeURIComponent(returnUrl)}`);
-      return;
-    }
-  }, [isAuthenticated, user, navigate, orderCode, restaurantName]);
-
-  // ✅ Update payment from polling hook (priority)
   useEffect(() => {
     if (polledPayment) {
       setPayment(polledPayment);
     }
   }, [polledPayment]);
 
-  // ✅ Set initial payment on mount (will be overridden by polling)
   useEffect(() => {
     if (initialPayment && !polledPayment) {
       setPayment(initialPayment);
@@ -61,19 +43,19 @@ const PaymentPage = () => {
     setLoading(false);
   }, [initialPayment, polledPayment]);
 
-
-  // Redirect if payment is successful, failed, or canceled
   useEffect(() => {
     if (payment?.subscriptionPaymentStatus === "SUCCESS") {
-      // ✅ Redirect to success page instead of dashboard directly
       navigate("/payment/success", {
         state: {
           restaurantName,
           orderCode,
-          amount: payment.amount
-        }
+          amount: payment.amount,
+        },
       });
-    } else if (payment?.subscriptionPaymentStatus === "FAILED" || payment?.subscriptionPaymentStatus === "CANCELED") {
+    } else if (
+      payment?.subscriptionPaymentStatus === "FAILED" ||
+      payment?.subscriptionPaymentStatus === "CANCELED"
+    ) {
       toast({
         variant: "destructive",
         title: `${payment.subscriptionPaymentStatus} Payment`,
@@ -98,7 +80,7 @@ const PaymentPage = () => {
         title: "Payment canceled",
         description: "You can start over if needed.",
       });
-      navigate("/payment/cancel", { replace: true }); // ✅ chuyển sang trang cancel
+      navigate("/payment/cancel", { replace: true });
     } catch {
       toast({
         variant: "destructive",
@@ -107,7 +89,6 @@ const PaymentPage = () => {
       });
     }
   };
-
 
   if (loading) {
     return (
@@ -164,12 +145,14 @@ const PaymentPage = () => {
 
                 <p className="text-sm text-muted-foreground mt-4 mb-2">Status</p>
                 <p
-                  className={`font-medium ${payment.subscriptionPaymentStatus === "SUCCESS"
+                  className={`font-medium ${
+                    payment.subscriptionPaymentStatus === "SUCCESS"
                       ? "text-green-600"
-                      : payment.subscriptionPaymentStatus === "FAILED" || payment.subscriptionPaymentStatus === "CANCELED"
-                        ? "text-red-600"
-                        : "text-yellow-600"
-                    }`}
+                      : payment.subscriptionPaymentStatus === "FAILED" ||
+                        payment.subscriptionPaymentStatus === "CANCELED"
+                      ? "text-red-600"
+                      : "text-yellow-600"
+                  }`}
                 >
                   {payment.subscriptionPaymentStatus || "PENDING"}
                 </p>
@@ -180,17 +163,15 @@ const PaymentPage = () => {
 
               {/* Actions */}
               <div className="flex justify-center gap-4">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(-1)}
-                  disabled={loading}
-                >
+                <Button variant="outline" onClick={() => navigate(-1)} disabled={loading}>
                   Back
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={handleCancel}
-                  disabled={loading || payment.subscriptionPaymentStatus !== "PENDING"}
+                  disabled={
+                    loading || payment.subscriptionPaymentStatus !== "PENDING"
+                  }
                 >
                   Cancel Payment
                 </Button>
@@ -225,18 +206,19 @@ const PaymentPage = () => {
             </div>
           </CardContent>
 
-          {/* Expired Warning (Spanning Both Columns) */}
-          {new Date(payment.expiredAt) < new Date() && payment.subscriptionPaymentStatus === "PENDING" && (
-            <div className="col-span-full">
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Payment Expired</AlertTitle>
-                <AlertDescription>
-                  The payment link has expired. Please start a new payment process.
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
+          {/* Expired Warning */}
+          {new Date(payment.expiredAt) < new Date() &&
+            payment.subscriptionPaymentStatus === "PENDING" && (
+              <div className="col-span-full">
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Payment Expired</AlertTitle>
+                  <AlertDescription>
+                    The payment link has expired. Please start a new payment process.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
         </Card>
       </div>
     </div>

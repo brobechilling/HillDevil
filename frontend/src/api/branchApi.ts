@@ -36,3 +36,10 @@ export const deleteBranch = async (id: string) => {
     const res = await axiosClient.delete<ApiResponse<void>>(`/branches/${id}`);
     return res.data;
 };
+
+export const getRestaurantByBranchId = async (branchId: string) => {
+    const res = await axiosClient.get<ApiResponse<string>>(
+        `/branches/${branchId}/restaurant`
+    );
+    return res.data.result;
+};

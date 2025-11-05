@@ -43,6 +43,7 @@ import {
 
 import { FeatureDTO } from "@/dto/feature.dto";
 import { FeatureValueDTO } from "@/dto/featureValue.dto";
+import { toast } from "../ui/use-toast";
 
 const packageSchema = z.object({
   name: z.string().min(3),
@@ -126,8 +127,13 @@ export const PackageDialog = ({ open, onOpenChange, packageId }: Props) => {
       };
       updateMutation.mutate(
         { id: packageId, data: updatePayload },
-        { onSuccess: () => onOpenChange(false) }
+        { onSuccess: () => onOpenChange(false)}
       );
+      toast({
+            title: "Package updated",
+            description: "The package has been updated successfully.",
+            variant: "default",
+          })
     } else {
       createMutation.mutate(payload, { onSuccess: () => onOpenChange(false) });
     }

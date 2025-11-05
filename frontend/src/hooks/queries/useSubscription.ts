@@ -7,6 +7,8 @@ export const useSubscription = (id: string) => {
     queryKey: ["subscriptions", id],
     queryFn: () => subscriptionApi.getById(id),
     enabled: !!id,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -15,6 +17,8 @@ export const useActiveSubscriptionByRestaurant = (restaurantId: string) => {
     queryKey: ["subscriptions", "active", restaurantId],
     queryFn: () => subscriptionApi.getActiveByRestaurant(restaurantId),
     enabled: !!restaurantId
+    ,staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -22,6 +26,8 @@ export const useOverviewForOwner = () => {
   return useQuery({
     queryKey: ["subscriptions", "overview"],
     queryFn: () => subscriptionApi.getOverviewForOwner(),
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -31,6 +37,8 @@ export const usePaymentHistory = (restaurantId: string) => {
     queryKey: ["subscriptions", "payments", restaurantId],
     queryFn: () => subscriptionApi.getPaymentHistory(restaurantId),
     enabled: !!restaurantId,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -39,6 +47,8 @@ export const useLatestPaymentStatus = (restaurantId: string) => {
     queryKey: ["subscriptions", "latest-payment", restaurantId],
     queryFn: () => subscriptionApi.getLatestPaymentStatus(restaurantId),
     enabled: !!restaurantId,
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -46,6 +56,8 @@ export const useSubscriptionStats = () => {
   return useQuery({
     queryKey: ["subscriptions", "stats"],
     queryFn: () => subscriptionApi.getStats(),
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -106,5 +118,7 @@ export const useAllSubscriptionsByRestaurant = (restaurantId: string) => {
     queryKey: ['subscriptions', 'all', restaurantId],
     queryFn: () => subscriptionApi.getAllByRestaurant(restaurantId),
     enabled: !!restaurantId,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 };

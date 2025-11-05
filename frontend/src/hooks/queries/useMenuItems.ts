@@ -7,14 +7,20 @@ import {
   deleteMenuItem,
   isMenuItemActiveInBranch,
   setActiveStatus,
+  updateBestSeller,
 } from "@/api/menuItemApi";
 import { MenuItemDTO, MenuItemCreateRequest } from "@/dto/menuItem.dto";
+import { toast } from "@/components/ui/use-toast";
 
 export const useMenuItems = (restaurantId?: string) => {
   return useQuery<MenuItemDTO[]>({
     queryKey: ["menu-items", restaurantId],
     queryFn: () => getAllMenuItems(restaurantId!),
     enabled: !!restaurantId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 };
 
@@ -71,13 +77,83 @@ export const useDeleteMenuItem = () => {
   });
 };
 
-export const useSetActiveStatus = () => {
+export const useSetActiveStatus = (restaurantId?: string) => {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ menuItemId, active }: { menuItemId: string; active: boolean }) =>
       setActiveStatus(menuItemId, active),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["menu-items"] });
+
+    onSuccess: (updatedItem, { menuItemId }) => {
+      queryClient.setQueryData<MenuItemDTO>(["menu-items", menuItemId], updatedItem);
+
+      queryClient.setQueryData<MenuItemDTO[]>(["menu-items", restaurantId], (old = []) =>
+        old.map((i) =>
+          i.menuItemId === updatedItem.menuItemId ? updatedItem : i
+        )
+      );
+
+      toast({
+        title: updatedItem.status === "ACTIVE" ? "Activated" : "Deactivated",
+        description: `Menu item is now ${updatedItem.status === "ACTIVE" ? "available" : "unavailable"
+          }.`,
+      });
+    },
+
+    onError: () => {
+      toast({
+        title: "Failed",
+        description: "Cannot change status.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useUpdateBestSeller = (restaurantId?: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ menuItemId, bestSeller }: { menuItemId: string; bestSeller: boolean }) =>
+      updateBestSeller(menuItemId, bestSeller),
+
+    onMutate: async ({ menuItemId, bestSeller }) => {
+      await queryClient.cancelQueries({ queryKey: ["menu-items", restaurantId] });
+
+      const previousData = queryClient.getQueryData<MenuItemDTO[]>(["menu-items", restaurantId]);
+
+      if (previousData) {
+        queryClient.setQueryData<MenuItemDTO[]>(["menu-items", restaurantId], old =>
+          old?.map(item =>
+            item.menuItemId === menuItemId ? { ...item, bestSeller } : item
+          ) || []
+        );
+      }
+
+      return { previousData };
+    },
+
+    onError: (error, variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["menu-items", restaurantId], context.previousData);
+      }
+      toast({
+        title: "❌ Error",
+        description: "Failed to update best seller.",
+        variant: "destructive",
+      });
+    },
+
+    onSuccess: (data) => {
+      queryClient.setQueryData<MenuItemDTO[]>(["menu-items", restaurantId], old =>
+        old?.map(item =>
+          item.menuItemId === data.menuItemId ? data : item
+        ) || []
+      );
+      toast({
+        title: data.bestSeller ? "Best Seller Set" : "Best Seller Unset",
+        description: `Menu item "${data.name}" is now ${data.bestSeller ? "a Best Seller" : "no longer a Best Seller"}.`,
+      });
     },
   });
 };

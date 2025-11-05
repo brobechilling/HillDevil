@@ -70,4 +70,10 @@ public class BranchService {
     public List<BranchDTO> getByRestaurant(UUID restaurantId) {
         return branchRepository.findByRestaurant_RestaurantId(restaurantId).stream().map(branchMapper::toDto).toList();
     }
+
+    @Transactional(readOnly = true)
+    public UUID getRestaurantIdByBranchId(UUID branchId) {
+        return branchRepository.findRestaurantIdByBranchId(branchId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
+    }
 }

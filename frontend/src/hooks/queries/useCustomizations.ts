@@ -13,9 +13,12 @@ export const useCustomizations = (restaurantId?: string) => {
     queryKey: ["customizations", restaurantId],
     queryFn: () => getAllCustomizations(restaurantId!),
     enabled: !!restaurantId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 };
-
 export const useCustomization = (id: string | undefined) => {
   return useQuery<CustomizationDTO>({
     queryKey: ["customizations", id],

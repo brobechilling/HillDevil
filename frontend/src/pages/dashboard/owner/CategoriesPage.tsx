@@ -6,7 +6,7 @@ import { Settings } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useMenuStore } from '@/store/menuStore';
 import { useMenuCustomizationStore } from '@/store/customizationStore';
-import { CategoryManagementDialog } from '@/components/owner/CategoryManagementDialog';
+import { CategoryManagementDialog } from '@/components/menu/CategoryManagementDialog';
 
 const DEFAULT_CATEGORIES = [
   'Appetizers',

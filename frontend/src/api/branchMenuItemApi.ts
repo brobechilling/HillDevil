@@ -10,13 +10,14 @@ export const getMenuItemsByBranch = async (branchId: string) => {
 };
 
 export const updateAvailability = async (
-  branchMenuItemId: string,
+  branchId: string,
+  menuItemId: string,
   available: boolean
 ) => {
   const res = await axiosClient.put<ApiResponse<void>>(
-    `/branch-menu-items/${branchMenuItemId}/availability`,
+    `/branch-menu-items/availability`,
     null,
-    { params: { available } }
+    { params: { branchId, menuItemId, available } }
   );
   return res.data;
 };
