@@ -142,6 +142,7 @@ const tables = allTables.filter(t => t.branchId === branchId);
         open={isQRDialogOpen}
         onOpenChange={setIsQRDialogOpen}
         table={selectedTable}
+        branchId={branchId}
       />
 
       <AlertDialog open={!!tableToDelete} onOpenChange={() => setTableToDelete(null)}>

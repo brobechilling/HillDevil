@@ -17,6 +17,7 @@ const PUBLIC_ENDPOINTS = [
     "/restaurants/paginated",
     "/packages",
     "/branches",
+    "/public",
     "/users/mail",
 ];
 
@@ -91,4 +92,3 @@ axiosClient.interceptors.response.use(
         return Promise.reject(error);
     }
 );
-

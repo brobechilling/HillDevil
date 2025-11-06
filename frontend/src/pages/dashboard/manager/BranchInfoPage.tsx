@@ -6,53 +6,33 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Save, Building2, Mail, Phone, MapPin } from 'lucide-react';
-import { getBranchById, updateBranch } from '@/api/branchApi';
+import { useBranch, useUpdateBranch } from '@/hooks/queries/useBranches';
 
 export default function BranchInfoPage() {
   const { user } = useAuthStore();
   const branchId = user?.branchId || '1';
 
-  // Load branch data
-  const [branch, setBranch] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Load branch data via query
+  const { data: branch, isLoading } = useBranch(branchId);
+  const updateBranchMutation = useUpdateBranch();
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
 
   useEffect(() => {
-    const loadBranch = async () => {
-      try {
-        const branchData = await getBranchById(branchId);
-        setBranch(branchData);
-        setPhone(branchData.branchPhone || '');
-        setEmail(branchData.mail || '');
-        setAddress(branchData.address || '');
-      } catch (error) {
-        console.error('Failed to load branch:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadBranch();
-  }, [branchId]);
+    if (branch) {
+      setPhone(branch.branchPhone || '');
+      setEmail(branch.mail || '');
+      setAddress(branch.address || '');
+    }
+  }, [branch]);
 
   const handleSave = async () => {
     try {
-      await updateBranch(branchId, {
-        branchPhone: phone,
-        mail: email,
-        address,
-      });
-      toast({
-        title: 'Branch Updated',
-        description: 'Contact information has been saved successfully.',
-      });
+      await updateBranchMutation.mutateAsync({ id: branchId, data: { branchPhone: phone, mail: email } });
+      toast({ title: 'Branch Updated', description: 'Contact information has been saved successfully.' });
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: 'Failed to update branch information.',
-      });
+      toast({ variant: 'destructive', title: 'Update Failed', description: 'Failed to update branch information.' });
     }
   };
 

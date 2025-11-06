@@ -6,12 +6,11 @@ import { Store, ArrowRight, MapPin } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { RestaurantDTO } from '@/dto/restaurant.dto';
 import { UserDTO } from '@/dto/user.dto';
-import { getRestaurantsByOwner } from '@/api/restaurantApi';
+import { useRestaurantsByOwner } from '@/hooks/queries/useRestaurants';
 
 const BranchSelection = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserDTO | null>(null);
-  const [restaurants, setRestaurants] = useState<RestaurantDTO[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,36 +23,17 @@ const BranchSelection = () => {
 
     const userData = JSON.parse(storedUser) as UserDTO;
     setUser(userData);
-
-    // Check if we have restaurants stored from brand selection
-    const storedRestaurants = localStorage.getItem('user_restaurants');
-    if (storedRestaurants) {
-      const restaurantsData = JSON.parse(storedRestaurants);
-      setRestaurants(restaurantsData);
-      setLoading(false);
-    } else {
-      // If no stored restaurants, fetch them from API
-      fetchRestaurants(userData);
-    }
+    setLoading(false);
   }, [navigate]);
 
-  const fetchRestaurants = async (userData: UserDTO) => {
-    try {
-      setLoading(true);
-      const restaurantsData = await getRestaurantsByOwner(userData.userId);
-      setRestaurants(restaurantsData);
-      localStorage.setItem('user_restaurants', JSON.stringify(restaurantsData));
-    } catch (error) {
-      console.error('Error fetching restaurants:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load restaurants. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // useQuery to fetch restaurants for the owner
+  const userId = user?.userId || JSON.parse(localStorage.getItem('user') || 'null')?.userId;
+  const { data: restaurants = [], isLoading: isRestaurantsLoading } = useRestaurantsByOwner(userId);
+  // persist in localStorage for fallback
+  if (!localStorage.getItem('user_restaurants') && restaurants.length > 0) {
+    localStorage.setItem('user_restaurants', JSON.stringify(restaurants));
+  }
+  const effectiveLoading = loading || isRestaurantsLoading;
 
   const handleRestaurantSelect = (restaurantId: string) => {
     const restaurant = restaurants.find(r => r.restaurantId === restaurantId);
@@ -89,7 +69,7 @@ const BranchSelection = () => {
     navigate('/dashboard/owner');
   };
 
-  if (loading) {
+  if (effectiveLoading) {
     return (
       <div className="min-h-screen bg-muted/30 py-12 px-4">
         <div className="container max-w-5xl">

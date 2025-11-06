@@ -30,7 +30,7 @@ export const RestaurantLoginForm = ({ restaurant, onBack }: RestaurantLoginFormP
 
   const branchesByRestaurantQuery = useBranchesByRestaurant(restaurant.restaurantId);
   const branches: BranchDTO[] = branchesByRestaurantQuery.data ?? [];
-  const { setSession } = useSessionStore.getState();
+  const { setSession } = useSessionStore();
 
   const loginStaffMutation = useMutation({
     mutationFn: login,
