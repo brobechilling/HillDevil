@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import RegisterPackage from './pages/auth/RegisterPackage';
 import RegisterConfirm from './pages/auth/RegisterConfirm';
 import BrandSelection from './pages/auth/BrandSelection';
+import ForgotPassword from './pages/ForgotPassword';
 import OwnerDashboard from './pages/dashboard/OwnerDashboard';
 import ManagerDashboard from './pages/dashboard/ManagerDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
@@ -69,6 +70,10 @@ export const routes: RouteObject[] = [
     element: <Login />,
   },
   {
+    path: '/forgot-password',
+    element: <ForgotPassword />,
+  },
+  {
     path: '/register',
     element: <Register />,
   },
@@ -102,6 +107,14 @@ export const routes: RouteObject[] = [
   },
   {
     path: '/branch/:shortCode/table/:tableId',
+    element: <GuestLanding />,
+  },
+  {
+    path: '/t/:branchId/:tableId',
+    element: <GuestLanding />,
+  },
+  {
+    path: '/t/:areaName/:tableName',
     element: <GuestLanding />,
   },
   {

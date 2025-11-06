@@ -16,6 +16,10 @@ export default function BranchSelectionPage() {
     const { data: branches, isLoading: isBranchesLoading } = useBranchesByRestaurant(selectedRestaurant?.restaurantId);
 
     const handleAccessManagerDashboard = (selectedBranch: BranchDTO) => {
+        // Save selected branchId to sessionStorage for persistence across navigation
+        if (selectedBranch?.branchId) {
+            sessionStorage.setItem('owner_selected_branch_id', String(selectedBranch.branchId));
+        }
         // temporary allow access to staff page in manager dashboard
         navigate("/dashboard/manager/staff", {
         state: {
