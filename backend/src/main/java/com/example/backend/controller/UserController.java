@@ -11,6 +11,7 @@ import com.example.backend.dto.request.OTPValidateMailRequest;
 import com.example.backend.dto.request.SignupRequest;
 import com.example.backend.dto.response.PageResponse;
 import com.example.backend.service.MailService;
+import com.example.backend.service.OTPService;
 import com.example.backend.service.UserService;
 
 import jakarta.validation.Valid;
@@ -34,10 +35,12 @@ public class UserController {
 
     private final UserService userService;
     private final MailService mailService;
+    private final OTPService otpService;
     
-    public UserController(UserService userService, MailService mailService) {
+    public UserController(UserService userService, MailService mailService, OTPService otpService) {
         this.userService = userService;
         this.mailService = mailService;
+        this.otpService = otpService;
     }
     
     @GetMapping("")
@@ -104,8 +107,9 @@ public class UserController {
         return apiResponse;
     }
     
+    // send mail to verify user's email
     @PostMapping("/mail")
-    public ApiResponse<String> testMail(@RequestBody OTPMailRequest otpMailRequest) {
+    public ApiResponse<String> sendMailVerification(@RequestBody @Valid OTPMailRequest otpMailRequest) {
         ApiResponse<String> apiResponse = new ApiResponse<>();
         mailService.sendOTPMail(otpMailRequest);
         apiResponse.setResult("send mail successfully");
@@ -113,10 +117,9 @@ public class UserController {
     }
 
     @PostMapping("/mail/otp")
-    public ApiResponse<Boolean> validateOTP(@RequestBody OTPValidateMailRequest otpValidateMailRequest) {
+    public ApiResponse<Boolean> validateOTP(@RequestBody @Valid OTPValidateMailRequest otpValidateMailRequest) {
         ApiResponse<Boolean> apiResponse = new ApiResponse<>();
-        mailService.sendEmail();
-        apiResponse.setResult(mailService.checkOTP(otpValidateMailRequest));
+        apiResponse.setResult(otpService.validateOTPCode(otpValidateMailRequest.getOtp(), otpValidateMailRequest.getEmail()));
         return apiResponse;
     }
     
