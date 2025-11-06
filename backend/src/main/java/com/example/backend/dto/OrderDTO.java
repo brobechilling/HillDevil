@@ -4,21 +4,15 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import com.example.backend.entities.OrderStatus;
+
 public class OrderDTO {
     private UUID orderId;
-    private UUID areaTableId;
     private String tableTag;
-    private String status;
+    private String areaName;
+    private OrderStatus status;
     private BigDecimal totalPrice;
     private List<OrderLineDTO> orderLines;
-
-    public UUID getAreaTableId() {
-        return areaTableId;
-    }
-
-    public void setAreaTableId(UUID areaTableId) {
-        this.areaTableId = areaTableId;
-    }
 
     public UUID getOrderId() {
         return orderId;
@@ -36,14 +30,6 @@ public class OrderDTO {
         this.tableTag = tableTag;
     }
 
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
     public BigDecimal getTotalPrice() {
         return totalPrice;
     }
@@ -59,4 +45,21 @@ public class OrderDTO {
     public void setOrderLines(List<OrderLineDTO> orderLines) {
         this.orderLines = orderLines;
     }
+
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(OrderStatus status) {
+        this.status = status;
+    }
+
+    public String getAreaName() {
+        return areaName;
+    }
+
+    public void setAreaName(String areaName) {
+        this.areaName = areaName;
+    }
+    
 }

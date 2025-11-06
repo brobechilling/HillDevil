@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public class OrderItemCustomizationDTO {
     private UUID orderItemCustomizationId;
-    private UUID customizationId;
+    private String customizationName;
     private int quantity;
     private BigDecimal totalPrice;
 
@@ -15,14 +15,6 @@ public class OrderItemCustomizationDTO {
 
     public void setOrderItemCustomizationId(UUID orderItemCustomizationId) {
         this.orderItemCustomizationId = orderItemCustomizationId;
-    }
-
-    public UUID getCustomizationId() {
-        return customizationId;
-    }
-
-    public void setCustomizationId(UUID customizationId) {
-        this.customizationId = customizationId;
     }
 
     public int getQuantity() {
@@ -40,4 +32,13 @@ public class OrderItemCustomizationDTO {
     public void setTotalPrice(BigDecimal totalPrice) {
         this.totalPrice = totalPrice;
     }
+
+    public String getCustomizationName() {
+        return customizationName;
+    }
+
+    public void setCustomizationName(String customizationName) {
+        this.customizationName = customizationName;
+    }
+    
 }

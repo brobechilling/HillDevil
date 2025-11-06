@@ -10,7 +10,6 @@ import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.OrderLineMapper;
 import com.example.backend.repository.OrderLineRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -23,68 +22,52 @@ import java.util.UUID;
 public class OrderLineService {
 
     private final OrderLineRepository orderLineRepository;
-    private final OrderLineMapper mapper;
+    private final OrderLineMapper orderLineMapper;
     private final OrderItemService orderItemService;
 
     public OrderLineService(OrderLineRepository orderLineRepository,
-                            OrderLineMapper mapper,
+                            OrderLineMapper orderLineMapper,
                             OrderItemService orderItemService) {
         this.orderLineRepository = orderLineRepository;
-        this.mapper = mapper;
+        this.orderLineMapper = orderLineMapper;
         this.orderItemService = orderItemService;
     }
 
-    public OrderLineDTO getById(UUID orderLineId) {
-        OrderLine orderLine = orderLineRepository.findById(orderLineId).orElseThrow(() -> new AppException(ErrorCode.ORDERLINE_NOT_EXISTS));
-        return mapper.toOrderLineDTO(orderLine);
+    public void createOrderLine(CreateOrderLineRequest createOrderLineRequest) {
+        // check whether this order line is first 
+        
     }
 
-    public List<OrderLineDTO> getOrderLineFromOrder(UUID orderId) {
-        List<OrderLine> orderLines = orderLineRepository.findAllByOrder_OrderId(orderId);
-        return mapper.toDtoList(orderLines);
-    }
+    // @Transactional
+    // public List<OrderLineDTO> createOrderLines(List<CreateOrderLineRequest> requests, Order order) {
+    //     List<OrderLineDTO> savedLines = new ArrayList<>();
 
+    //     for (CreateOrderLineRequest lineReq : requests) {
+    //         OrderLine line = new OrderLine();
+    //         line.setOrder(order);
+    //         line.setOrderLineStatus(
+    //                 lineReq.getOrderLineStatus() == null
+    //                         ? OrderLineStatus.PENDING
+    //                         : lineReq.getOrderLineStatus()
+    //         );
 
+    //         OrderLine savedLine = orderLineRepository.save(line);
 
-    public OrderLineDTO setOrderLineStatus(UUID orderLineId, OrderLineStatus status) {
-        OrderLine line = orderLineRepository.findById(orderLineId)
-                .orElseThrow(() -> new AppException(ErrorCode.ORDERLINE_NOT_EXISTS));
+    //         BigDecimal lineTotal = BigDecimal.ZERO;
 
-        line.setOrderLineStatus(status);
-        line.setUpdatedAt(Instant.now());
-        return mapper.toOrderLineDTO(orderLineRepository.save(line));
-    }
+    //         if (lineReq.getOrderItems() != null && !lineReq.getOrderItems().isEmpty()) {
+    //             var items = orderItemService.createOrderItems(lineReq.getOrderItems(), savedLine);
+    //             lineTotal = items.stream()
+    //                     .map(OrderItemDTO::getTotalPrice)
+    //                     .reduce(BigDecimal.ZERO, BigDecimal::add);
+    //         }
 
-    @Transactional
-    public List<OrderLineDTO> createOrderLines(List<CreateOrderLineRequest> requests, Order order) {
-        List<OrderLineDTO> savedLines = new ArrayList<>();
+    //         savedLine.setTotalPrice(lineTotal);
+    //         savedLine = orderLineRepository.save(savedLine);
 
-        for (CreateOrderLineRequest lineReq : requests) {
-            OrderLine line = new OrderLine();
-            line.setOrder(order);
-            line.setOrderLineStatus(
-                    lineReq.getOrderLineStatus() == null
-                            ? OrderLineStatus.PENDING
-                            : lineReq.getOrderLineStatus()
-            );
+    //         savedLines.add(mapper.toOrderLineDTO(savedLine));
+    //     }
 
-            OrderLine savedLine = orderLineRepository.save(line);
-
-            BigDecimal lineTotal = BigDecimal.ZERO;
-
-            if (lineReq.getOrderItems() != null && !lineReq.getOrderItems().isEmpty()) {
-                var items = orderItemService.createOrderItems(lineReq.getOrderItems(), savedLine);
-                lineTotal = items.stream()
-                        .map(OrderItemDTO::getTotalPrice)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-            }
-
-            savedLine.setTotalPrice(lineTotal);
-            savedLine = orderLineRepository.save(savedLine);
-
-            savedLines.add(mapper.toOrderLineDTO(savedLine));
-        }
-
-        return savedLines;
-    }
+    //     return savedLines;
+    // }
 }

@@ -9,8 +9,9 @@ import java.util.List;
 
 @Mapper(componentModel = "spring", uses = {OrderLineMapper.class})
 public interface OrderMapper {
-    @Mapping(source = "areaTable.tag", target = "tableTag")
-    @Mapping(source = "status", target = "status")
-    OrderDTO toOrderDTO(Order order);
-    List<OrderDTO> toDtoList(List<Order> orders);
+    
+    // @Mapping(source = "areaTable.tag", target = "tableTag")
+    // @Mapping(source = "status", target = "status")
+    // OrderDTO toOrderDTO(Order order);
+    // List<OrderDTO> toDtoList(List<Order> orders);
 }

@@ -10,53 +10,41 @@ import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.OrderItemCustomizationMapper;
 import com.example.backend.repository.CustomizationRepository;
 import com.example.backend.repository.OrderItemCustomizationRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderItemCustomizationService {
 
     private final OrderItemCustomizationRepository orderItemCustomizationRepository;
     private final CustomizationRepository customizationRepository;
-    private final OrderItemCustomizationMapper mapper;
+    private final OrderItemCustomizationMapper orderItemCustomizationMapper;
 
     public OrderItemCustomizationService(OrderItemCustomizationRepository orderItemCustomizationRepository,
                                          CustomizationRepository customizationRepository,
-                                         OrderItemCustomizationMapper mapper) {
+                                         OrderItemCustomizationMapper orderItemCustomizationMapper) {
         this.orderItemCustomizationRepository = orderItemCustomizationRepository;
         this.customizationRepository = customizationRepository;
-        this.mapper = mapper;
+        this.orderItemCustomizationMapper = orderItemCustomizationMapper;
     }
 
-    @Transactional
-    public List<OrderItemCustomizationDTO> createCustomizations(
-            List<CreateOrderItemCustomizationRequest> requests,
-            OrderItem orderItem) {
-
-        List<OrderItemCustomization> entities = new ArrayList<>();
-
-        for (CreateOrderItemCustomizationRequest req : requests) {
-            Customization customization = customizationRepository.findById(req.getCustomizationId())
-                    .orElseThrow(() -> new AppException(ErrorCode.CUSTOMIZATION_NOT_FOUND));
-
-            OrderItemCustomization entity = new OrderItemCustomization();
-            entity.setOrderItem(orderItem);
-            entity.setCustomization(customization);
-            entity.setQuantity(req.getQuantity());
-
-            // ✅ tự tính giá customization
-            entity.setTotalPrice(customization.getPrice()
-                    .multiply(BigDecimal.valueOf(req.getQuantity())));
-
-            entities.add(entity);
+    public Set<OrderItemCustomization> createOrderItemCustomization(OrderItem orderItem, List<CreateOrderItemCustomizationRequest> createOrderItemCustomizationRequestList) {
+        List<OrderItemCustomization> orderItemCustomizations = new ArrayList<>();
+        for (CreateOrderItemCustomizationRequest createOrderItemCustomizationRequest : createOrderItemCustomizationRequestList) {
+            OrderItemCustomization orderItemCustomization = orderItemCustomizationMapper.createOrderItemCustomization(createOrderItemCustomizationRequest);
+            orderItemCustomization.setOrderItem(orderItem);
+            Customization customization = customizationRepository.findById(createOrderItemCustomizationRequest.getCustomizationId()).orElseThrow(() -> new AppException(ErrorCode.CUSTOMIZATION_NOT_FOUND));
+            orderItemCustomization.setCustomization(customization);
+            // recalculate the price from front end
+            orderItemCustomization.setTotalPrice(customization.getPrice().multiply(BigDecimal.valueOf(createOrderItemCustomizationRequest.getQuantity())));
+            orderItemCustomizations.add(orderItemCustomization);
         }
-
-        List<OrderItemCustomization> saved = orderItemCustomizationRepository.saveAll(entities);
-        return mapper.toDtoList(saved);
+        return orderItemCustomizationRepository.saveAll(orderItemCustomizations).stream().collect(Collectors.toSet());
     }
 
 }

@@ -1,28 +1,21 @@
 package com.example.backend.mapper;
 
-import com.example.backend.dto.OrderItemCustomizationDTO;
-import com.example.backend.entities.Customization;
-import com.example.backend.entities.OrderItemCustomization;
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-import java.util.List;
-import java.util.UUID;
+import com.example.backend.dto.OrderItemCustomizationDTO;
+import com.example.backend.dto.request.CreateOrderItemCustomizationRequest;
+import com.example.backend.entities.OrderItemCustomization;
+
 
 @Mapper(componentModel = "spring")
 public interface OrderItemCustomizationMapper {
 
-    @Mapping(source = "customization.customizationId", target = "customizationId")
+    @Mapping(target = "customizationName", source = "customization.name")
     OrderItemCustomizationDTO toOrderItemCustomizationDTO(OrderItemCustomization entity);
-    List<OrderItemCustomizationDTO> toDtoList(List<OrderItemCustomization> list);
 
+    @Mapping(target = "customization", ignore = true)
     @Mapping(target = "orderItem", ignore = true)
-    @Mapping(target = "customization", expression = "java(mapCustomization(dto.getCustomizationId()))")
-    OrderItemCustomization toOrderItemCustomization(OrderItemCustomizationDTO dto);
+    OrderItemCustomization createOrderItemCustomization(CreateOrderItemCustomizationRequest createOrderItemCustomizationRequest);
 
-    default Customization mapCustomization(UUID id) {
-        if (id == null) return null;
-        Customization c = new Customization();
-        c.setCustomizationId(id);
-        return c;
-    }
 }

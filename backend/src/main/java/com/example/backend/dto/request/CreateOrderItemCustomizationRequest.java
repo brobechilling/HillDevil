@@ -7,6 +7,7 @@ public class CreateOrderItemCustomizationRequest {
 
     private UUID customizationId;
     private int quantity;
+    // calculated in frontend
     private BigDecimal totalPrice;
 
     public UUID getCustomizationId() {

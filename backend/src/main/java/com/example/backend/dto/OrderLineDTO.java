@@ -5,7 +5,6 @@ import com.example.backend.entities.OrderLineStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 public class OrderLineDTO {
@@ -13,8 +12,9 @@ public class OrderLineDTO {
     private OrderLineStatus orderLineStatus;
     private Instant createdAt;
     private BigDecimal totalPrice;
-
-    private Set<OrderItemDTO> orderItems;
+    private List<OrderItemDTO> orderItems;
+    private String tableTag;
+    private String areaName;
 
     public UUID getOrderLineId() {
         return orderLineId;
@@ -32,14 +32,6 @@ public class OrderLineDTO {
         this.createdAt = createdAt;
     }
 
-    public Set<OrderItemDTO> getOrderItems() {
-        return orderItems;
-    }
-
-    public void setOrderItems(Set<OrderItemDTO> orderItems) {
-        this.orderItems = orderItems;
-    }
-
     public OrderLineStatus getOrderLineStatus() {
         return orderLineStatus;
     }
@@ -55,4 +47,29 @@ public class OrderLineDTO {
     public void setTotalPrice(BigDecimal totalPrice) {
         this.totalPrice = totalPrice;
     }
+
+    public List<OrderItemDTO> getOrderItems() {
+        return orderItems;
+    }
+
+    public void setOrderItems(List<OrderItemDTO> orderItems) {
+        this.orderItems = orderItems;
+    }
+
+    public String getTableTag() {
+        return tableTag;
+    }
+
+    public void setTableTag(String tableTag) {
+        this.tableTag = tableTag;
+    }
+
+    public String getAreaName() {
+        return areaName;
+    }
+
+    public void setAreaName(String areaName) {
+        this.areaName = areaName;
+    }
+
 }

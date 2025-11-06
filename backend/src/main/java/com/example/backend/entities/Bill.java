@@ -19,7 +19,7 @@ public class Bill {
     private UUID billId;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false, unique = true)
+    @JoinColumn(name = "order_id", nullable = true, unique = true)
     private Order order;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)

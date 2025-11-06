@@ -8,6 +8,8 @@ public class CreateOrderItemRequest {
 
     private UUID menuItemId;
     private int quantity;
+    // totalPrice is calculated in frontend by List<CreateOrderItemCustomizationRequest>
+    // can change later
     private BigDecimal totalPrice;
     private String note;
     private boolean status = true;

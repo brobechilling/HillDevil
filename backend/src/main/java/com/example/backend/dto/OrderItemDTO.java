@@ -6,12 +6,11 @@ import java.util.UUID;
 
 public class OrderItemDTO {
     private UUID orderItemId;
-    private UUID menuItemId;
     private int quantity;
     private BigDecimal totalPrice;
     private String note;
     private boolean status;
-
+    private String menuItemName;
     private List<OrderItemCustomizationDTO> customizations;
 
     public UUID getOrderItemId() {
@@ -62,11 +61,12 @@ public class OrderItemDTO {
         this.quantity = quantity;
     }
 
-    public UUID getMenuItemId() {
-        return menuItemId;
+    public String getMenuItemName() {
+        return menuItemName;
     }
 
-    public void setMenuItemId(UUID menuItemId) {
-        this.menuItemId = menuItemId;
+    public void setMenuItemName(String menuItemName) {
+        this.menuItemName = menuItemName;
     }
+
 }

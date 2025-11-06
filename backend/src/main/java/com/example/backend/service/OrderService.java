@@ -13,6 +13,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -35,66 +36,48 @@ public class OrderService {
         this.orderLineService = orderLineService;
     }
 
-    public List<OrderDTO> getOrdersHistoryFromBranch(UUID branchId) {
-        List<Order> orders = orderRepository.findAllByBranchIdAndStatus(branchId, OrderStatus.COMPLETED);
-        return orderMapper.toDtoList(orders);
-    }
-
-    public OrderDTO getById(UUID orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTS));
-        return orderMapper.toOrderDTO(order);
-    }
-
-    @Transactional
-    public OrderDTO create(CreateOrderRequest request) {
-        if (request == null || request.getAreaTableId() == null
-                || request.getOrderLines() == null || request.getOrderLines().isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-
-        AreaTable table = tableRepository.findById(request.getAreaTableId())
-                .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
-
-        if (orderRepository.existsByAreaTable_AreaTableIdAndStatus(request.getAreaTableId(), OrderStatus.PENDING)) {
-            throw new AppException(ErrorCode.TABLE_ALREADY_HAS_PENDING_ORDER);
-        }
-
+    public Order createOrder(UUID areaTableId) {
         Order order = new Order();
-        order.setAreaTable(table);
-        order.setStatus(OrderStatus.PENDING);
-        order.setTotalPrice(BigDecimal.ZERO);
-        Order savedOrder = orderRepository.save(order);
-
-        List<OrderLineDTO> createdLines = orderLineService.createOrderLines(request.getOrderLines(), savedOrder);
-
-        BigDecimal grandTotal = createdLines.stream()
-                .map(OrderLineDTO::getTotalPrice)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        savedOrder.setTotalPrice(grandTotal);
-        savedOrder = orderRepository.save(savedOrder);
-
-        return orderMapper.toOrderDTO(savedOrder);
+        order.setAreaTable(tableRepository.findById(areaTableId).orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND)));
+        order.setStatus(OrderStatus.EATING);
+        return orderRepository.save(order);
     }
 
-    public OrderDTO getPendingOrderByTable(UUID tableId) {
-        Order order = orderRepository.findByAreaTable_AreaTableIdAndStatus(tableId, OrderStatus.PENDING).orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTS));
-        return orderMapper.toOrderDTO(order);
+    public Order checkOrderExist(UUID areaTableId) {
+        return orderRepository.findTopByAreaTable_AreaTableIdAndStatusOrderByUpdatedAtDesc(areaTableId, OrderStatus.EATING).orElseGet( () -> createOrder(areaTableId));
     }
 
-    public OrderDTO completeOrder(UUID orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTS));
+    // @Transactional
+    // public OrderDTO create(CreateOrderRequest request) {
+    //     if (request == null || request.getAreaTableId() == null
+    //             || request.getOrderLines() == null || request.getOrderLines().isEmpty()) {
+    //         throw new AppException(ErrorCode.INVALID_REQUEST);
+    //     }
 
-        if (order.getStatus() == OrderStatus.COMPLETED) {
-            throw new AppException(ErrorCode.ORDER_ALREADY_COMPLETED);
-        }
+    //     AreaTable table = tableRepository.findById(request.getAreaTableId())
+    //             .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
 
-        order.setStatus(OrderStatus.COMPLETED);
-        orderRepository.save(order);
+    //     if (orderRepository.existsByAreaTable_AreaTableIdAndStatus(request.getAreaTableId(), OrderStatus.PENDING)) {
+    //         throw new AppException(ErrorCode.TABLE_ALREADY_HAS_PENDING_ORDER);
+    //     }
 
-        return orderMapper.toOrderDTO(order);
-    }
+    //     Order order = new Order();
+    //     order.setAreaTable(table);
+    //     order.setStatus(OrderStatus.PENDING);
+    //     order.setTotalPrice(BigDecimal.ZERO);
+    //     Order savedOrder = orderRepository.save(order);
+
+    //     List<OrderLineDTO> createdLines = orderLineService.createOrderLines(request.getOrderLines(), savedOrder);
+
+    //     BigDecimal grandTotal = createdLines.stream()
+    //             .map(OrderLineDTO::getTotalPrice)
+    //             .filter(Objects::nonNull)
+    //             .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    //     savedOrder.setTotalPrice(grandTotal);
+    //     savedOrder = orderRepository.save(savedOrder);
+
+    //     return orderMapper.toOrderDTO(savedOrder);
+    // }
+
 }
