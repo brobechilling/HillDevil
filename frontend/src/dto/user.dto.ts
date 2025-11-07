@@ -33,3 +33,8 @@ export interface ChangePasswordRequest {
     userId: string;
     newPassword: string;
 }
+
+export interface ForgetPasswordRequst {
+    password: string;
+    email: string;
+}

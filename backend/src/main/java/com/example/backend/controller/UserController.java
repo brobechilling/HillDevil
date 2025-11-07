@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.UserDTO;
 import com.example.backend.dto.request.ChangePasswordRequest;
+import com.example.backend.dto.request.ForgetPasswordRequest;
 import com.example.backend.dto.request.OTPMailRequest;
 import com.example.backend.dto.request.OTPValidateMailRequest;
 import com.example.backend.dto.request.SignupRequest;
@@ -123,4 +124,10 @@ public class UserController {
         return apiResponse;
     }
     
+    @PostMapping("/forgetpass")
+    public ApiResponse<Boolean> forgetPassword(@RequestBody @Valid ForgetPasswordRequest forgetPasswordRequest) {
+        ApiResponse<Boolean> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(userService.forgetPassword(forgetPasswordRequest));
+        return apiResponse;
+    }
 }

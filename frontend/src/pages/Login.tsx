@@ -30,10 +30,9 @@ const Login = () => {
       case "RESTAURANT_OWNER":
         try {
           const restaurants = await getRestaurantsByOwner(data.user.userId);
-          console.log('Login success - Restaurants:', restaurants);
-
           if (restaurants.length === 0) {
-            navigate('/register/package');
+            navigate('/');
+            // navigate('/register/package');
           } else if (restaurants.length === 1) {
             localStorage.setItem('selected_restaurant', JSON.stringify(restaurants[0]));
             navigate('/dashboard/owner');
@@ -42,7 +41,6 @@ const Login = () => {
             navigate('/brand-selection');
           }
         } catch (error) {
-          console.error('Error fetching restaurants:', error);
           toast({
             title: "Error",
             description: "Failed to load restaurant information. Please try again.",
