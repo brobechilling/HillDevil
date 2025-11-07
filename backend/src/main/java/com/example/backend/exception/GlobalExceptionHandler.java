@@ -60,6 +60,11 @@ public class GlobalExceptionHandler {
      // handle unexpected exception
     @ExceptionHandler(value = Exception.class)
     ResponseEntity<ApiResponse<Void>> handleUncategorizedException(Exception e) {
+        // Log exception for debugging
+        System.err.println("GlobalExceptionHandler caught exception: " + e.getClass().getName());
+        System.err.println("Message: " + e.getMessage());
+        e.printStackTrace();
+        
         ApiResponse<Void> apiResponse = new ApiResponse<>();
         apiResponse.setCode(ErrorCode.WE_COOKED.getCode());
         apiResponse.setMessage(ErrorCode.WE_COOKED.getMessage());
