@@ -1,7 +1,9 @@
 package com.example.backend.dto.request;
 
+import jakarta.validation.constraints.Email;
+
 public class OTPValidateMailRequest {
-    
+    @Email
     private String email;
     private String otp;
     

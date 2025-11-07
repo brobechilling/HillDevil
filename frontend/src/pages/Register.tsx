@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { SignupRequest } from '@/dto/user.dto';
 import { useRegister } from '@/hooks/queries/useAuth';
 import { ApiResponse } from '@/dto/apiResponse';
 import { AxiosError } from 'axios';
+import { useValidateOTP, useVerifyMail } from '@/hooks/queries/useUsers';
 
 const Register = () => {
   const [formData, setFormData] = useState<SignupRequest>({
@@ -19,8 +20,13 @@ const Register = () => {
     password: '',
   });
   const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [emailVerified, setEmailVerified] = useState<boolean>(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [otp, setOtp] = useState<string>('');
+  const verifyMailMutation = useVerifyMail();
+  const validateOTPMutation = useValidateOTP();
+  const [timer, setTimer] = useState<number>(0);
 
   const registerMutation = useRegister({
     onSuccess: () => {
@@ -44,15 +50,130 @@ const Register = () => {
       });
       return;
     }
-    registerMutation.mutate(formData);
+    if (emailVerified) {
+      registerMutation.mutate(formData);
+    }
+    else {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Your email has not been verified",
+      });
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.id]: e.target.value,
-    });
+    const { id, value } = e.target;
+
+    if (id === 'email') {
+      setEmailVerified(false);
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
   };
+
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+
+  const handleSendOTP = async () => {
+    if (!formData.email || !formData.username) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please enter your name and email before verifying.",
+      });
+      return;
+    }
+    if (!isValidEmail(formData.email)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+      });
+      return;
+    }
+    if (timer > 0) 
+      return;
+    verifyMailMutation.mutate(
+      {
+        mail: formData.email,
+        name: formData.username
+      },
+      {
+        onSuccess: () => {
+          toast({
+            variant: "default",
+            title: "OTP sent!",
+            description: "Please check your email for the OTP code.",
+          });
+          setTimer(60);
+        },
+        onError: () => {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to send OTP. Please try again.",
+          });
+        },
+      }
+    );
+  };
+
+  const handleValidateOTP = async () => {
+    if (!otp) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please enter your OTP code.",
+      });
+      return;
+    }
+
+    validateOTPMutation.mutate(
+      { email: formData.email, otp },
+      {
+        onSuccess: (data) => {
+          // set email verified to be true only when the otp is correct, regardless of the mutation result state
+          if (data) {
+            setEmailVerified(true);
+            toast({
+              variant: "default",
+              title: "Email verified!",
+              description: "You can now complete your registration.",
+            });
+            setOtp('');
+          } else {
+            toast({
+              variant: "destructive",
+              title: "Invalid OTP",
+              description: "Please check your code and try again.",
+            });
+          }
+        },
+        onError: () => {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Verification failed. Please try again.",
+          });
+        },
+      }
+    );
+  };
+
+  useEffect(() => {
+    if (timer <= 0) return;
+    const interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
+    return () => clearInterval(interval);
+  }, [timer]);
+
+
 
   return (
     <div className="min-h-screen flex items-center justify-center gradient-hero p-4">
@@ -99,6 +220,44 @@ const Register = () => {
                 />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="otp">Email Verification</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSendOTP}
+                  disabled={verifyMailMutation.isPending || !formData.email || !formData.username || timer > 0 || emailVerified}
+                  className="whitespace-nowrap"
+                >
+                  {verifyMailMutation.isPending ? "Sending..." : timer > 0 ? `Resend (${timer}s)` : "Send OTP"}
+                </Button>
+                <Input
+                  id="otp"
+                  type="text"
+                  placeholder="Enter OTP"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  className="flex-1"
+                  disabled={emailVerified}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleValidateOTP}
+                  disabled={validateOTPMutation.isPending || !otp}
+                >
+                  {validateOTPMutation.isPending ? "Verifying..." : "Verify"}
+                </Button>
+              </div>
+              {emailVerified && (
+                <p className="text-green-600 text-sm font-medium mt-1">
+                  Email verified
+                </p>
+              )}
+            </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>

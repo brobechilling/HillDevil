@@ -27,6 +27,8 @@ const PUBLIC_ENDPOINTS = [
     "/restaurants/paginated",
     "/packages",
     "/branches",
+    "/public",
+    "/users/mail",
 ];
 
 const isPublicEndpoint = (url: string = "") =>

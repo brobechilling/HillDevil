@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAreasByBranch, createArea, deleteArea, CreateAreaRequest } from '@/api/areaApi';
 import { useMemo } from 'react';
-import { getAccessToken } from '@/api/axiosClient';
+import { useSessionStore } from '@/store/sessionStore';
+
 
 // Helper function to validate UUID format
 const isValidUUID = (str: string): boolean => {
@@ -10,6 +11,7 @@ const isValidUUID = (str: string): boolean => {
 };
 
 export const useAreas = (branchId: string | undefined) => {
+  const { token } = useSessionStore();
   // Kiểm tra token và branchId hợp lệ (phải là UUID format)
   const isValidBranchId = useMemo(() => {
     if (!branchId || typeof branchId !== 'string') return false;
@@ -19,7 +21,6 @@ export const useAreas = (branchId: string | undefined) => {
   }, [branchId]);
   
   const hasToken = useMemo(() => {
-    const token = getAccessToken();
     return !!token && token.trim() !== '';
   }, []); // Check token mỗi lần component render
   

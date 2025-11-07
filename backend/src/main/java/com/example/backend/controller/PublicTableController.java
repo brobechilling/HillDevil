@@ -21,7 +21,28 @@ public class PublicTableController {
         this.tableService = tableService;
     }
 
+    // Public endpoint for guest access with branchId and tableId: /t/{branchId}/{tableId}
+    // This is the NEW format - unique and prevents conflicts
+    // This MUST come FIRST to have highest priority
+    @GetMapping("/{branchId}/{tableId}")
+    public ApiResponse<TableResponse> getPublicTableByBranchAndTable(
+            @PathVariable String branchId,
+            @PathVariable String tableId) {
+        ApiResponse<TableResponse> res = new ApiResponse<>();
+        
+        try {
+            UUID branchUUID = UUID.fromString(branchId);
+            UUID tableUUID = UUID.fromString(tableId);
+            res.setResult(tableService.getTableByBranchIdAndTableId(branchUUID, tableUUID));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid UUID format for branchId or tableId: " + e.getMessage());
+        }
+        
+        return res;
+    }
+
     // Public endpoint for guest access with area name: /t/{areaName}/{tableName}
+    // (For backward compatibility - deprecated, use /t/{branchId}/{tableId} instead)
     // This MUST come BEFORE /{identifier} to avoid path variable conflicts
     @GetMapping("/{areaName}/{tableName}")
     public ApiResponse<TableResponse> getPublicTableByAreaAndName(
@@ -33,7 +54,8 @@ public class PublicTableController {
     }
     
     // Public endpoint for guest access (short URL support: /t/{tableId} or /t/{tableName})
-    // This comes AFTER the two-parameter endpoint to avoid conflicts
+    // (For backward compatibility - deprecated, use /t/{branchId}/{tableId} instead)
+    // This comes AFTER the two-parameter endpoints to avoid conflicts
     @GetMapping("/{identifier}")
     public ApiResponse<TableResponse> getPublicTable(@PathVariable String identifier) {
         ApiResponse<TableResponse> res = new ApiResponse<>();

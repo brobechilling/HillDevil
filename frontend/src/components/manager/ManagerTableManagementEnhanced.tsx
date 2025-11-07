@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAreas, useCreateArea, useDeleteArea } from '@/hooks/queries/useAreas';
 import { useTables, useDeleteTable, useUpdateTableStatus, useUpdateTable } from '@/hooks/queries/useTables';
 import { useBranches, useBranchesByRestaurant } from '@/hooks/queries/useBranches';
+import { useQueryClient } from '@tanstack/react-query';
 import { BranchSelection } from '@/components/common/BranchSelection';
 import { BranchDTO } from '@/dto/branch.dto';
 import { TableDTO } from '@/dto/table.dto';
@@ -78,6 +79,7 @@ export const ManagerTableManagementEnhanced = ({
   const { data: areas = [] } = useAreas(validBranchId);
   const createAreaMutation = useCreateArea();
   const deleteAreaMutation = useDeleteArea();
+  const queryClient = useQueryClient();
   
   const { data: tablesData, isLoading: isTablesLoading, error: tablesError, refetch: refetchTables } = useTables(validBranchId);
   const existingTables: TableDTO[] = tablesData?.content || [];
@@ -230,15 +232,13 @@ export const ManagerTableManagementEnhanced = ({
   };
 
   const handleDeleteAreaClick = (areaId: string, areaName: string) => {
-    // Check if area has tables
+    // Check if area has tables - show warning but allow deletion
     const areaTables = areaMap.get(areaId)?.tables || [];
     if (areaTables.length > 0) {
       toast({
-        variant: 'destructive',
-        title: 'Cannot delete area',
-        description: `Area "${areaName}" has ${areaTables.length} table(s). Please delete or move all tables first.`,
+        title: 'Area has tables',
+        description: `Area "${areaName}" has ${areaTables.length} table(s). These tables will be moved to "Undefined Area" after deletion.`,
       });
-      return;
     }
     
     setAreaToDelete({ id: areaId, name: areaName });
@@ -249,10 +249,17 @@ export const ManagerTableManagementEnhanced = ({
     if (!areaToDelete) return;
 
     try {
+      const areaTables = areaMap.get(areaToDelete.id)?.tables || [];
       await deleteAreaMutation.mutateAsync(areaToDelete.id);
+      
+      let description = `Area "${areaToDelete.name}" has been deleted successfully.`;
+      if (areaTables.length > 0) {
+        description += ` ${areaTables.length} table(s) have been moved to "Undefined Area".`;
+      }
+      
       toast({
         title: 'Area deleted',
-        description: `Area "${areaToDelete.name}" has been deleted successfully.`,
+        description: description,
       });
       setIsDeleteAreaDialogOpen(false);
       setAreaToDelete(null);
@@ -260,6 +267,8 @@ export const ManagerTableManagementEnhanced = ({
       if (selectedAreaId === areaToDelete.id) {
         setSelectedAreaId(null);
       }
+      // Refetch tables to show updated area assignments
+      refetchTables();
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to delete area';
       toast({
@@ -317,7 +326,8 @@ export const ManagerTableManagementEnhanced = ({
         }
       }
 
-      await updateTableMutation.mutateAsync({
+      // Update table (area, capacity)
+      const updatedTableResponse = await updateTableMutation.mutateAsync({
         tableId: selectedTable.id,
         data: {
           areaId: editFormData.areaId,
@@ -327,12 +337,46 @@ export const ManagerTableManagementEnhanced = ({
       });
 
       // Update status separately if it changed
+      let finalTableData = updatedTableResponse;
       if (editFormData.status !== selectedTable.status) {
-        await updateTableStatusMutation.mutateAsync({
+        finalTableData = await updateTableStatusMutation.mutateAsync({
           tableId: selectedTable.id,
           status: apiStatus,
         });
       }
+
+      // Find area name for the new areaId
+      const newArea = areas.find(a => a.areaId === editFormData.areaId);
+      
+      // Prepare updated table data with area name
+      const updatedTableData = {
+        ...finalTableData,
+        areaId: editFormData.areaId,
+        areaName: newArea?.name || finalTableData.areaName || selectedTable.areaName,
+        capacity: editFormData.capacity,
+        status: apiStatus,
+      };
+
+      // Update selectedTable immediately with response data
+      setSelectedTable(updatedTableData);
+
+      // Update React Query cache directly to update the list view immediately
+      // useTables hook uses queryKey: ['tables', branchId, page, size, sort]
+      // We need to update all matching queries for this branchId
+      // IMPORTANT: Update cache BEFORE invalidateQueries triggers refetch
+      // This ensures the UI shows the new data immediately
+      queryClient.setQueriesData(
+        { queryKey: ['tables', validBranchId] },
+        (oldData: any) => {
+          if (!oldData || !oldData.content) return oldData;
+          return {
+            ...oldData,
+            content: oldData.content.map((table: TableDTO) =>
+              table.id === selectedTable.id ? updatedTableData : table
+            ),
+          };
+        }
+      );
 
       toast({
         title: 'Table updated successfully',
@@ -387,7 +431,9 @@ export const ManagerTableManagementEnhanced = ({
   const [hoveredTable, setHoveredTable] = useState<string | null>(null);
 
   useEffect(() => {
-    if (allowBranchSelection && !selectedBranch && branches.length > 0) {
+    // Only auto-select first branch if no branchId was provided initially
+    // and no branch is currently selected
+    if (allowBranchSelection && !selectedBranch && !initialBranchId && branches.length > 0) {
       const firstBranch = branches[0];
       if (firstBranch && firstBranch.branchId) {
         const branchIdStr = String(firstBranch.branchId);
@@ -400,7 +446,18 @@ export const ManagerTableManagementEnhanced = ({
         }
       }
     }
-  }, [allowBranchSelection, selectedBranch, branches]);
+    // If initialBranchId is provided, use it
+    else if (allowBranchSelection && initialBranchId && !selectedBranch) {
+      const branchIdStr = String(initialBranchId);
+      const isValidUUID = (str: string): boolean => {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(str);
+      };
+      if (isValidUUID(branchIdStr)) {
+        setSelectedBranch(branchIdStr);
+      }
+    }
+  }, [allowBranchSelection, selectedBranch, branches, initialBranchId]);
 
   return (
     <>
@@ -455,6 +512,10 @@ export const ManagerTableManagementEnhanced = ({
               };
               if (isValidUUID(branchIdStr)) {
                 setSelectedBranch(branchIdStr);
+                // Save to sessionStorage for persistence (for owner role)
+                if (allowBranchSelection) {
+                  sessionStorage.setItem('owner_selected_branch_id', branchIdStr);
+                }
               }
             }}
             variant="compact"
@@ -962,24 +1023,11 @@ export const ManagerTableManagementEnhanced = ({
                   <div className="flex gap-2">
                     <Input 
                       value={(() => {
-                        // Use same URL format as TableQRDialog: /t/{areaName}/{tableName}
-                        const sanitizeForUrl = (str: string) => {
-                          return String(str)
-                            .toLowerCase()
-                            .trim()
-                            .replace(/\s+/g, '-')
-                            .replace(/[^a-z0-9-]/g, '')
-                            .replace(/-+/g, '-')
-                            .replace(/^-|-$/g, '');
-                        };
-                        
-                        const tableName = selectedTable.tag || (selectedTable as any).number || selectedTable.id || 'unknown';
-                        const areaName = selectedTable.areaName || areas.find(a => a.areaId === selectedTable.areaId)?.name || 'unassigned';
-                        
-                        const sanitizedAreaName = sanitizeForUrl(areaName);
-                        const sanitizedTableName = sanitizeForUrl(tableName);
-                        
-                        return `${window.location.origin}/t/${sanitizedAreaName}/${sanitizedTableName}`;
+                        // Use new URL format: /t/{branchId}/{tableId}
+                        // This format is unique and prevents conflicts
+                        const tableId = selectedTable.id || selectedTable.areaTableId || 'unknown';
+                        const branchId = validBranchId || selectedTable.branchId || 'unknown';
+                        return `${window.location.origin}/t/${branchId}/${tableId}`;
                       })()}
                       readOnly
                       className="font-mono text-xs"
@@ -988,24 +1036,10 @@ export const ManagerTableManagementEnhanced = ({
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        // Use same URL format as TableQRDialog
-                        const sanitizeForUrl = (str: string) => {
-                          return String(str)
-                            .toLowerCase()
-                            .trim()
-                            .replace(/\s+/g, '-')
-                            .replace(/[^a-z0-9-]/g, '')
-                            .replace(/-+/g, '-')
-                            .replace(/^-|-$/g, '');
-                        };
-                        
-                        const tableName = selectedTable.tag || (selectedTable as any).number || selectedTable.id || 'unknown';
-                        const areaName = selectedTable.areaName || areas.find(a => a.areaId === selectedTable.areaId)?.name || 'unassigned';
-                        
-                        const sanitizedAreaName = sanitizeForUrl(areaName);
-                        const sanitizedTableName = sanitizeForUrl(tableName);
-                        
-                        const tableUrl = `${window.location.origin}/t/${sanitizedAreaName}/${sanitizedTableName}`;
+                        // Use new URL format: /t/{branchId}/{tableId}
+                        const tableId = selectedTable.id || selectedTable.areaTableId || 'unknown';
+                        const branchId = validBranchId || selectedTable.branchId || 'unknown';
+                        const tableUrl = `${window.location.origin}/t/${branchId}/${tableId}`;
                         
                         navigator.clipboard.writeText(tableUrl);
                         toast({ title: 'Copied!', description: 'URL copied to clipboard' });
@@ -1174,9 +1208,24 @@ export const ManagerTableManagementEnhanced = ({
                       return;
                     }
                     
+                    // Check for duplicate area name before creating
+                    const trimmedAreaName = areaName.trim();
+                    const existingArea = areas.find(a => 
+                      a.name.toLowerCase().trim() === trimmedAreaName.toLowerCase()
+                    );
+                    
+                    if (existingArea) {
+                      toast({
+                        variant: 'destructive',
+                        title: 'Area already exists',
+                        description: `An area with the name "${trimmedAreaName}" already exists. Please choose a different name.`,
+                      });
+                      return;
+                    }
+                    
                     await createAreaMutation.mutateAsync({
                       branchId: validBranchId,
-                      name: areaName.trim(),
+                      name: trimmedAreaName,
                     });
                     toast({ 
                       title: 'Area added', 
@@ -1185,7 +1234,6 @@ export const ManagerTableManagementEnhanced = ({
                     setAreaName('');
                 setIsAreaDialogOpen(false);
                   } catch (error: any) {
-                    console.error('Create area error:', error);
                     const errorMessage = error?.response?.data?.message 
                       || error?.message 
                       || 'Failed to create area. Please check if branchId is valid.';
@@ -1323,7 +1371,14 @@ export const ManagerTableManagementEnhanced = ({
               Delete Area
             </DialogTitle>
             <DialogDescription className="pt-2">
-              Are you sure you want to delete area <strong>"{areaToDelete?.name}"</strong>? This action cannot be undone and the area will be permanently removed. Make sure the area has no tables before deleting.
+              Are you sure you want to delete area <strong>"{areaToDelete?.name}"</strong>? 
+              {(() => {
+                const areaTables = areaToDelete ? areaMap.get(areaToDelete.id)?.tables || [] : [];
+                if (areaTables.length > 0) {
+                  return ` This area has ${areaTables.length} table(s) that will be moved to "Undefined Area" after deletion.`;
+                }
+                return ' This action cannot be undone and the area will be permanently removed.';
+              })()}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-3 pt-4">
