@@ -1,4 +1,4 @@
-import { ChangePasswordRequest, SignupRequest, UserDTO } from "@/dto/user.dto";
+import { ChangePasswordRequest, ForgetPasswordRequst, SignupRequest, UserDTO } from "@/dto/user.dto";
 import { axiosClient } from "./axiosClient";
 import { ApiResponse } from "@/dto/apiResponse";
 import { PageResponse } from "@/dto/pageResponse";
@@ -42,5 +42,10 @@ export const sendMailVerification = async ( request : OTPMailRequest) => {
 
 export const validateOTP = async ( request : OTPValidateMailRequest) => {
   const res = await axiosClient.post<ApiResponse<boolean>>("/users/mail/otp", request);
+  return res.data.result;
+}
+
+export const forgetPassword = async (request : ForgetPasswordRequst) => {
+  const res = await axiosClient.post<ApiResponse<boolean>>("/users/forgetpass", request);
   return res.data.result;
 }

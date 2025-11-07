@@ -19,6 +19,7 @@ const PUBLIC_ENDPOINTS = [
     "/branches",
     "/public",
     "/users/mail",
+    "/users/forgetpass",
 ];
 
 const isPublicEndpoint = (url: string = "") =>
