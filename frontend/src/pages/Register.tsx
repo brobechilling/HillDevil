@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { UtensilsCrossed, Mail, Lock, User, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SignupRequest } from '@/dto/user.dto';
-import { useRegister } from '@/hooks/queries/useAuth';
+import { useMutation } from '@tanstack/react-query';
+import { register } from '@/api/userApi';
 import { ApiResponse } from '@/dto/apiResponse';
 import { AxiosError } from 'axios';
 import { useValidateOTP, useVerifyMail } from '@/hooks/queries/useUsers';
@@ -28,15 +29,24 @@ const Register = () => {
   const validateOTPMutation = useValidateOTP();
   const [timer, setTimer] = useState<number>(0);
 
-  const registerMutation = useRegister({
-    onSuccess: () => {
-      toast({ variant: 'default', title: 'Success', description: 'You have registered successfully.' });
+  const registerMutation = useMutation({
+     mutationFn: register,
+     onSuccess: () => {
+      toast({
+        variant: "default",
+        title: "Success",
+        description: "You have registered successfully.",
+      });
       navigate('/login');
-    },
-    onError(error: AxiosError<ApiResponse<null>>) {
-      const message = error.response?.data?.message || 'Unexpected error occured. Please try again';
-      toast({ variant: 'destructive', title: 'Error', description: message });
-    },
+     },
+     onError(error: AxiosError<ApiResponse<null>>) {
+      const message = error.response?.data?.message || "Unexpected error occured. Please try again";
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: message,
+      });
+     },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

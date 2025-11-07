@@ -39,28 +39,11 @@ public class SecurityConfig {
         this.myCustomJwtDecoder = myCustomJwtDecoder;
     }
 
-    // SecurityFilterChain for public endpoints - NO JWT validation
     @Bean
-    @org.springframework.core.annotation.Order(1)
-    public SecurityFilterChain publicSecurityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity
-            .securityMatcher("/api/public/**")
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()));
-
-        return httpSecurity.build();
-    }
-
-    // SecurityFilterChain for protected endpoints - WITH JWT validation
-    @Bean
-    @org.springframework.core.annotation.Order(2)
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.authorizeHttpRequests(request -> 
             request
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // allow preflight request in local
-                .requestMatchers("/actuator/health").permitAll()
-                // Public endpoints (these should not reach here if publicSecurityFilterChain works correctly)
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                 
                 // User API
