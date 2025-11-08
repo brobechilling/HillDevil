@@ -75,4 +75,11 @@ public class BranchController {
         res.setResult(branchService.getRestaurantIdByBranchId(branchId));
         return res;
     }
+
+    @GetMapping("/restaurant/{restaurantId}/can-create")
+    public ApiResponse<Boolean> canCreateBranch(@PathVariable UUID restaurantId) {
+        ApiResponse<Boolean> res = new ApiResponse<>();
+        res.setResult(branchService.canCreateBranch(restaurantId));
+        return res;
+    }
 }

@@ -3,6 +3,8 @@ package com.example.backend.repository;
 import com.example.backend.entities.Subscription;
 import com.example.backend.entities.SubscriptionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import com.example.backend.entities.Package;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,5 +20,13 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
     );
 
     List<Subscription> findAllByRestaurant_RestaurantId(UUID restaurantId);
+
+    @Query("""
+    SELECT s.aPackage
+    FROM Subscription s
+    WHERE s.restaurant.restaurantId = :restaurantId
+      AND s.status = 'ACTIVE'
+""")
+    Optional<Package> findActivePackageByRestaurantId(UUID restaurantId);
 
 }

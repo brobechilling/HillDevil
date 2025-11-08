@@ -37,14 +37,14 @@ public class PackageFeatureService {
 
     @Transactional(readOnly = true)
     public List<PackageFeatureDTO> getAllPackagesWithFeatures() {
-        return packageRepository.findAll()
+        return packageRepository.findAllWithFeatures()
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
     public PackageFeatureDTO getPackageWithFeatures(UUID packageId) {
-        Package pkg = packageRepository.findById(packageId)
+        Package pkg = packageRepository.findOneWithFeaturesByPackageId(packageId)
                 .orElseThrow(() -> new AppException(ErrorCode.PACKAGE_NOTEXISTED));
         return mapToDTO(pkg);
     }
@@ -78,10 +78,7 @@ public class PackageFeatureService {
     }
 
     private PackageFeatureDTO mapToDTO(Package pkg) {
-        List<PackageFeature> packageFeatures =
-                packageFeatureRepository.findByaPackage_PackageId(pkg.getPackageId());
-
-        List<FeatureValueDTO> features = packageFeatures.stream()
+        List<FeatureValueDTO> features = pkg.getPackageFeatures().stream()
                 .map(pf -> {
                     FeatureValueDTO dto = new FeatureValueDTO();
                     dto.setFeatureId(pf.getFeature().getFeatureId());

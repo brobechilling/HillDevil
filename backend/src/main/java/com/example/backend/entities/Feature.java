@@ -4,14 +4,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "feature")
@@ -27,6 +20,10 @@ public class Feature {
 
     @Column(name = "description")
     private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "code", unique = true, nullable = true, length = 100)
+    private FeatureCode code;
 
     @OneToMany(mappedBy = "feature", cascade = CascadeType.ALL)
     private Set<PackageFeature> packageFeatures = new LinkedHashSet<>();
@@ -62,6 +59,12 @@ public class Feature {
     public void setPackageFeatures(Set<PackageFeature> packageFeatures) {
         this.packageFeatures = packageFeatures;
     }
-    
 
+    public FeatureCode getCode() {
+        return code;
+    }
+
+    public void setCode(FeatureCode code) {
+        this.code = code;
+    }
 }

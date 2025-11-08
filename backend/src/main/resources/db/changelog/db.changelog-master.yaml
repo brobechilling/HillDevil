@@ -50,4 +50,7 @@ databaseChangeLog:
   - include:
       file: fix-bill-order-orderline-changelog.sql
       relativeToChangelogFile: true
+  - include:
+      file: fix-packages-features-changelog.sql
+      relativeToChangelogFile: true
 
