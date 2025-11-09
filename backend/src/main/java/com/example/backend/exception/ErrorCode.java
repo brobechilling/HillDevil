@@ -17,6 +17,8 @@ public enum ErrorCode {
     TOKEN_REUSED(2009, "The refresh token already used", HttpStatus.UNAUTHORIZED),
     USER_INACTIVE(2010, "User account is inactive", HttpStatus.BAD_REQUEST),
     STAFFACCOUNT_INACTIVE(2011, "Staff account is inactive", HttpStatus.BAD_REQUEST),
+    PASSWORD_NOTMATCH(2012, "Current password does not match", HttpStatus.BAD_REQUEST),
+    EMAIL_EXISTED(2013, "Email already existed", HttpStatus.BAD_REQUEST),
     //Subcriptions handling error: Khoi
     PACKAGE_NOTEXISTED(1010, "The package does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
     FEATURE_NOTEXISTED(1011, "The feature does not exist", HttpStatus.INTERNAL_SERVER_ERROR),
@@ -36,6 +38,8 @@ public enum ErrorCode {
     TABLE_NOT_FOUND(2001, "Table not found", HttpStatus.NOT_FOUND),
     AREA_NOT_FOUND(2002, "Area not found", HttpStatus.NOT_FOUND),
     AREA_NOT_OWNED_BY_USER(2003, "Area does not belong to this owner", HttpStatus.FORBIDDEN),
+    AREA_HAS_TABLES(2006, "Cannot delete area that has tables", HttpStatus.BAD_REQUEST),
+    AREA_NAME_EXISTS(2007, "Area name already exists in this branch", HttpStatus.BAD_REQUEST),
     TABLE_TAG_EXISTED_IN_AREA(2004, "Table tag already exists in this area", HttpStatus.BAD_REQUEST),
     INVALID_TABLE_STATUS(2005, "Invalid table status", HttpStatus.BAD_REQUEST),
     
@@ -49,6 +53,7 @@ public enum ErrorCode {
     AUTHENTICATION_INVALID(9000, "Authentication request invalid, missing email or username", HttpStatus.BAD_REQUEST),
     MISSING_BRANCHID(9001, "Missing branchId when login as staff", HttpStatus.BAD_REQUEST),
     RESTAURANT_DELETE_FAILED(3002, "Failed to delete restaurant", HttpStatus.INTERNAL_SERVER_ERROR),
+    INVALID_PASSWORD(9002, "Password must be at least 6 characters long", HttpStatus.BAD_REQUEST),
 
     // Menu - Category - Customization
     CATEGORY_NOT_FOUND(4001, "Category not found", HttpStatus.NOT_FOUND),
@@ -62,6 +67,12 @@ public enum ErrorCode {
     MEDIA_NOT_FOUND(4052, "File not found", HttpStatus.NOT_FOUND),
     MEDIA_DELETE_FAILED(4053, "File delete failed", HttpStatus.BAD_REQUEST),
     TARGET_TYPE_NOT_FOUND(4054, "Target type not found", HttpStatus.NOT_FOUND),
+
+    //Order Features
+    ORDER_NOT_EXISTS(5001, "Order not exists", HttpStatus.NOT_FOUND),
+    ORDERLINE_NOT_EXISTS(5002, "Orderline not exists", HttpStatus.NOT_FOUND),
+    TABLE_ALREADY_HAS_PENDING_ORDER(5003, "Table already has pending order", HttpStatus.BAD_REQUEST),
+    ORDER_ALREADY_COMPLETED(5004, "Order already completed", HttpStatus.BAD_REQUEST),
 
     // Reservation errors
     RESERVATION_NOT_FOUND(5001, "Reservation not found", HttpStatus.NOT_FOUND),

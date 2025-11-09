@@ -1,11 +1,12 @@
-import { ChangePasswordRequest, SignupRequest, UserDTO } from "@/dto/user.dto";
+import { ChangePasswordRequest, ForgetPasswordRequst, SignupRequest, UserDTO } from "@/dto/user.dto";
 import { axiosClient } from "./axiosClient";
 import { ApiResponse } from "@/dto/apiResponse";
 import { PageResponse } from "@/dto/pageResponse";
+import { OTPMailRequest, OTPValidateMailRequest } from "@/dto/mail.dto";
 
 export const register = async (signupRequest: SignupRequest) => {
-    const res = await axiosClient.post<ApiResponse<UserDTO>>("/users/signup", signupRequest);
-    return res.data.result;
+  const res = await axiosClient.post<ApiResponse<UserDTO>>("/users/signup", signupRequest);
+  return res.data.result;
 }
 
 export const getUsers = async (page: number = 1, size: number = 2) => {
@@ -30,6 +31,21 @@ export const setUserStatus = async (userId: string) => {
 };
 
 export const changePassword = async (changePasswordRequest: ChangePasswordRequest) => {
-  const res = await axiosClient.post<ApiResponse<boolean>>("/users/changepass");
+  const res = await axiosClient.post<ApiResponse<boolean>>("/users/changepass", changePasswordRequest);
+  return res.data.result;
+}
+
+export const sendMailVerification = async ( request : OTPMailRequest) => {
+  const res = await axiosClient.post<ApiResponse<string>>("/users/mail", request);
+  return res.data.result;
+}
+
+export const validateOTP = async ( request : OTPValidateMailRequest) => {
+  const res = await axiosClient.post<ApiResponse<boolean>>("/users/mail/otp", request);
+  return res.data.result;
+}
+
+export const forgetPassword = async (request : ForgetPasswordRequst) => {
+  const res = await axiosClient.post<ApiResponse<boolean>>("/users/forgetpass", request);
   return res.data.result;
 }

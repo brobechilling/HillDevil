@@ -96,5 +96,5 @@ public class StaffAccountController {
         apiResponse.setResult(staffAccountService.getStaffAccountByRestaurantPaginated(page, size, restaurantId));
         return apiResponse;
     }
-    
+        
 }

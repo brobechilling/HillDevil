@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.backend.dto.UserDTO;
 import com.example.backend.dto.request.ChangePasswordRequest;
+import com.example.backend.dto.request.ForgetPasswordRequest;
 import com.example.backend.dto.request.SignupRequest;
 import com.example.backend.dto.response.PageResponse;
 import com.example.backend.entities.Role;
@@ -55,6 +56,11 @@ public class UserService {
     }
 
     public UserDTO signUp(SignupRequest signupRequest) {
+        // email should be unique
+        if (userRepository.findByEmail(signupRequest.getEmail()).isPresent())
+        {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
+        }
         User newUser = userMapper.signUp(signupRequest);
         newUser.setPassword(passwordEncoder.encode(newUser.getPassword()));
         Role ownerRole = roleRepository.findByName(RoleName.RESTAURANT_OWNER).orElseThrow(() -> new AppException(ErrorCode.ROLE_NOTEXISTED));
@@ -78,7 +84,7 @@ public class UserService {
         user.setPhone(userDTO.getPhone());
         user.setUsername(userDTO.getUsername());
         user.setRole(roleRepository.findByName(userDTO.getRole().getName()).orElseThrow(() -> new AppException(ErrorCode.ROLE_NOTEXISTED)));
-        user.setStatus(userDTO.isStatus());
+        // user.setStatus(userDTO.isStatus());
         return userMapper.toUserDto(userRepository.save(user));
     }
     
@@ -100,7 +106,13 @@ public class UserService {
             userRepository.save(user);
             return true;
         }
-        return false;
+        throw new AppException(ErrorCode.PASSWORD_NOTMATCH);
+    }
+
+    public boolean forgetPassword(ForgetPasswordRequest forgetPasswordRequest) {
+        User user = userRepository.findByEmail(forgetPasswordRequest.getEmail()).orElseThrow(() -> new AppException(ErrorCode.USER_NOTEXISTED));
+        user.setPassword(passwordEncoder.encode(forgetPasswordRequest.getPassword()));
+        return userRepository.save(user) != null;
     }
 
 }

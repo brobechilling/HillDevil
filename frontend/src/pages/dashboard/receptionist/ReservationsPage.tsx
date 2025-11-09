@@ -266,9 +266,9 @@ const ReservationsPage = () => {
   };
 
   const getTabColor = (isActive) => {
-    return isActive
-      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-      : 'bg-card text-muted-foreground border-border hover:bg-muted hover:text-foreground';
+    return isActive 
+      ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
+      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white';
   };
 
   const BookingCard = ({ booking, index }) => {
@@ -411,7 +411,7 @@ const ReservationsPage = () => {
   };
 
   return (
-  <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
       <style>{`
         @keyframes slideIn {
           from {
@@ -445,16 +445,16 @@ const ReservationsPage = () => {
         }
       `}</style>
 
-  <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center gap-4 flex-wrap" style={{ animation: 'fadeIn 0.5s ease-out' }}>
           <div>
-            <h2 className="text-3xl font-bold text-foreground mb-1">Reservation Management</h2>
-            <p className="text-muted-foreground">Manage and track all your restaurant bookings</p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Reservation Management</h2>
+            <p className="text-gray-600 dark:text-gray-400">Manage and track all your restaurant bookings</p>
           </div>
-          <button
+          <button 
             onClick={() => setShowNewReservationModal(true)}
-            className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md flex items-center gap-2 transition-all duration-200 transform hover:scale-105"
+            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-md flex items-center gap-2 transition-all duration-200 transform hover:scale-105"
           >
             <Plus className="h-4 w-4" />
             New Reservation
@@ -463,13 +463,13 @@ const ReservationsPage = () => {
 
         {/* Search Bar */}
         <div className="relative" style={{ animation: 'fadeIn 0.6s ease-out' }}>
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
             placeholder="Search by guest name or phone number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />
         </div>
 
@@ -483,7 +483,7 @@ const ReservationsPage = () => {
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${activeTab === tab.id ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
                 {groupedBookings[tab.id].length}
               </span>
             </button>

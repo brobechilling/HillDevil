@@ -14,6 +14,7 @@ interface SessionState {
   initialize: () => Promise<void>;
   setSession: (user: UserDTO | StaffAccountDTO, token: string) => void;
   clearSession: () => void;
+  updateUser: (user: UserDTO) => void;
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
@@ -105,6 +106,14 @@ export const useSessionStore = create<SessionState>((set) => ({
       token: null,
       isAuthenticated: false,
       isLoading: false,
+    });
+  },
+
+  // update user in memory and local storage
+  updateUser: (updatedUser: UserDTO) => {
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+    set({
+      user: updatedUser,
     });
   },
 }));

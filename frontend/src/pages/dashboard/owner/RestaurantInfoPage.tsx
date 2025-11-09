@@ -7,10 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { getRestaurantById, updateRestaurant, deleteRestaurant } from '@/api/restaurantApi';
-import { subscriptionApi } from '@/api/subscriptionApi';
+import { useRestaurant, useUpdateRestaurant, useDeleteRestaurant } from '@/hooks/queries/useRestaurants';
+import { useActiveSubscriptionByRestaurant, usePaymentHistory } from '@/hooks/queries/useSubscription';
 import { usePackages } from '@/hooks/queries/usePackages';
-import { useActiveSubscriptionByRestaurant } from '@/hooks/queries/useSubscription';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,15 +19,31 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
-import { Package, Calendar, DollarSign, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
-import { useRestaurant } from '@/hooks/queries/useRestaurants';
-import { useQueryClient } from '@tanstack/react-query';
+import { Package, AlertCircle, CheckCircle2, XCircle, Calendar, DollarSign, Clock, Receipt } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function RestaurantInfoPage() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [restaurant, setRestaurant] = useState<any | null>(null);
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -39,20 +54,59 @@ export default function RestaurantInfoPage() {
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const queryClient = useQueryClient();
-  const stored = localStorage.getItem('selected_restaurant');
-  const restaurantId = stored ? JSON.parse(stored).restaurantId : null;
-  const { data: restaurant, isLoading: loading } = useRestaurant(restaurantId);
+  const selected = JSON.parse(localStorage.getItem('selected_restaurant') || '{}');
+  const restaurantId = selected?.restaurantId || selected?.id;
 
   const { data: activeSubscription, isLoading: subLoading } = useActiveSubscriptionByRestaurant(restaurantId);
+
+  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
+  const { data: paymentHistory = [], isLoading: isLoadingPayments } = usePaymentHistory(restaurantId);
+  const { data: packages = [] } = usePackages();
+
+  const getPackageName = (packageId?: string) => {
+    if (!packageId) return 'Unknown Package';
+    const pkg = packages.find(p => p.packageId === packageId);
+    return pkg?.name || packageId;
+  };
+
+  // useQuery to fetch restaurant
+  const { data: restaurantData, isLoading: isRestaurantLoading, error: restaurantError } = useRestaurant(String(restaurantId));
+  const updateRestaurantMutation = useUpdateRestaurant();
+  const deleteRestaurantMutation = useDeleteRestaurant();
+
+  useEffect(() => {
+    if (!restaurantId) {
+      navigate('/brand-selection');
+      return;
+    }
+  }, [restaurantId, navigate]);
+
+  // update local states when query returns
+  useEffect(() => {
+    if (restaurantData) {
+      setRestaurant(restaurantData);
+      setForm({
+        name: restaurantData.name || '',
+        email: restaurantData.email || '',
+        restaurantPhone: restaurantData.restaurantPhone || '',
+        publicUrl: restaurantData.publicUrl || '',
+        description: restaurantData.description || '',
+        status: restaurantData.status ? 'active' : 'inactive',
+      });
+    }
+    if (restaurantError) {
+      toast({ variant: 'destructive', title: 'Load failed', description: (restaurantError as any)?.message || 'Could not load restaurant data.' });
+    }
+    setLoading(isRestaurantLoading);
+  }, [restaurantData, isRestaurantLoading, restaurantError]);
 
   const handleChange = (k: keyof typeof form, v: string) => setForm((s) => ({ ...s, [k]: v }));
 
   const handleUpdate = async () => {
-    if (!restaurantId) return;
+    if (!restaurant) return;
     setSaving(true);
     try {
-      const payload = {
+      const payload: Partial<any> = {
         name: form.name,
         email: form.email,
         restaurantPhone: form.restaurantPhone,
@@ -60,9 +114,9 @@ export default function RestaurantInfoPage() {
         description: form.description,
         status: form.status === 'active',
       };
-
-      await updateRestaurant(restaurantId, payload as any);
-      await queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] });
+      const updated = await updateRestaurantMutation.mutateAsync({ id: String(restaurant?.restaurantId || restaurant?.id), data: payload });
+      setRestaurant(updated);
+      localStorage.setItem('selected_restaurant', JSON.stringify(updated));
       toast({ title: 'Updated', description: 'Restaurant updated successfully.' });
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Update failed', description: err?.message || 'Failed to update.' });
@@ -71,15 +125,14 @@ export default function RestaurantInfoPage() {
     }
   };
 
-
   const handleDelete = async () => {
-    if (!restaurantId) return;
+    if (!restaurant) return;
     setDeleting(true);
     try {
-      await deleteRestaurant(restaurantId);
-      toast({ title: 'Deleted', description: 'Restaurant deleted successfully.' });
-      localStorage.removeItem('selected_restaurant_id');
-      navigate('/brand-selection');
+      await deleteRestaurantMutation.mutateAsync(String(restaurant?.restaurantId || restaurant?.id));
+      toast({ title: 'Deleted', description: 'Restaurant and all subscriptions have been cancelled.' });
+      localStorage.removeItem('selected_restaurant');
+      navigate('/dashboard/owner');
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Delete failed', description: err?.message || 'Failed to delete.' });
     } finally {
@@ -87,7 +140,6 @@ export default function RestaurantInfoPage() {
       setShowDeleteConfirm(false);
     }
   };
-
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -104,19 +156,20 @@ export default function RestaurantInfoPage() {
     }
   };
 
-  useEffect(() => {
-    if (restaurant) {
-      setForm({
-        name: restaurant.name || '',
-        email: restaurant.email || '',
-        restaurantPhone: restaurant.restaurantPhone || '',
-        publicUrl: restaurant.publicUrl || '',
-        description: restaurant.description || '',
-        status: restaurant.status ? 'active' : 'inactive',
-      });
+  const getPaymentBadge = (status: string) => {
+    switch (status) {
+      case 'SUCCESS':
+        return <Badge className="bg-emerald-500">Success</Badge>;
+      case 'PENDING':
+        return <Badge variant="secondary">Pending</Badge>;
+      case 'FAILED':
+        return <Badge variant="destructive">Failed</Badge>;
+      case 'CANCELED':
+        return <Badge variant="outline">Canceled</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
-  }, [restaurant]);
-
+  };
 
   if (loading) {
     return (
@@ -154,29 +207,14 @@ export default function RestaurantInfoPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="publicUrl">Public URL</Label>
-              <div className="relative">
-                <Input
-                  id="publicUrl"
-                  value={form.publicUrl}
-                  disabled
-                  className="pr-10 bg-muted/50 cursor-not-allowed"
-                  placeholder="https://app.example.com/your-restaurant"
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                You are not allowed to edit this field.
-              </p>
+              <Input id="publicUrl" value={form.publicUrl} onChange={(e) => handleChange('publicUrl', e.target.value)} />
             </div>
             <div className="md:col-span-2 space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea id="description" value={form.description} onChange={(e) => handleChange('description', e.target.value)} />
             </div>
           </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t mt-4">
             <Button variant="outline" onClick={() => setShowDeleteConfirm(true)} className="mr-auto">
               Delete Restaurant
@@ -205,50 +243,67 @@ export default function RestaurantInfoPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
           ) : activeSubscription ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-sm text-muted-foreground">Package</Label>
-                  <p className="font-medium">{activeSubscription.packageName || 'Standard Package'}</p>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-muted-foreground">Package</span>
+                  </div>
+                  <p className="font-medium">{getPackageName(activeSubscription.packageId)}</p>
+
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-muted-foreground">Amount</span>
+                  </div>
+                  <p className="font-medium">${activeSubscription.amount?.toFixed(2) || '0.00'}</p>
+
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-muted-foreground">Period</span>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm">
+                      Start: {activeSubscription.startDate ? format(new Date(activeSubscription.startDate), 'PPP') : 'N/A'}
+                    </p>
+                    <p className="text-sm">
+                      End: {activeSubscription.endDate ? format(new Date(activeSubscription.endDate), 'PPP') : 'N/A'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">Status</Label>
-                  <div className="mt-1">{getStatusBadge(activeSubscription.status)}</div>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">Amount</Label>
-                  <p className="font-medium flex items-center gap-1">
-                    <DollarSign className="h-4 w-4" />
-                    {activeSubscription.amount?.toLocaleString() || '0'} VND
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-muted-foreground">Status</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(activeSubscription.status)}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-muted-foreground">Days Remaining</span>
+                  </div>
+                  <p className="font-medium">
+                    {activeSubscription.endDate ?
+                      Math.max(0, Math.ceil((new Date(activeSubscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
+                      : 'N/A'} days
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    Start Date
-                  </Label>
-                  <p className="font-medium">
-                    {activeSubscription.startDate ? format(new Date(activeSubscription.startDate), 'dd/MM/yyyy') : '—'}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    End Date
-                  </Label>
-                  <p className="font-medium">
-                    {activeSubscription.endDate ? format(new Date(activeSubscription.endDate), 'dd/MM/yyyy') : '—'}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">Payment Status</Label>
-                  <p className="font-medium capitalize">{(activeSubscription.paymentStatus || 'unknown').toLowerCase()}</p>
-                </div>
+              <div className="mt-6 pt-6 border-t">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowPaymentHistory(true)}
+                >
+                  <Receipt className="w-4 h-4 mr-2" />
+                  View Payment History
+                </Button>
               </div>
-            </div>
+            </>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <Package className="mx-auto h-12 w-12 mb-3 text-muted-foreground/50" />
@@ -258,6 +313,62 @@ export default function RestaurantInfoPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Payment History Dialog */}
+      <Dialog open={showPaymentHistory} onOpenChange={setShowPaymentHistory}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Payment History</DialogTitle>
+            <DialogDescription>
+              View all subscription payments for this restaurant
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4">
+            {isLoadingPayments ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              </div>
+            ) : paymentHistory.length > 0 ? (
+              <ScrollArea className="h-[400px] rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Period</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paymentHistory.map((payment) => (
+                      <TableRow key={payment.subscriptionPaymentId}>
+                        <TableCell>
+                          {payment.date ? format(new Date(payment.date), 'PPP') : 'N/A'}
+                        </TableCell>
+                        <TableCell>${(payment.amount ?? 0)}</TableCell>
+                        <TableCell>
+                          {getPaymentBadge(payment.subscriptionPaymentStatus)}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {payment.expiredAt ? (
+                            format(new Date(payment.expiredAt), 'PP')
+                          ) : (payment.description || 'N/A')}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Receipt className="mx-auto h-12 w-12 mb-3 text-muted-foreground/50" />
+                <p>No payment history found</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>

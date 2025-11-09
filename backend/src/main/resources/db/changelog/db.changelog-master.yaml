@@ -48,6 +48,11 @@ databaseChangeLog:
       relativeToChangelogFile: true
 
   - include:
+      file: fix-bill-order-orderline-changelog.sql
+      relativeToChangelogFile: true
+
+
+  - include:
       file: alter-reservation-area-table-changelog.sql
       relativeToChangelogFile: true
 

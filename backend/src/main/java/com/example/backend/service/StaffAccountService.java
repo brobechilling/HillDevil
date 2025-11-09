@@ -14,7 +14,6 @@ import com.example.backend.dto.StaffAccountDTO;
 import com.example.backend.dto.request.CreateStaffAccountRequest;
 import com.example.backend.dto.response.PageResponse;
 import com.example.backend.entities.Branch;
-import com.example.backend.entities.Restaurant;
 import com.example.backend.entities.Role;
 import com.example.backend.entities.RoleName;
 import com.example.backend.entities.StaffAccount;
@@ -92,7 +91,7 @@ public class StaffAccountService {
 
     public PageResponse<StaffAccountDTO> getStaffAccountByRestaurantPaginated(int page, int size, UUID restaurantId) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
-        Restaurant restaurant = restaurantRepository.findById(restaurantId).orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
+        restaurantRepository.findById(restaurantId).orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
         Page<StaffAccount> pageData = staffAccountRepository.findByBranch_Restaurant_RestaurantId(restaurantId, pageable);
         PageResponse<StaffAccountDTO> pageResponse = new PageResponse<>();
         pageResponse.setItems(pageData.map(staffAccount -> staffAccountMapper.toStaffAccountDTO(staffAccount)).toList());

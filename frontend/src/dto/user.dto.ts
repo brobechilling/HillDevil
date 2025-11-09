@@ -10,7 +10,7 @@ export interface UserDTO {
 
 export interface RoleDTO {
     name: string;
-    description: string;
+    description?: string;
 }
 
 export enum ROLE_NAME {
@@ -32,4 +32,9 @@ export interface ChangePasswordRequest {
     password: string;
     userId: string;
     newPassword: string;
+}
+
+export interface ForgetPasswordRequst {
+    password: string;
+    email: string;
 }

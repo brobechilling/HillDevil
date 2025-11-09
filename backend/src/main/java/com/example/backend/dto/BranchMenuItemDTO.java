@@ -1,66 +1,11 @@
 package com.example.backend.dto;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
-public class BranchMenuItemDTO {
-    private UUID menuItemId;
-    private String name;
-    private String description;
-    private BigDecimal price;
-    private boolean bestSeller;
-    private boolean hasCustomization;
+public class BranchMenuItemDTO extends MenuItemDTO {
     private boolean available;
     private UUID branchId;
-    private UUID categoryId;
-
-    public UUID getMenuItemId() {
-        return menuItemId;
-    }
-
-    public void setMenuItemId(UUID menuItemId) {
-        this.menuItemId = menuItemId;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public boolean isBestSeller() {
-        return bestSeller;
-    }
-
-    public void setBestSeller(boolean bestSeller) {
-        this.bestSeller = bestSeller;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
-
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
-
-    public boolean isHasCustomization() {
-        return hasCustomization;
-    }
-
-    public void setHasCustomization(boolean hasCustomization) {
-        this.hasCustomization = hasCustomization;
-    }
+    private UUID branchMenuItemId;
 
     public boolean isAvailable() {
         return available;
@@ -78,11 +23,11 @@ public class BranchMenuItemDTO {
         this.branchId = branchId;
     }
 
-    public UUID getCategoryId() {
-        return categoryId;
+    public UUID getBranchMenuItemId() {
+        return branchMenuItemId;
     }
 
-    public void setCategoryId(UUID categoryId) {
-        this.categoryId = categoryId;
+    public void setBranchMenuItemId(UUID branchMenuItemId) {
+        this.branchMenuItemId = branchMenuItemId;
     }
 }

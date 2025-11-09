@@ -1,25 +1,14 @@
 package com.example.backend.entities;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "order_line")
@@ -34,8 +23,11 @@ public class OrderLine {
     @JoinColumn(nullable = false,name = "order_id")
     private Order order;
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "orderLine")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "orderLine", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OrderItem> orderItems = new LinkedHashSet<>();
+
+    @Column(name = "total_price", precision = 10, scale = 2)
+    private BigDecimal totalPrice = BigDecimal.ZERO;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "order_line_status")
@@ -96,5 +88,9 @@ public class OrderLine {
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public BigDecimal getTotalPrice() {return totalPrice;}
+
+    public void setTotalPrice(BigDecimal totalPrice) {this.totalPrice = totalPrice;}
 
 }

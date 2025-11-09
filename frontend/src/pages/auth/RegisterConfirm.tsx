@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,7 +41,7 @@ type BrandFormData = z.infer<typeof brandSchema>;
 const RegisterConfirm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, isAuthenticated, isLoading: isSessionLoading, initialize } = useSessionStore();
+  const { user } = useSessionStore();
   const { data: packages, isLoading: isPackagesLoading } = usePackages();
   const [submitting, setSubmitting] = useState(false);
   const packageId = searchParams.get("packageId") || "";
@@ -53,28 +53,6 @@ const RegisterConfirm = () => {
   } = useForm<BrandFormData>({
     resolver: zodResolver(brandSchema),
   });
-
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
-
-  useEffect(() => {
-    if (isSessionLoading) return;
-    if (!isAuthenticated) {
-      const returnUrl = `/register/confirm?packageId=${packageId}`;
-      navigate(`/register?returnUrl=${encodeURIComponent(returnUrl)}`);
-      return;
-    }
-
-    if (user && !(user as UserDTO).userId) {
-      toast({
-        variant: "destructive",
-        title: "Permission denied",
-        description: "Only owner accounts can access this page.",
-      });
-      navigate("/");
-    }
-  }, [isAuthenticated, isSessionLoading, navigate, packageId, user]);
 
   const selectedPackage =
     packages?.find((p) => p.packageId === packageId) || packages?.[0];
@@ -93,7 +71,7 @@ const RegisterConfirm = () => {
       : `${price} VND/month`;
 
   const onSubmit = async (data: BrandFormData) => {
-    if (!isAuthenticated || !user || !selectedPackage) return;
+    if (!user || !selectedPackage) return;
     if (submitting) return;
     setSubmitting(true);
 
@@ -131,7 +109,8 @@ const RegisterConfirm = () => {
     }
   };
 
-  if (isPackagesLoading) return <div className="flex justify-center p-10">Loading...</div>;
+  if (isPackagesLoading)
+    return <div className="flex justify-center p-10">Loading...</div>;
   if (!selectedPackage) return <p>No package selected.</p>;
 
   return (

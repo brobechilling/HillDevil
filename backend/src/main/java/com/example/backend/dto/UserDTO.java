@@ -2,11 +2,19 @@ package com.example.backend.dto;
 
 import java.util.UUID;
 
+import com.example.backend.validator.Phone;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
+
 public class UserDTO {
     
     private UUID userId;
+    @Email
     private String email;
+    @Size(min = 5, max = 25, message = "username's length must be between 5 and 25")    
     private String username;
+    @Phone
     private String phone;
     private RoleDTO role;
     private boolean status;

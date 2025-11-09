@@ -39,6 +39,5 @@ public class StaffAccountDTO {
     }
     public void setBranchId(UUID branchId) {
         this.branchId = branchId;
-    }
-    
+    }    
 }
