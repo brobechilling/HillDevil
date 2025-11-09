@@ -1,9 +1,9 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { reservationApi } from '@/api/reservationApi';
-import { getTablesByBranch } from '@/api/tableApi';
+import { useReservations, useCreateReservationReceptionist } from '@/hooks/queries/useReservations';
+import { useTables } from '@/hooks/queries/useTables';
 import { useSessionStore } from '@/store/sessionStore';
 import { isStaffAccountDTO } from '@/utils/typeCast';
-import { Calendar, Users, Clock, Check, X, Trash2, Search, Plus } from 'lucide-react';
+import { Calendar, Users, Clock, Check, X, Trash2, Search, Plus, Mail } from 'lucide-react';
 
 const ReservationsPage = () => {
   const [search, setSearch] = useState('');
@@ -21,77 +21,63 @@ const ReservationsPage = () => {
   });
 
   const [bookings, setBookings] = useState<any[]>([]);
-  const [loadingBookings, setLoadingBookings] = useState<boolean>(true);
   const [tables, setTables] = useState<any[]>([]);
   const { user } = useSessionStore();
 
   const branchId = isStaffAccountDTO(user) ? user.branchId : null;
 
+  // Use react-query hooks to load reservations and tables
+  const reservationsQuery = useReservations(branchId ?? undefined, 0, 100);
+  const tablesQuery = useTables(branchId ?? undefined, 0, 200);
+  const createMutation = useCreateReservationReceptionist();
+
   useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      if (!branchId) {
-        setBookings([]);
-        setTables([]);
-        setLoadingBookings(false);
-        return;
-      }
+    if (!reservationsQuery.data) {
+      setBookings([]);
+      return;
+    }
 
-      setLoadingBookings(true);
-      try {
-        // load reservations
-        const res = await reservationApi.fetchByBranch(branchId, 0, 100);
-        // normalize response to array
-        const data = res && res.result ? res.result.content || res.result : res;
-        const list = data && data.content ? data.content : data;
+    const res = reservationsQuery.data;
+    const data = res && res.result ? res.result.content || res.result : res;
+    const list = data && data.content ? data.content : data;
 
-        const normalized = Array.isArray(list)
-          ? list.map((r: any) => ({
-            id: r.reservationId || r.id,
-            reservationId: r.reservationId || r.id,
-            branchId: r.branchId,
-            tableId: r.areaTableId || r.tableId || null,
-            guestName: r.customerName || r.guestName || '',
-            guestPhone: r.customerPhone || r.guestPhone || '',
-            guestEmail: r.customerEmail || r.guestEmail || '',
-            numberOfGuests: r.guestNumber || r.numberOfGuests || 1,
-            startTime: r.startTime ? (typeof r.startTime === 'string' ? r.startTime : r.startTime.toString()) : null,
-            endTime: r.endTime || (r.startTime ? new Date(new Date(r.startTime).getTime() + 2 * 60 * 60 * 1000).toISOString() : null),
-            status: (r.status || '').toString().toLowerCase(),
-            specialRequests: r.note || r.specialRequests || '',
-          }))
-          : [];
+    const normalized = Array.isArray(list)
+      ? list.map((r: any) => ({
+          id: r.reservationId || r.id,
+          reservationId: r.reservationId || r.id,
+          branchId: r.branchId,
+          tableId: r.areaTableId || r.tableId || null,
+          guestName: r.customerName || r.guestName || '',
+          guestPhone: r.customerPhone || r.guestPhone || '',
+          guestEmail: r.customerEmail || r.guestEmail || '',
+          numberOfGuests: r.guestNumber || r.numberOfGuests || 1,
+          startTime: r.startTime ? (typeof r.startTime === 'string' ? r.startTime : r.startTime.toString()) : null,
+          endTime: r.endTime || (r.startTime ? new Date(new Date(r.startTime).getTime() + 2 * 60 * 60 * 1000).toISOString() : null),
+          status: (r.status || '').toString().toLowerCase(),
+          specialRequests: r.note || r.specialRequests || '',
+        }))
+      : [];
 
-        if (mounted) setBookings(normalized);
+    setBookings(normalized);
+  }, [reservationsQuery.data]);
 
-        // load tables for branch
-        try {
-          const tblRes = await getTablesByBranch(branchId, 0, 200);
-          const tbls = tblRes && tblRes.content ? tblRes.content : tblRes;
-          const normalizedTables = (Array.isArray(tbls) ? tbls : []).map((t: any) => ({
-            id: t.id,
-            number: t.tag || t.id,
-            capacity: t.capacity || 0,
-            status: (t.status || 'ACTIVE').toLowerCase(),
-            branchId: branchId,
-          }));
-          if (mounted) setTables(normalizedTables);
-        } catch (tErr) {
-          console.warn('Failed to load tables', tErr);
-          if (mounted) setTables([]);
-        }
-      } catch (err) {
-        console.error('Failed to load reservations', err);
-        if (mounted) setBookings([]);
-      } finally {
-        if (mounted) setLoadingBookings(false);
-      }
-    };
+  useEffect(() => {
+    if (!tablesQuery.data) {
+      setTables([]);
+      return;
+    }
 
-    load();
-
-    return () => { mounted = false; };
-  }, [branchId]);
+    const tblRes = tablesQuery.data;
+    const tbls = tblRes && (tblRes.content || tblRes) ? (tblRes.content || tblRes) : [];
+    const normalizedTables = (Array.isArray(tbls) ? tbls : []).map((t: any) => ({
+      id: t.id,
+      number: t.tag || t.id,
+      capacity: t.capacity || 0,
+      status: (t.status || 'ACTIVE').toLowerCase(),
+      branchId: branchId,
+    }));
+    setTables(normalizedTables);
+  }, [tablesQuery.data, branchId]);
 
 
   const tabs = [
@@ -177,7 +163,7 @@ const ReservationsPage = () => {
     };
 
     try {
-      const res = await reservationApi.createForReceptionist(payload);
+      const res = await createMutation.mutateAsync(payload);
       const saved = res && res.result ? res.result : res;
 
       const savedBooking = {
@@ -291,7 +277,7 @@ const ReservationsPage = () => {
 
     return (
       <div
-        className="p-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+          className="p-5 rounded-lg border border-border bg-card hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
         style={{
           animation: `slideIn 0.4s ease-out ${index * 0.1}s both`
         }}
@@ -299,9 +285,16 @@ const ReservationsPage = () => {
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-1">{booking.guestName}</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-              <span>📞</span> {booking.guestPhone}
-            </p>
+              <div className="text-sm text-muted-foreground space-y-1">
+              <p className="flex items-center gap-2">
+                <span>📞</span>
+                  <span>{booking.guestPhone || '—'}</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                  <span>{booking.guestEmail || '—'}</span>
+              </p>
+            </div>
           </div>
           <span className={`px-3 py-1 rounded-md text-xs font-semibold whitespace-nowrap ${getStatusColor(booking.status)}`}>
             {booking.status.toUpperCase()}
@@ -418,7 +411,7 @@ const ReservationsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
+  <div className="min-h-screen bg-background p-4 md:p-8">
       <style>{`
         @keyframes slideIn {
           from {
@@ -452,16 +445,16 @@ const ReservationsPage = () => {
         }
       `}</style>
 
-      <div className="max-w-7xl mx-auto space-y-6">
+  <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center gap-4 flex-wrap" style={{ animation: 'fadeIn 0.5s ease-out' }}>
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Reservation Management</h2>
-            <p className="text-gray-600 dark:text-gray-400">Manage and track all your restaurant bookings</p>
+            <h2 className="text-3xl font-bold text-foreground mb-1">Reservation Management</h2>
+            <p className="text-muted-foreground">Manage and track all your restaurant bookings</p>
           </div>
           <button
             onClick={() => setShowNewReservationModal(true)}
-            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-md flex items-center gap-2 transition-all duration-200 transform hover:scale-105"
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md flex items-center gap-2 transition-all duration-200 transform hover:scale-105"
           >
             <Plus className="h-4 w-4" />
             New Reservation
@@ -470,13 +463,13 @@ const ReservationsPage = () => {
 
         {/* Search Bar */}
         <div className="relative" style={{ animation: 'fadeIn 0.6s ease-out' }}>
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search by guest name or phone number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
 
