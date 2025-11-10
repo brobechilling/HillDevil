@@ -50,24 +50,20 @@ public class SubscriptionPaymentService {
         if (pkg == null)
             throw new AppException(ErrorCode.PACKAGE_NOTEXISTED);
 
-        Integer amount = pkg.getPrice();
+        int amount = pkg.getPrice();
         String itemName = pkg.getName();
         String description = "Pay " + pkg.getName();
-
-        // ✅ Giới hạn 25 ký tự + thêm suffix "..."
-        if (description.length() > 25) {
+        if (description.length() > 25)
             description = description.substring(0, 22) + "...";
-        }
 
         long orderCode = Math.abs(UUID.randomUUID().getMostSignificantBits() % 1_000_000_000L);
         if (subscriptionPaymentRepository.existsByPayOsOrderCode(orderCode)) {
             throw new AppException(ErrorCode.ORDER_CODE_EXISTS);
         }
 
-        String dynamicReturnUrl = payOSService.buildReturnUrl(orderCode);
-
+        String returnUrl = payOSService.buildReturnUrl(orderCode);
         CheckoutResponseData payResponse = payOSService.createVQRPayment(amount, orderCode, itemName, description,
-                dynamicReturnUrl);
+                returnUrl);
 
         SubscriptionPayment payment = new SubscriptionPayment();
         payment.setSubscription(subscription);
@@ -76,12 +72,9 @@ public class SubscriptionPaymentService {
         payment.setQrCodeUrl(payResponse.getQrCode());
         payment.setAccountNumber(payResponse.getAccountNumber());
         payment.setAccountName(payResponse.getAccountName());
-        Long expiredAt = payResponse.getExpiredAt();
-        if (expiredAt != null) {
-            payment.setExpiredAt(Instant.ofEpochMilli(expiredAt * 1000)); // PayOS trả seconds → convert millis
-        } else {
-            payment.setExpiredAt(Instant.now().plusSeconds(30 * 60));
-        }
+        payment.setExpiredAt(
+                payResponse.getExpiredAt() != null ? Instant.ofEpochMilli(payResponse.getExpiredAt() * 1000)
+                        : Instant.now().plusSeconds(30 * 60));
         payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.PENDING);
         payment.setDate(Instant.now());
         payment.setDescription(description);
@@ -96,11 +89,10 @@ public class SubscriptionPaymentService {
         subscription.setStatus(SubscriptionStatus.PENDING_PAYMENT);
         subscriptionRepository.save(subscription);
 
-        // ✅ Đảm bảo nhà hàng bị khóa cho đến khi thanh toán xong
+        // Lock restaurant until payment succeeds
         Restaurant restaurant = subscription.getRestaurant();
-        if (restaurant != null) {
+        if (restaurant != null)
             restaurant.setStatus(false);
-        }
 
         return subscriptionPaymentMapper.toSubscriptionPaymentResponse(payment);
     }
@@ -110,18 +102,12 @@ public class SubscriptionPaymentService {
         try {
             WebhookData data = payOSService.verifyWebhook(webhookBody);
             long orderCode = data.getOrderCode();
-            if (orderCode == 0) {
-                System.err.println("[PayOS] ❌ orderCode = 0, webhook invalid");
+            if (orderCode == 0)
                 return;
-            }
 
-            SubscriptionPayment payment = subscriptionPaymentRepository.findByPayOsOrderCode(orderCode)
-                    .orElse(null);
-
-            if (payment == null) {
-                System.err.println("[PayOS] ❌ Không tìm thấy payment với orderCode: " + orderCode);
+            SubscriptionPayment payment = subscriptionPaymentRepository.findByPayOsOrderCode(orderCode).orElse(null);
+            if (payment == null)
                 return;
-            }
 
             payment.setWebhookStatus(true);
             payment.setSignatureVerified(true);
@@ -132,24 +118,28 @@ public class SubscriptionPaymentService {
             Restaurant restaurant = subscription.getRestaurant();
 
             if ("00".equals(data.getCode())) {
-                System.out.println("[PayOS] ✅ Thanh toán thành công cho orderCode: " + orderCode);
                 payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.SUCCESS);
-                activateSubscription(subscription);
-                if (restaurant != null)
+
+                if (subscription.getStatus() == SubscriptionStatus.PENDING_PAYMENT) {
+                    if (subscription.getStartDate() == null) {
+                        subscription.setStartDate(LocalDate.now());
+                        subscription
+                                .setEndDate(LocalDate.now().plusMonths(subscription.getaPackage().getBillingPeriod()));
+                    }
+                    subscription.setStatus(SubscriptionStatus.ACTIVE);
+                    subscription.setUpdatedAt(Instant.now());
+                    subscriptionRepository.save(subscription);
+                }
+
+                if (restaurant != null) {
                     restaurant.setStatus(true);
-            } else {
-                System.out.println("[PayOS] ⚠️ Thanh toán thất bại cho orderCode: " + orderCode);
-                payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.FAILED);
-                cancelSubscription(subscription);
-                if (restaurant != null)
-                    restaurant.setStatus(false);
+                }
             }
 
             subscriptionPaymentRepository.save(payment);
+
         } catch (Exception e) {
-            // ✅ Ghi log lỗi chi tiết để dễ debug
             e.printStackTrace();
-            System.err.println("[PayOS] ❌ Webhook exception: " + e.getMessage());
             throw new AppException(ErrorCode.PAYMENT_WEBHOOK_FAILED);
         }
     }
@@ -167,9 +157,8 @@ public class SubscriptionPaymentService {
         SubscriptionPayment payment = subscriptionPaymentRepository.findByPayOsOrderCode(orderCode)
                 .orElseThrow(() -> new AppException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        if (payment.getSubscriptionPaymentStatus() != SubscriptionPaymentStatus.PENDING) {
+        if (payment.getSubscriptionPaymentStatus() != SubscriptionPaymentStatus.PENDING)
             throw new AppException(ErrorCode.PAYMENT_CANNOT_CANCEL);
-        }
 
         payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.CANCELED);
         cancelSubscription(payment.getSubscription());
@@ -181,8 +170,7 @@ public class SubscriptionPaymentService {
     private void activateSubscription(Subscription subscription) {
         subscription.setStatus(SubscriptionStatus.ACTIVE);
         subscription.setStartDate(LocalDate.now());
-        subscription.setEndDate(subscription.getStartDate()
-                .plusMonths(subscription.getaPackage().getBillingPeriod()));
+        subscription.setEndDate(subscription.getStartDate().plusMonths(subscription.getaPackage().getBillingPeriod()));
         subscriptionRepository.save(subscription);
     }
 

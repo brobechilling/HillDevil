@@ -31,8 +31,7 @@ public class SubscriptionController {
     @PutMapping("/{subscriptionId}/activate")
     public ApiResponse<SubscriptionResponse> activateSubscription(
             @PathVariable UUID subscriptionId,
-            @RequestParam(defaultValue = "1") int durationMonths
-    ) {
+            @RequestParam(defaultValue = "1") int durationMonths) {
         ApiResponse<SubscriptionResponse> res = new ApiResponse<>();
         res.setResult(subscriptionService.activateSubscription(subscriptionId, durationMonths));
         return res;
@@ -41,10 +40,9 @@ public class SubscriptionController {
     @PutMapping("/{subscriptionId}/renew")
     public ApiResponse<SubscriptionResponse> renewSubscription(
             @PathVariable UUID subscriptionId,
-            @RequestParam(defaultValue = "1") int additionalMonths
-    ) {
+            @RequestParam UUID packageId) {
         ApiResponse<SubscriptionResponse> res = new ApiResponse<>();
-        res.setResult(subscriptionService.renewSubscription(subscriptionId, additionalMonths));
+        res.setResult(subscriptionService.renewSubscription(subscriptionId, packageId));
         return res;
     }
 
@@ -60,8 +58,7 @@ public class SubscriptionController {
     @PostMapping("/change")
     public ApiResponse<SubscriptionResponse> changePackage(
             @RequestParam UUID restaurantId,
-            @RequestParam UUID newPackageId
-    ) {
+            @RequestParam UUID newPackageId) {
         ApiResponse<SubscriptionResponse> res = new ApiResponse<>();
         res.setResult(subscriptionService.changePackage(restaurantId, newPackageId));
         return res;
@@ -98,8 +95,7 @@ public class SubscriptionController {
 
     @GetMapping("/restaurant/{restaurantId}/latest-payment")
     public ApiResponse<SubscriptionPaymentResponse> getLatestPaymentStatus(
-            @PathVariable UUID restaurantId
-    ) {
+            @PathVariable UUID restaurantId) {
         ApiResponse<SubscriptionPaymentResponse> res = new ApiResponse<>();
         SubscriptionPaymentResponse result = subscriptionService.getLatestPaymentStatusForRestaurant(restaurantId);
         res.setResult(result);
@@ -112,8 +108,7 @@ public class SubscriptionController {
 
     @GetMapping("/restaurant/{restaurantId}/payments")
     public ApiResponse<List<SubscriptionPaymentResponse>> getPaymentHistory(
-            @PathVariable UUID restaurantId
-    ) {
+            @PathVariable UUID restaurantId) {
         ApiResponse<List<SubscriptionPaymentResponse>> res = new ApiResponse<>();
         List<SubscriptionPaymentResponse> result = subscriptionService.getPaymentHistoryByRestaurant(restaurantId);
         res.setResult(result);

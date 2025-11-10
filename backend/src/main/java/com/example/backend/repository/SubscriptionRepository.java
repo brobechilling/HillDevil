@@ -28,5 +28,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
       AND s.status = 'ACTIVE'
 """)
     Optional<Package> findActivePackageByRestaurantId(UUID restaurantId);
+    long countByRestaurant_RestaurantId(UUID restaurantId);
 
 }

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Plus, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useCustomizations, useCreateCustomization, useCustomizationLimit } from '@/hooks/queries/useCustomizations';
@@ -147,12 +148,34 @@ export const CategoryManagementDialog = ({
         <div className="space-y-5 pt-4">
           {/* Limit warning */}
           {limit !== undefined && (
-            <div className="text-sm text-muted-foreground text-center">
-              {totalSelected}/{limit} selected
+            <>
+              <div className="text-sm text-muted-foreground text-center">
+                {totalSelected}/{limit} selected
+                {isAtLimit && (
+                  <span className="text-amber-500 ml-1">(Limit reached)</span>
+                )}
+              </div>
+
               {isAtLimit && (
-                <span className="text-red-500 ml-1">(Limit reached)</span>
+                <Card className="border-amber-500">
+                  <CardContent className="pt-6 pb-4 flex items-center gap-4">
+                    <div className="p-3 rounded-full bg-amber-500/20">
+                      <AlertCircle className="h-6 w-6 text-amber-500" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-amber-500 mb-1">Customization Limit Reached</h4>
+                      <p className="text-sm text-muted-foreground">
+                        You've reached the maximum number of customizations in your current package. 
+                        Please upgrade to Premium to add more customizations and unlock additional features.
+                      </p>
+                    </div>
+                    <Button variant="outline" className="border-amber-500 text-amber-500 hover:bg-amber-500/10">
+                      Upgrade to Premium
+                    </Button>
+                  </CardContent>
+                </Card>
               )}
-            </div>
+            </>
           )}
 
           {/* Add New */}
