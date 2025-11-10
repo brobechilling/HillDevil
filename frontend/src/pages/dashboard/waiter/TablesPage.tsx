@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useSessionStore } from '@/store/sessionStore';
 import { useTables } from '@/hooks/queries/useTables';
 import { useQuery } from '@tanstack/react-query';
 import { getReservationsByTable as apiGetReservationsByTable } from '@/api/reservationApi';
@@ -9,10 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Eye, Calendar } from 'lucide-react';
 import { TableStatusDialog } from '@/components/waiter/TableStatusDialog';
 import { TableDetailsDialog } from '@/components/waiter/TableDetailsDialog';
+import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
 
 const TablesPage = () => {
   const { user } = useSessionStore();
-  const branchId = (user as any)?.branchId || '';
+  const branchId = isStaffAccountDTO(user) ? user.branchId : "";
+  // const { getTablesByBranchAndFloor } = useTableStore();
+  // const { getReservationsByTable } = useReservationStore();
   const tablesQuery = useTables(branchId || undefined, 0, 200);
 
   // Debugging log

@@ -23,4 +23,5 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     @Query("SELECT b.restaurant.restaurantId FROM Branch b WHERE b.branchId = :branchId")
     Optional<UUID> findRestaurantIdByBranchId(@Param("branchId") UUID branchId);
 
+    long countByRestaurant_RestaurantId(UUID restaurantId);
 }

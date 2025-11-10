@@ -15,7 +15,7 @@ import com.example.backend.entities.Restaurant;
 @Repository
 public interface RestaurantRepository extends JpaRepository<Restaurant, UUID> {
     List<Restaurant> findByUser_UserId(UUID userId);
-    Page<Restaurant> findAll(Pageable pageable);
+    Page<Restaurant> findByStatus(Pageable pageable, boolean status);
 
     List<Restaurant> findAllByUser_UserId(UUID ownerId);
     @Query("SELECT r FROM Restaurant r WHERE r.publicUrl LIKE %:suffix")

@@ -1,6 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/store/authStore';
 import {
   Calendar,
   Users,
@@ -13,6 +12,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useSessionStore } from '@/store/sessionStore';
 
 const menuItems = [
   { 
@@ -47,11 +47,11 @@ const menuItems = [
 
 export const ReceptionistSidebar = () => {
   const location = useLocation();
-  const { user, logout } = useAuthStore();
+  const { user, clearSession } = useSessionStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
+    clearSession();
     navigate('/login');
   };
 
@@ -113,11 +113,11 @@ export const ReceptionistSidebar = () => {
         <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-card">
           <Avatar className="h-10 w-10">
             <AvatarFallback className="gradient-primary text-primary-foreground">
-              {user?.name?.charAt(0) || 'R'}
+              
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user?.name || 'Receptionist'}</p>
+            <p className="text-sm font-medium truncate">{'Receptionist'}</p>
             <div className="flex items-center gap-1 mt-0.5">
               <Badge variant="secondary" className="text-xs px-1.5 py-0">
                 Receptionist

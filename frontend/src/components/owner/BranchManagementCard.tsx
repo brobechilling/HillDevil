@@ -6,7 +6,7 @@ import { Building2, Edit, ExternalLink, Plus, AlertCircle } from 'lucide-react';
 import { BranchManagementDialog } from './BranchManagementDialog';
 import { toast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
-import { updateBranch } from '@/api/branchApi';
+import { useCanCreateBranch, useUpdateBranch } from '@/hooks/queries/useBranches';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +34,11 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
     branchId?: string;
     isActivating?: boolean;
   }>({ open: false, type: 'single' });
+
+  const selectedRestaurantRaw = localStorage.getItem('selected_restaurant');
+  const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
+  const canCreateBranchQuery = useCanCreateBranch(selectedRestaurant?.restaurantId);
+  const updateBranchMutation = useUpdateBranch();
 
   const activeBranches = branches.filter(b => b.isActive);
   const inactiveBranches = branches.filter(b => !b.isActive);
@@ -71,7 +76,7 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
     if (type === 'all') {
       const targetBranches = isActivating ? inactiveBranches : activeBranches;
       const updates = targetBranches.map(branch =>
-        updateBranch(branch.branchId, { isActive: isActivating! }).catch(() => null)
+        updateBranchMutation.mutateAsync({ id: branch.branchId, data: { isActive: isActivating! } }).catch(() => null)
       );
       await Promise.all(updates);
       toast({
@@ -81,7 +86,7 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
     } else if (branchId) {
       setProcessingIds(s => ({ ...s, [branchId]: true }));
       try {
-        await updateBranch(branchId, { isActive: isActivating! });
+        await updateBranchMutation.mutateAsync({ id: branchId, data: { isActive: isActivating! } });
         toast({
           title: 'Success',
           description: `Branch ${isActivating ? 'activated' : 'deactivated'}.`,
@@ -177,7 +182,20 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
                 You don't have any branches for this brand. Create your first branch to start accepting orders.
               </p>
               <div className="flex justify-center">
-                <Button onClick={() => setIsDialogOpen(true)}>
+                <Button 
+                  onClick={() => {
+                    if (!canCreateBranchQuery.data) {
+                      toast({
+                        variant: 'destructive',
+                        title: 'Cannot create more branches',
+                        description: 'Please upgrade your package to Premium to create more branches.',
+                      });
+                      return;
+                    }
+                    setIsDialogOpen(true);
+                  }}
+                  disabled={!canCreateBranchQuery.data}
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   Create First Branch
                 </Button>

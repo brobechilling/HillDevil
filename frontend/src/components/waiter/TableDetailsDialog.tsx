@@ -4,7 +4,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useTableStore } from '@/store/tableStore';
 import { useOrderStore, Order } from '@/store/orderStore';
 import { Receipt, Mail, Phone, Clock, Users } from 'lucide-react';
 import { BillCreationDialog } from './BillCreationDialog';
@@ -19,9 +18,14 @@ interface TableDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+export const TableDetailsDialog = ({ tableId, branchId, open, onOpenChange }: TableDetailsDialogProps) => {
+  // const getTableById = useTableStore((state) => state.getTableById);
 export const TableDetailsDialog = ({ tableId, table, branchId, open, onOpenChange }: TableDetailsDialogProps) => {
   const getTableById = useTableStore((state) => state.getTableById);
   const getOrdersByTable = useOrderStore((state) => state.getOrdersByTable);
+  
+  // Cache table để tránh render vô hạn
+  // const table = useMemo(() => tableId ? getTableById(tableId) : undefined, [tableId, getTableById]);
 
   // If parent passed `table`, use it; otherwise attempt to read from local store
   const tableFromStore = useMemo(() => tableId ? getTableById(tableId) : undefined, [tableId, getTableById]);
@@ -43,6 +47,7 @@ export const TableDetailsDialog = ({ tableId, table, branchId, open, onOpenChang
 
   if (!effectiveTable) return null;
 
+  // const allOrders = useMemo(() => getOrdersByTable(table.id), [table.id, getOrdersByTable]);
   const allOrders = useMemo(() => getOrdersByTable(effectiveTable.id), [effectiveTable.id, getOrdersByTable]);
 
   const isBilled = (order: Order) =>
@@ -117,7 +122,7 @@ export const TableDetailsDialog = ({ tableId, table, branchId, open, onOpenChang
                   )}
                   <div>
                     <p className="text-muted-foreground">Table Capacity</p>
-                    <p className="font-semibold">{effectiveTable.capacity} guests</p>
+                    <p className="font-semibold">{table.capacity} guests</p>
                   </div>
                 </div>
               </CardContent>

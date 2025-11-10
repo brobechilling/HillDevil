@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/authStore';
 import { ReportsAnalytics } from '@/components/owner/ReportsAnalytics';
 import { useEffect, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
@@ -7,18 +6,12 @@ import { useBranches } from '@/hooks/queries/useBranches';
 import { BranchDTO } from '@/dto/branch.dto';
 
 const OwnerReportsPage = () => {
-  const { user } = useAuthStore();
   const navigate = useNavigate();
   const [activeBranch, setActiveBranch] = useState<BranchDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const { data: branches, isLoading: isBranchesLoading } = useBranches();
 
   useEffect(() => {
-    if (!user || user.role !== 'owner') {
-      navigate('/login');
-      return;
-    }
-
     if (isBranchesLoading) {
       return;
     }
@@ -48,7 +41,7 @@ const OwnerReportsPage = () => {
 
     setActiveBranch(brandBranches[0]);
     setLoading(false);
-  }, [user, navigate, branches, isBranchesLoading]);
+  }, [navigate, branches, isBranchesLoading]);
 
   if (loading || isBranchesLoading) {
     return (

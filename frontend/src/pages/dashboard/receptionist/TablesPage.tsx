@@ -1,18 +1,18 @@
-import { useAuthStore } from '@/store/authStore';
-import { useTableStore } from '@/store/tableStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
 
 const TablesPage = () => {
-  const { user } = useAuthStore();
-  const branchId = user?.branchId || '';
-  const { getTablesByBranchAndFloor } = useTableStore();
+  const { user } = useSessionStore(); 
+  const branchId = isStaffAccountDTO(user) ? user.branchId : "";
+  // const { getTablesByBranchAndFloor } = useTableStore();
 
-  const floorMap = getTablesByBranchAndFloor(branchId);
-  const branchTables = Array.from(floorMap.values()).flat().filter(t => t.status !== 'out_of_service');
-  const availableTables = branchTables.filter(t => t.status === 'available');
-  const occupiedTables = branchTables.filter(t => t.status === 'occupied');
+  // const floorMap = getTablesByBranchAndFloor(branchId);
+  // const branchTables = Array.from(floorMap.values()).flat().filter(t => t.status !== 'out_of_service');
+  // const availableTables = branchTables.filter(t => t.status === 'available');
+  // const occupiedTables = branchTables.filter(t => t.status === 'occupied');
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -49,7 +49,7 @@ const TablesPage = () => {
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{availableTables.length}</div>
+            {/* <div className="text-2xl font-bold">{availableTables.length}</div> */}
             <p className="text-xs text-muted-foreground">
               Ready for guests
             </p>
@@ -62,7 +62,7 @@ const TablesPage = () => {
             <AlertCircle className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{occupiedTables.length}</div>
+            {/* <div className="text-2xl font-bold">{occupiedTables.length}</div> */}
             <p className="text-xs text-muted-foreground">
               Currently in use
             </p>
@@ -71,9 +71,8 @@ const TablesPage = () => {
       </div>
 
       <div className="space-y-6">
-        {Array.from(floorMap.keys()).sort((a, b) => a - b).map((floor) => {
+        {/* {Array.from(floorMap.keys()).sort((a, b) => a - b).map((floor) => {
           const floorTables = (floorMap.get(floor) || [])
-            .filter(t => t.status !== 'out_of_service')
             .sort((a, b) => a.number - b.number);
           
           if (floorTables.length === 0) return null;
@@ -133,20 +132,13 @@ const TablesPage = () => {
                         </div>
                       )}
 
-                      {table.status === 'occupied' && !table.reservationStart && (
-                        <div className="p-3 bg-muted rounded-lg space-y-1">
-                          <div className="text-sm font-semibold">
-                            Currently occupied
-                          </div>
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 ))}
               </div>
             </div>
           );
-        })}
+        })} */}
       </div>
     </div>
   );
