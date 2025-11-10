@@ -4,8 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Table2, Tag, DollarSign } from 'lucide-react';
 import { mockTables, mockPromotions } from '@/data/mockData';
 import { useAuthStore } from '@/store/authStore';
-import { useStaffStore } from '@/store/staffStore';
-import { useAreaStore } from '@/store/areaStore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useBranches } from '@/hooks/queries/useBranches';
 
@@ -15,25 +13,25 @@ export default function OverviewPage() {
   const { data: branches, isLoading } = useBranches();
 
   const activeBranch = branches?.find(b => String(b.branchId) === branchId) || branches?.[0];
-  const { getStaffByBranch } = useStaffStore();
-  const { getAreasByBranch } = useAreaStore();
-  const branchStaff = getStaffByBranch(branchId);
-  const branchAreas = getAreasByBranch(branchId);
+  // const { getStaffByBranch } = useStaffStore();
+  // const { getAreasByBranch } = useAreaStore();
+  // const branchStaff = getStaffByBranch(branchId);
+  // const branchAreas = getAreasByBranch(branchId);
   const [selectedFloor, setSelectedFloor] = useState<string>('all');
   const [selectedAreaId, setSelectedAreaId] = useState<string>('all');
 
   // Filter tables by selected floor
-  const filteredTables = useMemo(() => {
-    let tables = mockTables;
-    if (selectedFloor !== 'all') {
-      tables = tables.filter(t => t.floor === parseInt(selectedFloor));
-    }
-    if (selectedAreaId !== 'all') {
-      const area = branchAreas.find(a => a.id === selectedAreaId);
-      if (area) tables = tables.filter(t => t.floor === area.floor);
-    }
-    return tables;
-  }, [selectedFloor, selectedAreaId, branchAreas]);
+  // const filteredTables = useMemo(() => {
+  //   let tables = mockTables;
+  //   if (selectedFloor !== 'all') {
+  //     tables = tables.filter(t => t.floor === parseInt(selectedFloor));
+  //   }
+  //   if (selectedAreaId !== 'all') {
+  //     const area = branchAreas.find(a => a.id === selectedAreaId);
+  //     if (area) tables = tables.filter(t => t.floor === area.floor);
+  //   }
+  //   return tables;
+  // }, [selectedFloor, selectedAreaId, branchAreas]);
 
   // Get unique floors
   const floors = Array.from(new Set(mockTables.map(t => t.floor))).sort((a, b) => a - b);
@@ -68,10 +66,10 @@ export default function OverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {branchStaff.filter(s => s.status === 'active').length}
+              {/* {branchStaff.filter(s => s.status === 'active').length} */}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Out of {branchStaff.length} total staff
+              {/* Out of {branchStaff.length} total staff */}
             </p>
           </CardContent>
         </Card>
@@ -132,18 +130,18 @@ export default function OverviewPage() {
                   </SelectTrigger>
                   <SelectContent className="bg-background">
                     <SelectItem value="all">All Areas</SelectItem>
-                    {branchAreas.map((area) => (
+                    {/* {branchAreas.map((area) => (
                       <SelectItem key={area.id} value={area.id}>
                         {area.name || `Area ${area.floor}`}
                       </SelectItem>
-                    ))}
+                    ))} */}
                   </SelectContent>
                 </Select>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            {filteredTables.length === 0 ? (
+            {/* {filteredTables.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 No tables found
               </div>
@@ -203,7 +201,7 @@ export default function OverviewPage() {
                   ))}
                 </div>
               </div>
-            )}
+            )} */}
           </CardContent>
         </Card>
 

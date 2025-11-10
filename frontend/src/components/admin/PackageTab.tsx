@@ -1,5 +1,4 @@
 import { Fragment, useState } from "react";
-import { usePackageStore } from "@/store/packageStore";
 import {
   usePackages,
   useDeletePackage,
@@ -36,7 +35,6 @@ export const PackageTab = () => {
   const toggleMutation = useTogglePackageAvailability();
   const { toast } = useToast();
 
-  const { toggleAvailability } = usePackageStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());

@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { useTableStore } from '@/store/tableStore';
-import { useReservationStore } from '@/store/reservationStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,8 +10,8 @@ import { TableDetailsDialog } from '@/components/waiter/TableDetailsDialog';
 const TablesPage = () => {
   const { user } = useAuthStore();
   const branchId = user?.branchId || '';
-  const { getTablesByBranchAndFloor } = useTableStore();
-  const { getReservationsByTable } = useReservationStore();
+  // const { getTablesByBranchAndFloor } = useTableStore();
+  // const { getReservationsByTable } = useReservationStore();
 
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -21,7 +19,7 @@ const TablesPage = () => {
   const [reservationIndexMap, setReservationIndexMap] = useState<Map<string, number>>(new Map());
 
   // Lấy map floor -> tables
-  const floorMap = getTablesByBranchAndFloor(branchId);
+  // const floorMap = getTablesByBranchAndFloor(branchId);
 
   const handleViewDetails = (id: string) => {
     setSelectedTable(id);
@@ -75,8 +73,7 @@ const TablesPage = () => {
       </div>
 
       <div className="space-y-6">
-        {Array.from(floorMap.keys())
-          // đảm bảo sort số (phòng khi key là string)
+        {/* {Array.from(floorMap.keys())
           .sort((a: any, b: any) => Number(a) - Number(b))
           .map((floor) => {
             const floorTables = (floorMap.get(floor) || [])
@@ -87,14 +84,12 @@ const TablesPage = () => {
 
             return (
               <div key={String(floor)} className="space-y-3">
-                {/* Header tầng */}
                 <div className="flex items-center gap-3">
                   <div className="bg-primary/10 rounded-lg px-4 py-2">
                     <h3 className="text-lg font-semibold text-primary">Floor {floor}</h3>
                   </div>
                 </div>
 
-                {/* Grid bàn */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {floorTables.map((table) => {
                     const tableReservations = getReservationsByTable(table.id);
@@ -145,7 +140,7 @@ const TablesPage = () => {
                 </div>
               </div>
             );
-          })}
+          })} */}
       </div>
 
       {selectedTable && (
