@@ -1,4 +1,4 @@
-import { changePassword, getUsers, sendMailVerification, setUserStatus, updateUser, validateOTP } from "@/api/userApi";
+import { changePassword, forgetPassword, getUsers, sendMailVerification, setUserStatus, updateUser, validateOTP } from "@/api/userApi";
 import { PageResponse } from "@/dto/pageResponse";
 import { UserDTO } from "@/dto/user.dto";
 import { useSessionStore } from "@/store/sessionStore";
@@ -84,3 +84,12 @@ export const useValidateOTP = () => {
     mutationFn: validateOTP, 
   });
 };
+
+
+export const useForgetPassword = () => {
+  return useMutation({
+    mutationFn: forgetPassword,
+
+  });
+};
+

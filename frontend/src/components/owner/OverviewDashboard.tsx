@@ -8,12 +8,13 @@ import {
   ShoppingCart,
   ArrowUp,
   ArrowDown,
-  Plus
+  Plus,
+  AlertCircle
 } from 'lucide-react';
-import { statsApi, menuApi } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { BranchManagementCard } from './BranchManagementCard';
 import { BranchManagementDialog } from './BranchManagementDialog';
+import { useCanCreateBranch } from '@/hooks/queries/useBranches';
 
 interface OverviewDashboardProps {
   userBranches: any[];
@@ -25,15 +26,16 @@ export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDash
   const [bestSellers, setBestSellers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [branchDialogOpen, setBranchDialogOpen] = useState(false);
+  const selectedRestaurantRaw = localStorage.getItem('selected_restaurant');
+  const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
+  const canCreateBranchQuery = useCanCreateBranch(selectedRestaurant?.restaurantId);
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
         setLoading(true);
-        const statsResponse = await statsApi.getOwnerStats();
-        setStats(statsResponse.data);
-        const menuResponse = await menuApi.getAll();
-        setBestSellers(menuResponse.data.filter((item: any) => item.bestSeller).slice(0, 5));
+        // const statsResponse = await statsApi.getOwnerStats();
+        // setStats(statsResponse.data);
       } catch (error) {
         console.error('Error loading dashboard:', error);
         toast({
@@ -58,19 +60,44 @@ export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDash
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Overview</h1>
-          <p className="text-muted-foreground mt-2">
-            Your restaurant performance at a glance
-          </p>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Overview</h1>
+            <p className="text-muted-foreground mt-2">
+              Your restaurant performance at a glance
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => setBranchDialogOpen(true)}
+              disabled={!canCreateBranchQuery.data}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Branch
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setBranchDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Branch
-          </Button>
-        </div>
+
+        {!canCreateBranchQuery.data && (
+          <Card className="border-amber-500">
+            <CardContent className="pt-6 pb-4 flex items-center gap-4">
+              <div className="p-3 rounded-full bg-amber-500/20">
+                <AlertCircle className="h-6 w-6 text-amber-500" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-amber-500 mb-1">Branch Creation Limit Reached</h4>
+                <p className="text-sm text-muted-foreground">
+                  You've reached the maximum number of branches for your current package. 
+                  Please upgrade to Premium to create more branches and unlock additional features.
+                </p>
+              </div>
+              <Button variant="outline" className="border-amber-500 text-amber-500 hover:bg-amber-500/10">
+                Upgrade to Premium
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       

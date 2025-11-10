@@ -1,7 +1,5 @@
-import * as React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/store/authStore';
 import { Badge } from '@/components/ui/badge';
 import {
   LayoutDashboard,
@@ -18,8 +16,10 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { UserDTO } from '@/dto/user.dto';
 import { ROLE_NAME } from '@/dto/user.dto';
+import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO, isUserDTO } from '@/utils/typeCast';
+import { useBranch } from '@/hooks/queries/useBranches';
 
 const menuItems = [
   { 
@@ -75,40 +75,21 @@ const menuItems = [
 
 export const ManagerSidebar = () => {
   const location = useLocation();
-  const { user, logout, setUser } = useAuthStore();
+  const { user, clearSession } = useSessionStore();
+  const isOwner = isUserDTO(user) ? true : false;
   const navigate = useNavigate();
-  const [isOwnerView, setIsOwnerView] = React.useState(false);
-  const [branchName, setBranchName] = React.useState('');
-
-  React.useEffect(() => {
-    const ownerViewMode = sessionStorage.getItem('owner_viewing_as_manager') === 'true';
-    const storedBranchName = sessionStorage.getItem('manager_branch_name') || '';
-    setIsOwnerView(ownerViewMode);
-    setBranchName(storedBranchName);
-  }, []);
+  // TODO: test get branchId from state
+  const branchIdFromStore = isStaffAccountDTO(user) ? user.branchId : "";
+  // branchIdFromState is get when owner navigate to manager dashboard
+  const { branchId: branchIdFromState } =location.state || {};
+  const { data: branch } = useBranch(branchIdFromState || branchIdFromStore);
 
   const handleLogout = () => {
-    // If owner is viewing as manager, restore original user
-    if (sessionStorage.getItem('owner_viewing_as_manager') === 'true') {
-      const originalUserStr = sessionStorage.getItem('original_user');
-      if (originalUserStr) {
-        localStorage.setItem('mock_auth_user', originalUserStr);
-        try {
-          const originalUser = JSON.parse(originalUserStr);
-          setUser(originalUser);
-        } catch (e) {
-          // Fallback: ensure at least auth store reloads from storage next mount
-        }
-      }
-      sessionStorage.removeItem('owner_viewing_as_manager');
-      sessionStorage.removeItem('manager_branch_id');
-      sessionStorage.removeItem('manager_branch_name');
-      sessionStorage.removeItem('original_user');
+    if (isOwner) {
       navigate('/dashboard/owner');
       return;
     }
-
-    logout();
+    clearSession();
     navigate('/login');
   };
 
@@ -130,15 +111,15 @@ export const ManagerSidebar = () => {
         </Link>
       </div>
 
-      {(isOwnerView || isOwner) && (
+      {isOwner && (
         <div className="px-4 pt-4 space-y-2">
-          {isOwnerView && (
+          {isOwner && (
             <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
               <div className="flex items-center gap-2 mb-2">
                 <Badge variant="default" className="text-xs">Owner View</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                Viewing as manager: {branchName}
+                Viewing as manager: {branch?.address}
               </p>
             </div>
           )}
@@ -193,18 +174,18 @@ export const ManagerSidebar = () => {
         <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-card">
           <Avatar className="h-10 w-10">
             <AvatarFallback className="gradient-primary text-primary-foreground">
-              {user?.name?.charAt(0) || 'M'}
+              
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user?.name || 'Manager'}</p>
+            <p className="text-sm font-medium truncate">{'Manager'}</p>
             <div className="flex items-center gap-1 mt-0.5">
               <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                {user?.role === 'branch_manager' ? 'Manager' : user?.role || 'Manager'}
+                {isOwner ? ROLE_NAME.RESTAURANT_OWNER.toString() : ROLE_NAME.BRANCH_MANAGER.toString()}
               </Badge>
             </div>
-            {branchName && (
-              <p className="text-xs text-muted-foreground truncate mt-0.5">{branchName}</p>
+            {branch?.address && (
+              <p className="text-xs text-muted-foreground truncate mt-0.5">{branch?.address}</p>
             )}
           </div>
         </div>
@@ -223,7 +204,7 @@ export const ManagerSidebar = () => {
           onClick={handleLogout}
         >
           <LogOut className="mr-3 h-4 w-4" />
-          {isOwnerView ? 'Return to Owner Dashboard' : 'Sign Out'}
+          {isOwner ? 'Return to Owner Dashboard' : 'Sign Out'}
         </Button>
       </div>
     </aside>

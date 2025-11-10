@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,10 +6,12 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Save, Building2, Mail, Phone, MapPin } from 'lucide-react';
 import { useBranch, useUpdateBranch } from '@/hooks/queries/useBranches';
+import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
 
 export default function BranchInfoPage() {
-  const { user } = useAuthStore();
-  const branchId = user?.branchId || '1';
+  const { user } = useSessionStore(); 
+  const branchId = isStaffAccountDTO(user) ? user.branchId : "";
 
   // Load branch data via query
   const { data: branch, isLoading } = useBranch(branchId);
