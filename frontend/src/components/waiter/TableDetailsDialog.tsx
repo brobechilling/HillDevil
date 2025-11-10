@@ -4,7 +4,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useTableStore } from '@/store/tableStore';
 import { useOrderStore, Order } from '@/store/orderStore';
 import { Receipt } from 'lucide-react';
 import { BillCreationDialog } from './BillCreationDialog';
@@ -17,28 +16,28 @@ interface TableDetailsDialogProps {
 }
 
 export const TableDetailsDialog = ({ tableId, branchId, open, onOpenChange }: TableDetailsDialogProps) => {
-  const getTableById = useTableStore((state) => state.getTableById);
+  // const getTableById = useTableStore((state) => state.getTableById);
   const getOrdersByTable = useOrderStore((state) => state.getOrdersByTable);
   
   // Cache table để tránh render vô hạn
-  const table = useMemo(() => tableId ? getTableById(tableId) : undefined, [tableId, getTableById]);
+  // const table = useMemo(() => tableId ? getTableById(tableId) : undefined, [tableId, getTableById]);
 
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [billDialogOpen, setBillDialogOpen] = useState(false);
 
-  if (!table) return null;
+  // if (!table) return null;
 
-  const allOrders = useMemo(() => getOrdersByTable(table.id), [table.id, getOrdersByTable]);
+  // const allOrders = useMemo(() => getOrdersByTable(table.id), [table.id, getOrdersByTable]);
 
   const isBilled = (order: Order) =>
     order.orderLines.every(line => line.orderLineStatus === 'completed');
 
-  const currentOrders = useMemo(() => 
-    allOrders.filter(o => !isBilled(o) && ['pending', 'preparing', 'ready', 'completed'].includes(o.status)),
-    [allOrders]
-  );
+  // const currentOrders = useMemo(() => 
+  //   allOrders.filter(o => !isBilled(o) && ['pending', 'preparing', 'ready', 'completed'].includes(o.status)),
+  //   [allOrders]
+  // );
 
-  const pastOrders = useMemo(() => allOrders.filter(isBilled), [allOrders]);
+  // const pastOrders = useMemo(() => allOrders.filter(isBilled), [allOrders]);
 
   const getStatusBadge = (status: Order['status']) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive'> = {
@@ -59,14 +58,14 @@ export const TableDetailsDialog = ({ tableId, branchId, open, onOpenChange }: Ta
     );
   };
 
-  const completedUnbilledOrders = useMemo(
-    () => currentOrders.filter(o => o.status === 'completed'),
-    [currentOrders]
-  );
+  // const completedUnbilledOrders = useMemo(
+  //   () => currentOrders.filter(o => o.status === 'completed'),
+  //   [currentOrders]
+  // );
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" aria-describedby="table-details-dialog">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -247,7 +246,7 @@ export const TableDetailsDialog = ({ tableId, branchId, open, onOpenChange }: Ta
           setSelectedOrders([]);
           setBillDialogOpen(false);
         }}
-      />
+      /> */}
     </>
   );
 };

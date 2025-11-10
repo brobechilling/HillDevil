@@ -11,7 +11,6 @@ import {
   Plus,
   AlertCircle
 } from 'lucide-react';
-import { statsApi, menuApi } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { BranchManagementCard } from './BranchManagementCard';
 import { BranchManagementDialog } from './BranchManagementDialog';
@@ -35,10 +34,8 @@ export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDash
     const loadDashboardData = async () => {
       try {
         setLoading(true);
-        const statsResponse = await statsApi.getOwnerStats();
-        setStats(statsResponse.data);
-        const menuResponse = await menuApi.getAll();
-        setBestSellers(menuResponse.data.filter((item: any) => item.bestSeller).slice(0, 5));
+        // const statsResponse = await statsApi.getOwnerStats();
+        // setStats(statsResponse.data);
       } catch (error) {
         console.error('Error loading dashboard:', error);
         toast({

@@ -1,16 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAdminStore } from '@/store/adminStore';
 import { usePackages } from '@/hooks/queries/usePackages';
 import { mockBranches } from '@/data/mockData';
 import { Activity, Database, DollarSign, Eye, Package, Users } from 'lucide-react';
 
 export const OverviewTab = () => {
-  const { users, getTotalLandingVisits, getTopSpendingUser, getUsersWithPackages } = useAdminStore();
+  // const { users, getTotalLandingVisits, getTopSpendingUser, getUsersWithPackages } = useAdminStore();
   const { data: packages = [] } = usePackages(); // Fetch packages data using React Query from custom hook
 
-  const topSpender = getTopSpendingUser();
-  const usersWithPackages = getUsersWithPackages();
-  const totalPackagesPurchased = users.reduce((sum, user) => sum + user.packagesPurchased.length, 0);
+  // const topSpender = getTopSpendingUser();
+  // const usersWithPackages = getUsersWithPackages();
+  // const totalPackagesPurchased = users.reduce((sum, user) => sum + user.packagesPurchased.length, 0);
 
   // Mock system metrics
   const systemMetrics = {
@@ -82,7 +81,7 @@ export const OverviewTab = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{users.length}</div>
+              {/* <div className="text-2xl font-bold">{users.length}</div> */}
               <p className="text-xs text-muted-foreground mt-1">Registered accounts</p>
             </CardContent>
           </Card>
@@ -104,7 +103,7 @@ export const OverviewTab = () => {
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{getTotalLandingVisits()}</div>
+              {/* <div className="text-2xl font-bold">{getTotalLandingVisits()}</div> */}
               <p className="text-xs text-muted-foreground mt-1">Total page visits</p>
             </CardContent>
           </Card>
@@ -132,14 +131,14 @@ export const OverviewTab = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {topSpender ? (
+              {/* {topSpender ? (
                 <>
                   <div className="text-2xl font-bold">${topSpender.totalSpent.toFixed(2)}</div>
                   <p className="text-xs text-muted-foreground">{topSpender.username}</p>
                 </>
               ) : (
                 <div className="text-sm text-muted-foreground">No purchases yet</div>
-              )}
+              )} */}
             </CardContent>
           </Card>
         </div>

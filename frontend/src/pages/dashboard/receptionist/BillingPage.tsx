@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { useAuthStore } from '@/store/authStore';
 import { useOrderStore } from '@/store/orderStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Receipt, Eye } from 'lucide-react';
 import { OrderBillDialog } from '@/components/OrderBillDialog';
+import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
 
 const BillingPage = () => {
-  const { user } = useAuthStore();
-  const branchId = user?.branchId || '';
+  const { user } = useSessionStore(); 
+  const branchId = isStaffAccountDTO(user) ? user.branchId : "";
   const { orders, markOrderAsBilled } = useOrderStore();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
