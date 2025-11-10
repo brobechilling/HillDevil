@@ -22,8 +22,7 @@ public class MenuItemController {
 
     @GetMapping("")
     public ApiResponse<List<MenuItemDTO>> getAllByRestaurant(
-            @RequestParam UUID restaurantId
-    ) {
+            @RequestParam UUID restaurantId) {
         ApiResponse<List<MenuItemDTO>> res = new ApiResponse<>();
         res.setResult(menuItemService.getAllByRestaurant(restaurantId));
         return res;
@@ -36,22 +35,20 @@ public class MenuItemController {
         return res;
     }
 
-    @PostMapping(value = "/create", consumes = {"multipart/form-data"})
+    @PostMapping(value = "/create", consumes = { "multipart/form-data" })
     public ApiResponse<MenuItemDTO> create(
             @RequestPart("data") MenuItemCreateRequest request,
-            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile
-    ) {
+            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
         ApiResponse<MenuItemDTO> res = new ApiResponse<>();
         res.setResult(menuItemService.create(request, imageFile));
         return res;
     }
 
-    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    @PutMapping(value = "/{id}", consumes = { "multipart/form-data" })
     public ApiResponse<MenuItemDTO> update(
             @PathVariable UUID id,
             @RequestPart("data") MenuItemCreateRequest request,
-            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile
-    ) {
+            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
         ApiResponse<MenuItemDTO> res = new ApiResponse<>();
         res.setResult(menuItemService.update(id, request, imageFile));
         return res;
@@ -66,8 +63,7 @@ public class MenuItemController {
     @GetMapping("/{menuItemId}/branch/{branchId}/active")
     public ApiResponse<Boolean> isMenuItemActiveInBranch(
             @PathVariable UUID menuItemId,
-            @PathVariable UUID branchId
-    ) {
+            @PathVariable UUID branchId) {
         ApiResponse<Boolean> res = new ApiResponse<>();
         res.setResult(menuItemService.isMenuItemActiveInBranch(menuItemId, branchId));
         return res;
@@ -76,8 +72,7 @@ public class MenuItemController {
     @PutMapping("/{menuItemId}/status")
     public ApiResponse<MenuItemDTO> setActiveStatus(
             @PathVariable UUID menuItemId,
-            @RequestParam boolean active
-    ) {
+            @RequestParam boolean active) {
         ApiResponse<MenuItemDTO> res = new ApiResponse<>();
         res.setResult(menuItemService.setActiveStatus(menuItemId, active));
         return res;
@@ -86,10 +81,17 @@ public class MenuItemController {
     @PutMapping("/{menuItemId}/best-seller")
     public ApiResponse<MenuItemDTO> updateBestSeller(
             @PathVariable UUID menuItemId,
-            @RequestParam boolean bestSeller
-    ) {
+            @RequestParam boolean bestSeller) {
         ApiResponse<MenuItemDTO> res = new ApiResponse<>();
         res.setResult(menuItemService.updateBestSeller(menuItemId, bestSeller));
+        return res;
+    }
+
+    @GetMapping("/restaurant/{restaurantId}/can-create")
+    public ApiResponse<Boolean> canCreateMenuItem(
+            @PathVariable UUID restaurantId) {
+        ApiResponse<Boolean> res = new ApiResponse<>();
+        res.setResult(menuItemService.canCreateMenuItem(restaurantId));
         return res;
     }
 }

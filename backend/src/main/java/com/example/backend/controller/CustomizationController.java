@@ -55,4 +55,14 @@ public class CustomizationController {
         customizationService.delete(id);
         return new ApiResponse<>();
     }
+
+    @GetMapping("/restaurant/{restaurantId}/category/{categoryId}/can-create")
+    public ApiResponse<Boolean> canCreateCustomizationForCategory(
+            @PathVariable UUID restaurantId,
+            @PathVariable UUID categoryId
+    ) {
+        ApiResponse<Boolean> res = new ApiResponse<>();
+        res.setResult(customizationService.canCreateCustomizationForCategory(restaurantId, categoryId));
+        return res;
+    }
 }

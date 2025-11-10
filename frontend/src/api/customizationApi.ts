@@ -29,3 +29,10 @@ export const deleteCustomization = async (id: string) => {
   const res = await axiosClient.delete<ApiResponse<void>>(`/customizations/${id}`);
   return res.data;
 };
+
+export const canCreateCustomization = async (restaurantId: string, categoryId: string) => {
+  const res = await axiosClient.get<ApiResponse<boolean>>(
+    `/customizations/restaurant/${restaurantId}/category/${categoryId}/can-create`,
+  );
+  return res.data.result;
+};
