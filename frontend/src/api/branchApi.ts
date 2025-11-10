@@ -43,3 +43,10 @@ export const getRestaurantByBranchId = async (branchId: string) => {
     );
     return res.data.result;
 };
+
+export const canCreateBranch = async (restaurantId: string) => {
+    const res = await axiosClient.get<ApiResponse<boolean>>(
+        `/branches/restaurant/${restaurantId}/can-create`
+    );
+    return res.data.result;
+};

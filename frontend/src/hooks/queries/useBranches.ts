@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAllBranches, getBranchesByRestaurant, getRestaurantByBranchId, getBranchById, updateBranch as apiUpdateBranch } from '@/api/branchApi';
+import { getAllBranches, getBranchesByRestaurant, getRestaurantByBranchId, getBranchById, updateBranch as apiUpdateBranch, canCreateBranch } from '@/api/branchApi';
 import { BranchDTO } from '@/dto/branch.dto';
 import { createBranch, deleteBranch } from '@/api/branchApi';
 
@@ -60,5 +60,14 @@ export const useDeleteBranch = () => {
     return useMutation({
         mutationFn: (id: string) => deleteBranch(id),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['branches'] }),
+    });
+};
+
+export const useCanCreateBranch = (restaurantId: string | undefined) => {
+    return useQuery<boolean>({
+        queryKey: ['branches', 'canCreate', restaurantId],
+        queryFn: () => canCreateBranch(restaurantId!),
+        enabled: !!restaurantId,
+        refetchOnWindowFocus: false,
     });
 };
