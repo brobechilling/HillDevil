@@ -27,8 +27,8 @@ export function CustomerContactDialog({
   onCreateNewReservation,
 }: CustomerContactDialogProps) {
   const [notes, setNotes] = useState('');
-  const [customerResponse, setCustomerResponse] = useState<'agree' | 'decline' | null>(null);
-  const { declineBooking } = useBookingStore();
+  const [customerResponse, setCustomerResponse] = useState<'agree' | 'cancel' | null>(null);
+  const { cancelBooking } = useBookingStore();
 
   const handleCallCustomer = () => {
     toast({
@@ -55,10 +55,10 @@ export function CustomerContactDialog({
   };
 
   const handleCustomerDeclines = () => {
-    declineBooking(booking.id);
+    cancelBooking(booking.id);
     toast({
-      title: 'Reservation Declined',
-      description: 'The reservation has been marked as declined.',
+      title: 'Reservation Cancelled',
+      description: 'The reservation has been marked as cancelled.',
       variant: 'destructive',
     });
     onOpenChange(false);
@@ -123,7 +123,7 @@ export function CustomerContactDialog({
                 onClick={handleCustomerDeclines}
                 className="w-full"
               >
-                Customer Declines
+                Customer Cancels
               </Button>
             </div>
           </div>

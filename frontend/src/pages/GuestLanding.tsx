@@ -113,7 +113,8 @@ const GuestLanding = () => {
             } 
             // LEGACY FORMAT: /t/:tableId or /t/:tableName - for backward compatibility
             else {
-              tableApiUrl = `http://localhost:8080/api/public/tables/${encodeURIComponent(actualTableIdentifier)}`;
+              // Legacy single-identifier lookup moved to /id/{identifier}
+              tableApiUrl = `http://localhost:8080/api/public/tables/id/${encodeURIComponent(actualTableIdentifier)}`;
             }
             
             // Fetch table from public endpoint - supports both UUID and table name

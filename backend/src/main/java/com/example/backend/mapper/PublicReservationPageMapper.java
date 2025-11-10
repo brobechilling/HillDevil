@@ -9,7 +9,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
-public interface PublicPageMapper {
+public interface PublicReservationPageMapper {
     @Mapping(source = "restaurantId", target = "restaurantId")
     @Mapping(source = "name", target = "name")
     @Mapping(source = "restaurantPhone", target = "phone") 

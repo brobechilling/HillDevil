@@ -79,6 +79,19 @@ export const ManagerSidebar = () => {
   const navigate = useNavigate();
   const [isOwnerView, setIsOwnerView] = React.useState(false);
   const [branchName, setBranchName] = React.useState('');
+  // Determine if current user is an owner. `user.role` can be a string like 'owner' or an enum/object.
+  const isOwner = React.useMemo(() => {
+    if (!user) return false;
+    // plain string role (from mock auth store)
+    if (typeof user.role === 'string') {
+      return user.role === 'owner' || user.role === 'RESTAURANT_OWNER' || user.role === ROLE_NAME.RESTAURANT_OWNER;
+    }
+    // role object shape: { name: 'RESTAURANT_OWNER' }
+    if ((user as any).role && typeof (user as any).role === 'object') {
+      return (user as any).role.name === ROLE_NAME.RESTAURANT_OWNER || (user as any).role.name === 'RESTAURANT_OWNER';
+    }
+    return false;
+  }, [user]);
 
   React.useEffect(() => {
     const ownerViewMode = sessionStorage.getItem('owner_viewing_as_manager') === 'true';

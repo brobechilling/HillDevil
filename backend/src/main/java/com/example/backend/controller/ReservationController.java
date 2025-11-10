@@ -64,6 +64,14 @@ public class ReservationController {
         return res;
     }
 
+    // Public: get reservations assigned to a specific table
+    @GetMapping("/public/reservations/table/{tableId}")
+    public ApiResponse<java.util.List<ReservationResponse>> getByTable(@PathVariable UUID tableId) {
+        ApiResponse<java.util.List<ReservationResponse>> res = new ApiResponse<>();
+        res.setResult(reservationService.getReservationsByTable(tableId));
+        return res;
+    }
+
     // Receptionist: update reservation status
     @PutMapping("/receptionist/reservations/{id}/status")
     public ApiResponse<ReservationResponse> updateStatus(
@@ -76,6 +84,16 @@ public class ReservationController {
 
         ApiResponse<ReservationResponse> res = new ApiResponse<>();
         res.setResult(reservationService.updateStatus(id, status));
+        return res;
+    }
+
+    // Receptionist: assign / update table for a reservation
+    @PutMapping("/receptionist/reservations/{id}/table")
+    public ApiResponse<ReservationResponse> assignTable(
+            @PathVariable UUID id,
+            @RequestParam(required = false) UUID tableId) {
+        ApiResponse<ReservationResponse> res = new ApiResponse<>();
+        res.setResult(reservationService.assignTable(id, tableId));
         return res;
     }
 

@@ -4,6 +4,7 @@ import { useTables } from '@/hooks/queries/useTables';
 import { useSessionStore } from '@/store/sessionStore';
 import { isStaffAccountDTO } from '@/utils/typeCast';
 import { Calendar, Users, Clock, Check, X, Trash2, Search, Plus, Mail } from 'lucide-react';
+import { reservationApi } from '@/api/reservationApi';
 
 const ReservationsPage = () => {
   const [search, setSearch] = useState('');
@@ -26,10 +27,10 @@ const ReservationsPage = () => {
 
   const branchId = isStaffAccountDTO(user) ? user.branchId : null;
 
-  // Use react-query hooks to load reservations and tables
   const reservationsQuery = useReservations(branchId ?? undefined, 0, 100);
   const tablesQuery = useTables(branchId ?? undefined, 0, 200);
   const createMutation = useCreateReservationReceptionist();
+  const apiAssignTable = reservationApi.assignTable;
 
   useEffect(() => {
     if (!reservationsQuery.data) {
@@ -69,13 +70,19 @@ const ReservationsPage = () => {
 
     const tblRes = tablesQuery.data;
     const tbls = tblRes && (tblRes.content || tblRes) ? (tblRes.content || tblRes) : [];
-    const normalizedTables = (Array.isArray(tbls) ? tbls : []).map((t: any) => ({
-      id: t.id,
-      number: t.tag || t.id,
-      capacity: t.capacity || 0,
-      status: (t.status || 'ACTIVE').toLowerCase(),
-      branchId: branchId,
-    }));
+    const normalizedTables = (Array.isArray(tbls) ? tbls : []).map((t: any) => {
+      // Backend uses enum values like 'FREE' / 'OCCUPIED'.
+      // Normalize to UI-friendly values: treat 'FREE' as 'available'.
+      const rawStatus = (t.status || 'ACTIVE').toString().toLowerCase();
+      const status = rawStatus === 'free' ? 'available' : rawStatus;
+      return {
+        id: t.id,
+        number: t.tag || t.id,
+        capacity: t.capacity || 0,
+        status,
+        branchId: branchId,
+      };
+    });
     setTables(normalizedTables);
   }, [tablesQuery.data, branchId]);
 
@@ -200,19 +207,45 @@ const ReservationsPage = () => {
   };
 
   const handleApprove = (bookingId) => {
-    setBookings(prev =>
-      prev.map(b =>
-        b.id === bookingId ? { ...b, status: 'approved' } : b
-      )
-    );
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking) return;
+
+    (async () => {
+      try {
+        // Persist status change to backend
+        const resp = await reservationApi.updateStatus(booking.reservationId || booking.id, 'approved');
+        const saved = resp && resp.result ? resp.result : resp;
+
+        setBookings(prev =>
+          prev.map(b =>
+            b.id === bookingId ? { ...b, status: (saved.status || 'approved').toString().toLowerCase() } : b
+          )
+        );
+      } catch (err) {
+        console.error('Failed to update reservation status', err);
+        alert('Failed to update reservation status. Please try again.');
+      }
+    })();
   };
 
-  const handleDecline = (bookingId) => {
-    setBookings(prev =>
-      prev.map(b =>
-        b.id === bookingId ? { ...b, status: 'cancelled' } : b
-      )
-    );
+  const handleCancel = (bookingId) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking) return;
+
+    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+
+    (async () => {
+      try {
+        const resp = await reservationApi.updateStatus(booking.reservationId || booking.id, 'CANCELLED');
+        const saved = resp && resp.result ? resp.result : resp;
+        setBookings(prev =>
+          prev.map(b => (b.id === bookingId ? { ...b, status: (saved.status || 'cancelled').toString().toLowerCase(), tableId: null } : b))
+        );
+      } catch (err) {
+        console.error('Failed to cancel reservation', err);
+        alert('Failed to cancel reservation. Please try again.');
+      }
+    })();
   };
 
   const handleAssignTable = (bookingId, tableId) => {
@@ -225,24 +258,30 @@ const ReservationsPage = () => {
       return;
     }
 
-    setBookings(prev =>
-      prev.map(b =>
-        b.id === bookingId
-          ? { ...b, tableId, status: 'confirmed' }
-          : b
-      )
-    );
+    // Persist assignment to backend then update UI
+    (async () => {
+      try {
+        const resp = await apiAssignTable(booking.reservationId || booking.id, tableId);
+        const saved = resp && resp.result ? resp.result : resp;
+
+        setBookings(prev =>
+          prev.map(b =>
+            b.id === bookingId
+              ? {
+                  ...b,
+                  tableId: saved.areaTableId || saved.tableId || tableId,
+                  status: (saved.status || 'confirmed').toString().toLowerCase(),
+                }
+              : b
+          )
+        );
+      } catch (err) {
+        console.error('Failed to assign table', err);
+        alert('Failed to assign table. Please try again.');
+      }
+    })();
   };
 
-  const handleCancel = (bookingId) => {
-    if (window.confirm('Are you sure you want to cancel this booking?')) {
-      setBookings(prev =>
-        prev.map(b =>
-          b.id === bookingId ? { ...b, status: 'cancelled', tableId: null } : b
-        )
-      );
-    }
-  };
 
   const formatDateTime = (dateString) => {
     const date = new Date(dateString);
@@ -334,12 +373,15 @@ const ReservationsPage = () => {
               Available Tables ({availableTables.length})
             </p>
             {availableTables.length > 0 ? (
-              <div className="flex gap-2 flex-wrap">
-                {availableTables.slice(0, 3).map(t => (
-                  <span key={t.id} className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-md text-xs font-semibold text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 shadow-sm">
-                    Table {t.number} • {t.capacity} seats
-                  </span>
-                ))}
+              // Make the list scrollable so the reservation card height is bounded
+              <div className="max-h-40 overflow-y-auto pr-2">
+                <div className="flex flex-col gap-2">
+                  {availableTables.map(t => (
+                    <span key={t.id} className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-md text-xs font-semibold text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 shadow-sm">
+                      {t.number} • {t.capacity} seats
+                    </span>
+                  ))}
+                </div>
               </div>
             ) : (
               <p className="text-xs text-red-600 dark:text-red-400 font-bold flex items-center gap-1">
@@ -352,7 +394,7 @@ const ReservationsPage = () => {
         {booking.status === 'confirmed' && assignedTable && (
           <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              ✓ Assigned to <span className="text-green-600 dark:text-green-400">Table {assignedTable.number}</span>
+              ✓ Assigned to <span className="text-green-600 dark:text-green-400">{assignedTable.number}</span>
             </p>
           </div>
         )}
@@ -368,11 +410,11 @@ const ReservationsPage = () => {
                 <span>Approve</span>
               </button>
               <button
-                onClick={() => handleDecline(booking.id)}
+                onClick={() => handleCancel(booking.id)}
                 className="flex-1 min-w-fit px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 transition-all duration-200 transform hover:scale-105"
               >
                 <X className="h-4 w-4" />
-                <span>Decline</span>
+                <span>Cancel</span>
               </button>
             </>
           )}
@@ -388,7 +430,7 @@ const ReservationsPage = () => {
                 <span>Select Table</span>
               </button>
               <button
-                onClick={() => handleDecline(booking.id)}
+                onClick={() => handleCancel(booking.id)}
                 className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 transition-all duration-200 transform hover:scale-105"
               >
                 <X className="h-4 w-4" />

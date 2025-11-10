@@ -18,7 +18,6 @@ export const useCreateReservationPublic = () => {
     return useMutation({
         mutationFn: reservationApi.createPublic,
         onSuccess: () => {
-            // Invalidate reservations queries so guest-created bookings show up where applicable
             qc.invalidateQueries({
                 predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === 'reservations',
             });
@@ -31,7 +30,6 @@ export const useCreateReservationReceptionist = () => {
     return useMutation({
         mutationFn: reservationApi.createForReceptionist,
         onSuccess: (data: any, variables: any) => {
-            // variables is the payload containing branchId — invalidate that branch's reservations
             const bid = variables?.branchId;
             qc.invalidateQueries({
                 predicate: (query) =>

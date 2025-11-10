@@ -25,7 +25,7 @@ interface BookingNotificationProps {
 }
 
 export const BookingNotification = ({ branchId }: BookingNotificationProps) => {
-  const { getPendingBookings, approveBooking, declineBooking } = useBookingStore();
+  const { getPendingBookings, approveBooking, cancelBooking } = useBookingStore();
   const [selectedBooking, setSelectedBooking] = useState<string | null>(null);
   const [paymentLink, setPaymentLink] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -59,10 +59,10 @@ export const BookingNotification = ({ branchId }: BookingNotificationProps) => {
     setPaymentLink('');
   };
 
-  const handleDecline = (bookingId: string) => {
-    declineBooking(bookingId);
+  const handleCancel = (bookingId: string) => {
+    cancelBooking(bookingId);
     toast({
-      title: 'Booking Declined',
+      title: 'Booking Cancelled',
       description: 'The customer has been notified.',
     });
   };
@@ -132,11 +132,11 @@ export const BookingNotification = ({ branchId }: BookingNotificationProps) => {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleDecline(booking.id)}
+                          onClick={() => handleCancel(booking.id)}
                           className="flex-1"
                         >
                           <X className="h-4 w-4 mr-1" />
-                          Decline
+                          Cancel
                         </Button>
                       </div>
                     </CardContent>

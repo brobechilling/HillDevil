@@ -11,7 +11,7 @@ export interface Booking {
   guestName: string;            // customer_name
   guestPhone: string;           // customer_phone
   numberOfGuests: number;       // guest_number
-  status: 'pending' | 'approved' | 'confirmed' | 'declined';
+  status: 'pending' | 'approved' | 'confirmed' | 'cancelled';
   /** UI-only (không có trong DB reservation) */
   createdAt?: string;
 }
@@ -23,7 +23,7 @@ type BookingState = {
   addBooking: (booking: Omit<Booking, 'id' | 'status' | 'createdAt'>) => void;
   approveBooking: (bookingId: string) => void;            // ✅ 1 tham số
   confirmBooking: (bookingId: string) => void;
-  declineBooking: (bookingId: string) => void;
+  cancelBooking: (bookingId: string) => void;
 
   // Optional utilities
   markAsRead: (bookingId: string) => void;                // no-op (UI-only)
@@ -45,11 +45,13 @@ const loadBookings = (): Booking[] => {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw) as any[];
-    return parsed.map((b) => {
+      return parsed.map((b) => {
       // Nếu là shape cũ -> migrate sang startTime
       if (!b.startTime && b.bookingDate && b.bookingTime) {
         const iso = new Date(`${b.bookingDate}T${b.bookingTime}:00`).toISOString();
-        return {
+  // Migrate legacy 'declined' status to 'cancelled'
+  const migratedStatus = b.status === 'declined' ? 'cancelled' : b.status;
+  return {
           id: String(b.id),
           branchId: b.branchId,
           areaTableId: b.areaTableId ?? null,
@@ -62,7 +64,9 @@ const loadBookings = (): Booking[] => {
         } as Booking;
       }
       // Nếu đã đúng shape mới
-      return {
+        // Migrate legacy 'declined' status to 'cancelled' for existing saved items
+        const migratedStatus = b.status === 'declined' ? 'cancelled' : b.status;
+        return {
         id: String(b.id),
         branchId: b.branchId,
         areaTableId: b.areaTableId ?? null,
@@ -70,7 +74,7 @@ const loadBookings = (): Booking[] => {
         guestName: b.guestName,
         guestPhone: b.guestPhone ?? '',
         numberOfGuests: Number(b.numberOfGuests ?? 1),
-        status: (b.status ?? 'pending') as Booking['status'],
+          status: (migratedStatus ?? 'pending') as Booking['status'],
         createdAt: b.createdAt,
       } as Booking;
     });
@@ -129,15 +133,15 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     }),
 
   // ✅ Guard: chỉ decline từ 'pending' hoặc 'approved'
-  declineBooking: (bookingId: string) =>
+  cancelBooking: (bookingId: string) =>
     set((state) => {
       const idx = state.bookings.findIndex((b) => b.id === bookingId);
       if (idx === -1) return {};
       const current = state.bookings[idx];
-      if (current.status === 'confirmed' || current.status === 'declined') return {};
+      if (current.status === 'confirmed' || current.status === 'cancelled') return {};
 
       const updated = [...state.bookings];
-      updated[idx] = { ...current, status: 'declined' };
+      updated[idx] = { ...current, status: 'cancelled' };
 
       saveBookings(updated);
       return { bookings: updated };

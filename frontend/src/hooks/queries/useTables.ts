@@ -16,6 +16,8 @@ import {
 import { useMemo } from 'react';
 import { TableDTO, CreateTableRequest, TableStatus, QrCodeJsonResponse } from '@/dto/table.dto';
 import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
+import { getPublicTablesByBranch } from '@/api/tableApi';
 
 /**
  * Query hook: Lấy danh sách tables theo branch (có phân trang)
@@ -26,24 +28,25 @@ export const useTables = (
   size: number = 20,
   sort?: string
 ) => {
-  // Helper function to validate UUID format
+  // Helper function to validate UUID format (kept for optional stricter checks)
   const isValidUUID = (str: string): boolean => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
   };
 
-  // Kiểm tra token và branchId hợp lệ (phải là UUID format)
+  // For mock/dev data branch IDs may be numeric strings ("1", "2").
+  // Enable queries for any non-empty branchId; keep UUID helper for future checks.
   const isValidBranchId = useMemo(() => {
     if (!branchId || typeof branchId !== 'string') return false;
-    const trimmed = branchId.trim();
-    return trimmed !== '' && isValidUUID(trimmed);
+    return branchId.trim() !== '';
   }, [branchId]);
   
   const { token } = useSessionStore();
-  
+
+  // Recompute when token changes
   const hasToken = useMemo(() => {
     return !!token && token.trim() !== '';
-  }, []); // Check token mỗi lần component render
+  }, [token]);
   
   return useQuery({
     queryKey: ['tables', branchId, page, size, sort],
@@ -55,9 +58,22 @@ export const useTables = (
       if (!isValidUUID(branchId.trim())) {
         throw new Error('BranchId must be a valid UUID');
       }
+
+      const { user } = useSessionStore.getState();
+      // If current user is a staff account (receptionist/waiter) or there's no token (guest),
+      // call the public endpoint directly to avoid getting 403 from the owner API.
+      if (isStaffAccountDTO(user) || !hasToken) {
+        return getPublicTablesByBranch(branchId, page, size, sort);
+      }
+
+      // Otherwise (likely owner/admin), call owner endpoint which returns richer data.
       return getTablesByBranch(branchId, page, size, sort);
     },
-    enabled: isValidBranchId && hasToken,
+  // Enable when we have a branchId present; we no longer require strict UUID format because
+  // mock/dev branches use numeric ids. We also allow queries without an access token so
+  // staff/guest clients (mock auth) can call the public endpoint. Authorization fallback
+  // is handled in API helpers (owner endpoint -> fallback to public on 403).
+  enabled: isValidBranchId,
     retry: false, // Không retry để tránh spam requests khi có lỗi
     throwOnError: false, // Không throw error để tránh uncaught promise
   });

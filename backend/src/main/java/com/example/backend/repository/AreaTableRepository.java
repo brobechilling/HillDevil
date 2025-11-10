@@ -1,6 +1,7 @@
 package com.example.backend.repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -42,4 +43,17 @@ public interface AreaTableRepository extends JpaRepository<AreaTable, UUID> {
     """)
     List<AreaTable> findAllByBranchAndArea(@Param("branchId") UUID branchId,
                                            @Param("areaId") UUID areaId);
+
+    // Lookup by tag (legacy short name). Note: tag may not be unique across branches.
+    Optional<AreaTable> findByTag(String tag);
+
+    @Query("""
+       SELECT t
+       FROM AreaTable t
+         JOIN t.area a
+       WHERE a.name = :areaName
+         AND t.tag = :tag
+    """)
+    Optional<AreaTable> findByAreaNameAndTag(@Param("areaName") String areaName,
+                                                       @Param("tag") String tag);
 }

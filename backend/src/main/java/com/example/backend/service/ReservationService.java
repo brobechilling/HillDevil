@@ -22,6 +22,8 @@ import com.example.backend.exception.ErrorCode;
 import com.example.backend.repository.AreaTableRepository;
 import com.example.backend.repository.BranchRepository;
 import com.example.backend.repository.ReservationRepository;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ReservationService {
@@ -38,6 +40,12 @@ public class ReservationService {
         this.branchRepository = branchRepository;
         this.areaTableRepository = areaTableRepository;
         this.reservationMapper = reservationMapper;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReservationResponse> getReservationsByTable(UUID areaTableId) {
+        List<Reservation> list = reservationRepository.findAllByAreaTable_AreaTableId(areaTableId);
+        return list.stream().map(reservationMapper::toDto).collect(Collectors.toList());
     }
 
     @Transactional
@@ -99,10 +107,28 @@ public class ReservationService {
     }
 
     @Transactional
+    public ReservationResponse assignTable(UUID reservationId, java.util.UUID areaTableId) {
+        Reservation r = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        AreaTable t = null;
+        if (areaTableId != null) {
+            t = areaTableRepository.findById(areaTableId)
+                    .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
+        }
+
+        r.setAreaTable(t);
+        // When a table is assigned, we consider the reservation confirmed
+        r.setStatus(ReservationStatus.CONFIRMED);
+
+        r = reservationRepository.save(r);
+        return reservationMapper.toDto(r);
+    }
+
+    @Transactional
     public void deleteReservation(UUID reservationId) {
         Reservation r = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESERVATION_NOT_FOUND));
-        // Soft delete: mark as CANCELLED rather than physical delete
         r.setStatus(ReservationStatus.CANCELLED);
         r = reservationRepository.save(r);
     }

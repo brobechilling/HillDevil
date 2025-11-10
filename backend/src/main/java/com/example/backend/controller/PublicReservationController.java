@@ -1,18 +1,18 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.response.*;
-import com.example.backend.service.PublicPageService;
+import com.example.backend.service.PublicReservationPageService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/public")
-public class PublicPageController {
+public class PublicReservationController {
 
-    private final PublicPageService publicPageService;
+    private final PublicReservationPageService publicPageService;
 
-    public PublicPageController(PublicPageService publicPageService) {
+    public PublicReservationController(PublicReservationPageService publicPageService) {
         this.publicPageService = publicPageService;
     }
 

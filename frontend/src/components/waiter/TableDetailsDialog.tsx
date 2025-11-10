@@ -6,29 +6,44 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTableStore } from '@/store/tableStore';
 import { useOrderStore, Order } from '@/store/orderStore';
-import { Receipt } from 'lucide-react';
+import { Receipt, Mail, Phone, Clock, Users } from 'lucide-react';
 import { BillCreationDialog } from './BillCreationDialog';
+import { getReservationsByTable } from '@/api/reservationApi';
+import { useQuery } from '@tanstack/react-query';
 
 interface TableDetailsDialogProps {
-  tableId: string | null;
+  tableId?: string | null;
+  table?: any;
   branchId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export const TableDetailsDialog = ({ tableId, branchId, open, onOpenChange }: TableDetailsDialogProps) => {
+export const TableDetailsDialog = ({ tableId, table, branchId, open, onOpenChange }: TableDetailsDialogProps) => {
   const getTableById = useTableStore((state) => state.getTableById);
   const getOrdersByTable = useOrderStore((state) => state.getOrdersByTable);
-  
-  // Cache table để tránh render vô hạn
-  const table = useMemo(() => tableId ? getTableById(tableId) : undefined, [tableId, getTableById]);
+
+  // If parent passed `table`, use it; otherwise attempt to read from local store
+  const tableFromStore = useMemo(() => tableId ? getTableById(tableId) : undefined, [tableId, getTableById]);
+  const effectiveTable = table || tableFromStore;
+
+  // Fetch reservations assigned to this table (public endpoint)
+  const reservationsQuery = useQuery({
+    queryKey: ['public', 'reservations', 'table', effectiveTable?.id],
+    queryFn: () => getReservationsByTable(effectiveTable!.id),
+    enabled: !!effectiveTable?.id,
+  });
+
+  // Debug: log reservation query result to help diagnose missing UI
+  // eslint-disable-next-line no-console
+  console.debug('TableDetailsDialog: reservationsQuery=', reservationsQuery);
 
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [billDialogOpen, setBillDialogOpen] = useState(false);
 
-  if (!table) return null;
+  if (!effectiveTable) return null;
 
-  const allOrders = useMemo(() => getOrdersByTable(table.id), [table.id, getOrdersByTable]);
+  const allOrders = useMemo(() => getOrdersByTable(effectiveTable.id), [effectiveTable.id, getOrdersByTable]);
 
   const isBilled = (order: Order) =>
     order.orderLines.every(line => line.orderLineStatus === 'completed');
@@ -70,8 +85,8 @@ export const TableDetailsDialog = ({ tableId, branchId, open, onOpenChange }: Ta
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" aria-describedby="table-details-dialog">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              Table {table.number} - Details
-              {table.reservationStart && (
+              {effectiveTable.number || effectiveTable.tag} - Details
+              {effectiveTable.reservationStart && (
                 <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
                   Reserved
                 </Badge>
@@ -79,31 +94,85 @@ export const TableDetailsDialog = ({ tableId, branchId, open, onOpenChange }: Ta
             </DialogTitle>
           </DialogHeader>
 
-          {table.reservationStart && (
+              {effectiveTable.reservationStart && (
             <Card className="bg-muted/50">
               <CardContent className="pt-6">
                 <h4 className="font-semibold mb-3 text-sm">Reservation Details</h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  {table.reservationName && (
+                  {effectiveTable.reservationName && (
                     <div>
                       <p className="text-muted-foreground">Guest Name</p>
-                      <p className="font-semibold">{table.reservationName}</p>
+                      <p className="font-semibold">{effectiveTable.reservationName}</p>
                     </div>
                   )}
                   <div>
                     <p className="text-muted-foreground">Start Time</p>
-                    <p className="font-semibold">{new Date(table.reservationStart).toLocaleString()}</p>
+                    <p className="font-semibold">{new Date(effectiveTable.reservationStart).toLocaleString()}</p>
                   </div>
-                  {table.reservationEnd && (
+                  {effectiveTable.reservationEnd && (
                     <div>
                       <p className="text-muted-foreground">End Time</p>
-                      <p className="font-semibold">{new Date(table.reservationEnd).toLocaleString()}</p>
+                      <p className="font-semibold">{new Date(effectiveTable.reservationEnd).toLocaleString()}</p>
                     </div>
                   )}
                   <div>
                     <p className="text-muted-foreground">Table Capacity</p>
-                    <p className="font-semibold">{table.capacity} guests</p>
+                    <p className="font-semibold">{effectiveTable.capacity} guests</p>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Assigned reservations (from public API) */}
+          {Array.isArray(reservationsQuery.data) && reservationsQuery.data.length > 0 && (
+            <Card className="mt-4">
+              <CardContent>
+                <h4 className="font-semibold mb-3 text-sm">Assigned Reservations</h4>
+                <div className="space-y-3 text-sm">
+                  {reservationsQuery.data.map((r: any) => {
+                    const start = r.startTime || r.reservationStart || r.createdAt;
+                    return (
+                      <div key={r.reservationId || r.id} className="p-3 border rounded-md bg-background/50">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Users className="w-4 h-4 text-muted-foreground" />
+                              <div className="font-semibold">{r.customerName || r.reservationName || r.customerFullName || 'Guest'}</div>
+                            </div>
+
+                            <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                              <div className="flex items-center gap-2">
+                                <Mail className="w-3 h-3" />
+                                <span className="font-medium">mail:</span>
+                                <span className="truncate">{r.customerEmail || '-'}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Phone className="w-3 h-3" />
+                                <span className="font-medium">phone:</span>
+                                <span>{r.customerPhone || '-'}</span>
+                              </div>
+                              {r.note && (
+                                <div className="pt-1 text-xs italic text-muted-foreground">Note: {r.note}</div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex-shrink-0 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Clock className="w-4 h-4 text-muted-foreground" />
+                              <div className="font-medium">{new Date(start).toLocaleTimeString()}</div>
+                            </div>
+                            <div className="text-xs text-muted-foreground">start time</div>
+                            <div className="mt-2">
+                              <Badge variant="secondary">{(r.status || '').toString()}</Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">Guests: {r.guestNumber ?? r.guest ?? r.partySize ?? '-'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -242,7 +311,7 @@ export const TableDetailsDialog = ({ tableId, branchId, open, onOpenChange }: Ta
         open={billDialogOpen}
         onOpenChange={setBillDialogOpen}
         orderIds={selectedOrders}
-        tableNumber={table.number}
+        tableNumber={effectiveTable.number}
         onBillCreated={() => {
           setSelectedOrders([]);
           setBillDialogOpen(false);

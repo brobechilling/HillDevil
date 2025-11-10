@@ -1,8 +1,7 @@
-import { getRestaurants, getAllRestaurants, getRestaurantsByOwner, getRestaurantById } from "@/api/restaurantApi";
+import { getRestaurants, getAllRestaurants, getRestaurantsByOwner, getRestaurantById, updateRestaurant, deleteRestaurant } from "@/api/restaurantApi";
 import { PageResponse } from "@/dto/pageResponse";
 import { RestaurantDTO } from "@/dto/restaurant.dto";
 import { useQuery } from "@tanstack/react-query";
-import { getRestaurantById, updateRestaurant, deleteRestaurant } from '@/api/restaurantApi';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 
@@ -30,15 +29,8 @@ export const useRestaurantsByOwner = (userId: string | undefined) => {
   });
 };
 
-export const useRestaurant = (id?: string) => {
-  return useQuery<RestaurantDTO | null>({
-    queryKey: ['restaurant', id],
-    queryFn: () => getRestaurantById(id!),
-    enabled: !!id,
-    staleTime: 1000 * 60 * 2,
-    refetchOnWindowFocus: false,
-  });
-};
+// Consolidated `useRestaurant` above. If you need the variant with different options,
+// adjust the single export above to include staleTime/refetchOnWindowFocus as needed.
 
 export const useUpdateRestaurant = () => {
   const qc = useQueryClient();

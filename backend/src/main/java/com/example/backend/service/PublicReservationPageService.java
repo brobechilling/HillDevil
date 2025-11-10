@@ -5,7 +5,7 @@ import com.example.backend.dto.response.RestaurantPublicResponse;
 import com.example.backend.entities.*;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
-import com.example.backend.mapper.PublicPageMapper;
+import com.example.backend.mapper.PublicReservationPageMapper;
 import com.example.backend.repository.*;
 import org.springframework.stereotype.Service;
 
@@ -14,21 +14,21 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-public class PublicPageService {
+public class PublicReservationPageService {
 
         private final RestaurantRepository restaurantRepository;
         private final BranchRepository branchRepository;
         private final MenuItemRepository menuItemRepository;
-        private final PublicPageMapper mapper;
+        private final PublicReservationPageMapper mapper;
         private final MediaService mediaService;
 
-        public PublicPageService(
+        public PublicReservationPageService(
                         RestaurantRepository restaurantRepository,
                         BranchRepository branchRepository,
                         TableRepository tableRepository,
                         BranchMenuItemRepository branchMenuItemRepository,
                         MenuItemRepository menuItemRepository,
-                        PublicPageMapper mapper,
+                        PublicReservationPageMapper mapper,
                         MediaService mediaService) {
                 this.restaurantRepository = restaurantRepository;
                 this.branchRepository = branchRepository;
@@ -88,7 +88,7 @@ public class PublicPageService {
                                 .map(item -> {
                                         MenuPublicResponse.MenuItemDTO dto = mapper.menuItemToMenuItemDTO(item);
                                         dto.setImageUrl(mediaService.getImageUrlByTarget(item.getMenuItemId(),
-                                                        "MENU_ITEM_IMAGE")); // 👈 thêm dòng này
+                                                        "MENU_ITEM_IMAGE")); 
                                         return dto;
                                 })
                                 .collect(Collectors.toList()));
