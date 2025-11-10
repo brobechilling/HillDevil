@@ -1,5 +1,4 @@
-import React, { useState, useCallback } from 'react';
-import { useAuthStore } from '@/store/authStore';
+import { useState, useCallback } from 'react';
 import { useSessionStore } from "@/store/sessionStore";
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -63,8 +62,8 @@ const Settings = () => {
 
   // Account settings state
   const [accountData, setAccountData] = useState({
-    name: user?.username || '',
-    email: user?.email || '',
+    name: '',
+    email: '',
     phone: '',
   });
 
@@ -282,11 +281,6 @@ const Settings = () => {
                         setAccountData({ ...accountData, phone: e.target.value })
                       }
                     />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>User ID</Label>
-                    <Input value={user.userId} disabled />
                   </div>
                 </div>
 

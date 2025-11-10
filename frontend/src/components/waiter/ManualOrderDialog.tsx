@@ -5,7 +5,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useTableStore } from '@/store/tableStore';
 import { useMenuStore, MenuItem } from '@/store/menuStore';
 import { useOrderStore, OrderItem } from '@/store/orderStore';
 import { toast } from '@/hooks/use-toast';
@@ -26,8 +25,8 @@ interface OrderLineItem {
 }
 
 export const ManualOrderDialog = ({ open, onOpenChange, branchId }: ManualOrderDialogProps) => {
-  const allTables = useTableStore((state) => state.tables);
-  const tables = allTables.filter(t => t.branchId === branchId);
+  // const allTables = useTableStore((state) => state.tables);
+  // const tables = allTables.filter(t => t.branchId === branchId);
   const allMenuItems = useMenuStore((state) => state.items);
   const menuItems = allMenuItems.filter(item => item.branchId === branchId && item.available);
   const { addOrder, addOrderLine, getActiveOrderByTable } = useOrderStore();
@@ -246,11 +245,11 @@ export const ManualOrderDialog = ({ open, onOpenChange, branchId }: ManualOrderD
                 <SelectValue placeholder="Select table" />
               </SelectTrigger>
               <SelectContent>
-                {tables.map(table => (
+                {/* {tables.map(table => (
                   <SelectItem key={table.id} value={table.number.toString()}>
                     Table {table.number} (Capacity: {table.capacity})
                   </SelectItem>
-                ))}
+                ))} */}
               </SelectContent>
             </Select>
           </div>

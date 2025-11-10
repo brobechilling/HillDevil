@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { menuApi } from '@/lib/api';
 import { getBranchById } from '@/api/branchApi';
 // Note: GuestLanding now supports both shortCode (from mock) and UUID branchId (from QR codes)
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -147,8 +146,8 @@ const GuestLanding = () => {
                     setBranch(branchData);
                     
                     // Load menu
-                    const menuResponse = await menuApi.getAll(branchData.id);
-                    setMenuItems(menuResponse.data);
+                    // const menuResponse = await menuApi.getAll(branchData.id);
+                    // setMenuItems(menuResponse.data);
                     
                     setFlowState('menu');
                     setOrderType('now');
@@ -186,8 +185,8 @@ const GuestLanding = () => {
                 setTableNumber(tableApiResponse.result.tag || '');
                 
                 // Load menu
-                const menuResponse = await menuApi.getAll(branchData.id);
-                setMenuItems(menuResponse.data);
+                // const menuResponse = await menuApi.getAll(branchData.id);
+                // setMenuItems(menuResponse.data);
                 
                 setFlowState('menu');
                 setOrderType('now');
@@ -260,8 +259,8 @@ const GuestLanding = () => {
           }
         }
 
-        const menuResponse = await menuApi.getAll(branchData.id);
-        setMenuItems(menuResponse.data);
+        // const menuResponse = await menuApi.getAll(branchData.id);
+        // setMenuItems(menuResponse.data);
       } catch (error) {
         toast({
           variant: 'destructive',

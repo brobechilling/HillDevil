@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
-import { useTableStore, TableStatus } from '@/store/tableStore';
-import { useReservationStore } from '@/store/reservationStore';
+// import { useTableStore, TableStatus } from '@/store/tableStore';
+// import { useReservationStore } from '@/store/reservationStore';
 import { toast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -28,78 +28,78 @@ interface TableStatusDialogProps {
 
 export const TableStatusDialog = ({ tableId, open, onOpenChange }: TableStatusDialogProps) => {
   // Get tables and reservations
-  const tables = useTableStore((state) => state.tables);
-  const updateTable = useTableStore((state) => state.updateTable);
-  const addReservation = useReservationStore((state) => state.addReservation);
+  // const tables = useTableStore((state) => state.tables);
+  // const updateTable = useTableStore((state) => state.updateTable);
+  // const addReservation = useReservationStore((state) => state.addReservation);
 
   // Find specific table
-  const table = useMemo(
-    () => tables.find((t) => t.id === tableId) || null,
-    [tables, tableId]
-  );
+  // const table = useMemo(
+  //   () => tables.find((t) => t.id === tableId) || null,
+  //   [tables, tableId]
+  // );
 
   // Get reservations for this table
-  const allReservations = useReservationStore((state) => state.reservations);
-  const reservations = useMemo(
-    () => allReservations.filter((r) => r.tableId === tableId),
-    [allReservations, tableId]
-  );
+  // const allReservations = useReservationStore((state) => state.reservations);
+  // const reservations = useMemo(
+  //   () => allReservations.filter((r) => r.tableId === tableId),
+  //   [allReservations, tableId]
+  // );
 
   // Local state
-  const [status, setStatus] = useState<TableStatus>('available');
+  // const [status, setStatus] = useState<TableStatus>('available');
   const [reservationName, setReservationName] = useState('');
   const [reservationDate, setReservationDate] = useState<Date | undefined>(undefined);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
 
   // Cập nhật state khi dialog mở hoặc table thay đổi
-  useEffect(() => {
-    if (!open || !table) return;
+  // useEffect(() => {
+  //   if (!open || !table) return;
 
-    setStatus(table.status ?? 'available');
-    setReservationName(table.reservationName ?? '');
-    setReservationDate(table.reservationStart ? new Date(table.reservationStart) : undefined);
-    setStartTime(table.reservationStart ? format(new Date(table.reservationStart), 'HH:mm') : '');
-    setEndTime(table.reservationEnd ? format(new Date(table.reservationEnd), 'HH:mm') : '');
-  }, [open, table]);
+  //   setStatus(table.status ?? 'available');
+  //   setReservationName(table.reservationName ?? '');
+  //   setReservationDate(table.reservationStart ? new Date(table.reservationStart) : undefined);
+  //   setStartTime(table.reservationStart ? format(new Date(table.reservationStart), 'HH:mm') : '');
+  //   setEndTime(table.reservationEnd ? format(new Date(table.reservationEnd), 'HH:mm') : '');
+  // }, [open, table]);
 
-  if (!table) return null;
+  // if (!table) return null;
 
   const handleSave = () => {
-    const updates: Partial<typeof table> = { status };
+    // const updates: Partial<typeof table> = { status };
 
-    // Nếu status occupied → tạo reservation mới
-    if (status === 'occupied' && reservationDate && startTime && endTime && reservationName) {
-      const start = new Date(reservationDate);
-      const [startHour, startMin] = startTime.split(':').map(Number);
-      start.setHours(startHour, startMin);
+    // // Nếu status occupied → tạo reservation mới
+    // if (status === 'occupied' && reservationDate && startTime && endTime && reservationName) {
+    //   const start = new Date(reservationDate);
+    //   const [startHour, startMin] = startTime.split(':').map(Number);
+    //   start.setHours(startHour, startMin);
 
-      const end = new Date(reservationDate);
-      const [endHour, endMin] = endTime.split(':').map(Number);
-      end.setHours(endHour, endMin);
+    //   const end = new Date(reservationDate);
+    //   const [endHour, endMin] = endTime.split(':').map(Number);
+    //   end.setHours(endHour, endMin);
 
-      addReservation({
-        tableId: table.id,
-        branchId: table.branchId,
-        guestName: reservationName,
-        guestEmail: '',
-        guestPhone: '',
-        numberOfGuests: 1,
-        reservationStart: start.toISOString(),
-        reservationEnd: end.toISOString(),
-        status: 'confirmed',
-        notes: '',
-      });
-    }
+    //   addReservation({
+    //     tableId: table.id,
+    //     branchId: table.branchId,
+    //     guestName: reservationName,
+    //     guestEmail: '',
+    //     guestPhone: '',
+    //     numberOfGuests: 1,
+    //     reservationStart: start.toISOString(),
+    //     reservationEnd: end.toISOString(),
+    //     status: 'confirmed',
+    //     notes: '',
+    //   });
+    // }
 
-    updateTable(table.id, updates);
+    // updateTable(table.id, updates);
 
-    toast({
-      title: 'Table Updated',
-      description: `Table ${table.number} status changed to ${status}`,
-    });
+    // toast({
+    //   title: 'Table Updated',
+    //   description: `Table ${table.number} status changed to ${status}`,
+    // });
 
-    onOpenChange(false);
+    // onOpenChange(false);
   };
 
   return (
@@ -109,7 +109,7 @@ export const TableStatusDialog = ({ tableId, open, onOpenChange }: TableStatusDi
         aria-describedby="table-status-dialog-description"
       >
         <DialogHeader>
-          <DialogTitle>Update Table {table.number} Status</DialogTitle>
+          {/* <DialogTitle>Update Table {table.number} Status</DialogTitle> */}
           <p
             id="table-status-dialog-description"
             className="text-sm text-muted-foreground"
@@ -122,7 +122,7 @@ export const TableStatusDialog = ({ tableId, open, onOpenChange }: TableStatusDi
           {/* Table Status */}
           <div className="space-y-2">
             <Label>Table Status</Label>
-            <RadioGroup value={status} onValueChange={(v) => setStatus(v as TableStatus)}>
+            {/* <RadioGroup value={status} onValueChange={(v) => setStatus(v as TableStatus)}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="available" id="available" />
                 <Label htmlFor="available" className="font-normal cursor-pointer">
@@ -135,7 +135,7 @@ export const TableStatusDialog = ({ tableId, open, onOpenChange }: TableStatusDi
                   Occupied
                 </Label>
               </div>
-            </RadioGroup>
+            </RadioGroup> */}
           </div>
 
           {/* Reservation Fields */}
@@ -203,7 +203,7 @@ export const TableStatusDialog = ({ tableId, open, onOpenChange }: TableStatusDi
                 </div>
               </div>
 
-              {reservations.length > 0 && (
+              {/* {reservations.length > 0 && (
                 <div className="mt-4 border-t pt-2">
                   <Label>Current Reservations</Label>
                   <ul className="space-y-1 max-h-40 overflow-y-auto">
@@ -221,7 +221,7 @@ export const TableStatusDialog = ({ tableId, open, onOpenChange }: TableStatusDi
                     ))}
                   </ul>
                 </div>
-              )}
+              )} */}
             </>
           )}
         </div>

@@ -3,9 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table2, Eye, Settings, ChevronLeft, ChevronRight, Plus, QrCode, Trash2, Edit2, Save, X } from 'lucide-react';
-import { useTableStore } from '@/store/tableStore';
 import { TableStatus } from '@/dto/table.dto';
-import { useReservationStore } from '@/store/reservationStore';
 import { toast } from '@/hooks/use-toast';
 import { useAreas, useCreateArea, useDeleteArea } from '@/hooks/queries/useAreas';
 import { useTables, useDeleteTable, useUpdateTableStatus, useUpdateTable } from '@/hooks/queries/useTables';
@@ -51,8 +49,7 @@ export const ManagerTableManagementEnhanced = ({
   hideAddButtons = false,
   disableStatusChange = false,
 }: ManagerTableManagementEnhancedProps) => {
-  const { getTablesByBranchAndFloor } = useTableStore();
-  const { getReservationsByTable } = useReservationStore();
+  // const { getTablesByBranchAndFloor } = useTableStore();
   
   const selectedRestaurant: RestaurantDTO | null = useMemo(() => {
     return getLocalStorageObject<RestaurantDTO>("selected_restaurant");
@@ -426,7 +423,7 @@ export const ManagerTableManagementEnhanced = ({
     }
   };
 
-  const selectedTableReservations = selectedTable ? getReservationsByTable(selectedTable.id) : [];
+  // const selectedTableReservations = selectedTable ? getReservationsByTable(selectedTable.id) : [];
 
   const [hoveredTable, setHoveredTable] = useState<string | null>(null);
 
@@ -695,7 +692,7 @@ export const ManagerTableManagementEnhanced = ({
                         }}
                       >
                         {sortedTables.map((table, tableIndex) => {
-                          const reservations = getReservationsByTable(table.id);
+                          // const reservations = getReservationsByTable(table.id);
                           
                           return (
                             <div
@@ -743,11 +740,11 @@ export const ManagerTableManagementEnhanced = ({
                                       <Badge className={cn(getStatusColor(table.status), "transition-all duration-300 text-white font-semibold")}>
                                         {getStatusLabel(table.status)}
                                       </Badge>
-                                      {reservations.length > 0 && (
+                                      {/* {reservations.length > 0 && (
                                         <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100 animate-pulse font-semibold">
                                           {reservations.length} {reservations.length === 1 ? 'Booking' : 'Bookings'}
                                         </Badge>
-                                      )}
+                                      )} */}
                                   </div>
 
                                     {/* Capacity Info */}
@@ -1051,7 +1048,7 @@ export const ManagerTableManagementEnhanced = ({
                 </div>
               </div>
 
-              {selectedTableReservations.length > 0 && (
+              {/* {selectedTableReservations.length > 0 && (
                 <div className="border-t pt-6">
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="font-semibold flex items-center gap-2">
@@ -1122,7 +1119,7 @@ export const ManagerTableManagementEnhanced = ({
                     </div>
                   )}
                 </div>
-              )}
+              )} */}
             </div>
           )}
         </DialogContent>

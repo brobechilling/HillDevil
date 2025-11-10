@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOrderStore, Order } from '@/store/orderStore';
-import { useAuthStore } from '@/store/authStore';
 import { toast } from '@/hooks/use-toast';
 import { Search } from 'lucide-react';
+import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
 
 export const OrderManagement = () => {
-  const { user } = useAuthStore();
-  const branchId = (user && 'branchId' in user) ? (user as any).branchId : undefined;
+  const { user } = useSessionStore(); 
+  const branchId = isStaffAccountDTO(user) ? user.branchId : "";
   const allOrders = useOrderStore((state) => state.orders);
   const orders = allOrders.filter(o => o.branchId === branchId);
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
