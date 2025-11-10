@@ -1,45 +1,31 @@
-// package com.example.backend.controller;
+package com.example.backend.controller;
 
-// import com.example.backend.dto.ApiResponse;
-// import com.example.backend.dto.OrderLineDTO;
-// import com.example.backend.entities.OrderLineStatus;
-// import com.example.backend.service.OrderLineService;
-// import org.springframework.web.bind.annotation.*;
+import com.example.backend.dto.ApiResponse;
+import com.example.backend.dto.request.CreateOrderLineRequest;
+import com.example.backend.service.OrderLineService;
+import org.springframework.web.bind.annotation.*;
 
-// import java.util.List;
-// import java.util.UUID;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
-// @RestController
-// @RequestMapping("/api/order-lines")
-// public class OrderLineController {
 
-//     private final OrderLineService orderLineService;
+@RestController
+@RequestMapping("/api/orderlines")
+public class OrderLineController {
 
-//     public OrderLineController(OrderLineService orderLineService) {
-//         this.orderLineService = orderLineService;
-//     }
+    private final OrderLineService orderLineService;
 
-//     @GetMapping("/{id}")
-//     public ApiResponse<OrderLineDTO> getById(@PathVariable UUID id) {
-//         ApiResponse<OrderLineDTO> res = new ApiResponse<>();
-//         res.setResult(orderLineService.getById(id));
-//         return res;
-//     }
+    public OrderLineController(OrderLineService orderLineService) {
+        this.orderLineService = orderLineService;
+    }
 
-//     @GetMapping("/order/{orderId}")
-//     public ApiResponse<List<OrderLineDTO>> getByOrder(@PathVariable UUID orderId) {
-//         ApiResponse<List<OrderLineDTO>> res = new ApiResponse<>();
-//         res.setResult(orderLineService.getOrderLineFromOrder(orderId));
-//         return res;
-//     }
+    @PostMapping("")
+    public ApiResponse<Boolean> createOrderLine(@RequestBody CreateOrderLineRequest createOrderLineRequest) {
+        ApiResponse<Boolean> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(orderLineService.createOrderLine(createOrderLineRequest));
+        return apiResponse;
+    }
 
-//     @PutMapping("/{orderLineId}/status")
-//     public ApiResponse<OrderLineDTO> updateStatus(
-//             @PathVariable UUID orderLineId,
-//             @RequestParam OrderLineStatus status
-//     ) {
-//         ApiResponse<OrderLineDTO> res = new ApiResponse<>();
-//         res.setResult(orderLineService.setOrderLineStatus(orderLineId, status));
-//         return res;
-//     }
-// }
+    
+    
+}

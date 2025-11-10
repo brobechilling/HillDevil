@@ -15,8 +15,10 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderItemService {
@@ -37,25 +39,27 @@ public class OrderItemService {
     }
 
     // called by OrderLineService, when customer create a request -> no response back to customer
-    public void createOrderItem(List<CreateOrderItemRequest> createOrderItemRequestList, OrderLine orderLine) {
-        List<OrderItem> orderItems = new ArrayList<>();
+    public Set<OrderItem> createOrderItem(List<CreateOrderItemRequest> createOrderItemRequestList, OrderLine orderLine) {
+        Set<OrderItem> orderItems = new LinkedHashSet<>();
         for (CreateOrderItemRequest createOrderItemRequest : createOrderItemRequestList) {
             OrderItem orderItem = orderItemMapper.createOrderItem(createOrderItemRequest);
             MenuItem menuItem = menuItemRepository.findById(createOrderItemRequest.getMenuItemId()).orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
             orderItem.setMenuItem(menuItem);
             orderItem.setOrderLine(orderLine);
-            orderItem.setOrderItemCustomizations(orderItemCustomizationService.createOrderItemCustomization(orderItem, createOrderItemRequest.getCustomizations()));
+            OrderItem savedOrderItem = orderItemRepository.save(orderItem);
+            // save the orderItem first then fetch it and use in orderItemCustomizationService.createOrderItemCustomization 
+            savedOrderItem.setOrderItemCustomizations(orderItemCustomizationService.createOrderItemCustomization(savedOrderItem, createOrderItemRequest.getCustomizations()));
             BigDecimal basePrice = menuItem.getPrice().multiply(BigDecimal.valueOf(createOrderItemRequest.getQuantity()));
-            orderItem.setTotalPrice(basePrice.multiply(getCustomizationPrice(orderItem.getOrderItemCustomizations())));
-            orderItems.add(orderItem);
+            savedOrderItem.setTotalPrice(basePrice.add(getCustomizationPrice(savedOrderItem.getOrderItemCustomizations())));
+            orderItems.add(orderItemRepository.save(savedOrderItem));
         }
-        orderItemRepository.saveAll(orderItems);
+        return orderItems;
     }
 
     private BigDecimal getCustomizationPrice(Set<OrderItemCustomization> orderItemCustomizations) {
         BigDecimal customizationTotal = BigDecimal.ZERO;
         for (OrderItemCustomization orderItemCustomization : orderItemCustomizations) {
-            customizationTotal.add(orderItemCustomization.getTotalPrice());
+            customizationTotal = customizationTotal.add(orderItemCustomization.getTotalPrice());
         }
         return customizationTotal;
     }
