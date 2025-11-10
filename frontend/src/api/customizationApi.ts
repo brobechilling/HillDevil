@@ -36,3 +36,10 @@ export const canCreateCustomization = async (restaurantId: string, categoryId: s
   );
   return res.data.result;
 };
+
+export const getCustomizationLimit  = async (restaurantId: string) => {
+  const res = await axiosClient.get<ApiResponse<number>>(
+    `/customizations/restaurant/${restaurantId}/limit`,
+  );
+  return res.data.result;
+}

@@ -9,9 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useCustomizations, useCreateCustomization } from '@/hooks/queries/useCustomizations';
+import { useCustomizations, useCreateCustomization, useCustomizationLimit } from '@/hooks/queries/useCustomizations';
 import { useUpdateCategory, useCategory } from '@/hooks/queries/useCategories';
-
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -27,6 +26,7 @@ export const CategoryManagementDialog = ({
 }: Props) => {
   const { data: allCustomizations = [] } = useCustomizations(restaurantId);
   const { data: category } = useCategory(categoryId);
+  const { data: limit } = useCustomizationLimit(restaurantId);
   const createMutation = useCreateCustomization();
   const updateCategoryMutation = useUpdateCategory();
 
@@ -44,13 +44,26 @@ export const CategoryManagementDialog = ({
     }
   }, [open, category]);
 
-  const handleToggle = (custId: string, checked: boolean) => {
-    const newIds = checked
-      ? [...selectedIds, custId]
-      : selectedIds.filter(id => id !== custId);
+  const totalSelected = selectedIds.length;
+  const isOverLimit = limit !== undefined && totalSelected > limit;
+  const isAtLimit = limit !== undefined && totalSelected >= limit;
 
-    setSelectedIds(newIds);
-    // Chỉ update state, không gọi API ngay
+  const handleToggle = (custId: string, checked: boolean) => {
+    // Nếu đang đạt limit và user cố tick thêm → chặn lại
+    if (!checked && selectedIds.includes(custId)) {
+      // bỏ chọn => cho phép
+      setSelectedIds(selectedIds.filter(id => id !== custId));
+    } else if (checked) {
+      if (isAtLimit) {
+        toast({
+          variant: 'destructive',
+          title: 'Limit reached',
+          description: `You can only select up to ${limit} customizations.`,
+        });
+        return;
+      }
+      setSelectedIds([...selectedIds, custId]);
+    }
   };
 
   const handleSave = () => {
@@ -77,7 +90,6 @@ export const CategoryManagementDialog = ({
   };
 
   const handleCancel = () => {
-    // Reset state when canceling
     if (category?.customizationIds) {
       setSelectedIds(category.customizationIds);
     } else {
@@ -90,6 +102,15 @@ export const CategoryManagementDialog = ({
   };
 
   const handleAddNew = () => {
+    if (isAtLimit) {
+      toast({
+        variant: 'destructive',
+        title: 'Limit reached',
+        description: `You can only create up to ${limit} customizations.`,
+      });
+      return;
+    }
+
     if (!newName.trim()) return toast({ variant: 'destructive', title: 'Name required' });
 
     createMutation.mutate({
@@ -115,7 +136,7 @@ export const CategoryManagementDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200">
         <DialogHeader className="pb-4 border-b">
           <DialogTitle className="text-xl font-bold tracking-tight">Manage Customizations</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground mt-1">
@@ -124,12 +145,23 @@ export const CategoryManagementDialog = ({
         </DialogHeader>
 
         <div className="space-y-5 pt-4">
+          {/* Limit warning */}
+          {limit !== undefined && (
+            <div className="text-sm text-muted-foreground text-center">
+              {totalSelected}/{limit} selected
+              {isAtLimit && (
+                <span className="text-red-500 ml-1">(Limit reached)</span>
+              )}
+            </div>
+          )}
+
           {/* Add New */}
           {!showAddForm ? (
             <Button 
               variant="outline" 
               className="w-full h-10 border-2 border-dashed hover:border-primary/50 hover:bg-primary/5 transition-all" 
               onClick={() => setShowAddForm(true)}
+              disabled={isAtLimit}
             >
               <Plus className="mr-2 h-4 w-4" /> Add New Customization
             </Button>
@@ -152,7 +184,7 @@ export const CategoryManagementDialog = ({
                 className="h-10"
               />
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleAddNew} disabled={createMutation.isPending} className="h-9 flex-1">
+                <Button size="sm" onClick={handleAddNew} disabled={createMutation.isPending || isAtLimit} className="h-9 flex-1">
                   {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Add
                 </Button>
@@ -176,22 +208,25 @@ export const CategoryManagementDialog = ({
             ) : (
               allCustomizations.map((cust, index) => {
                 const isSelected = selectedIds.includes(cust.customizationId);
+                const disabled = !isSelected && isAtLimit; // chặn tick thêm khi đã đủ limit
+
                 return (
                   <div
                     key={cust.customizationId}
                     className={cn(
                       "flex items-center justify-between p-4 border rounded-xl transition-all duration-200",
-                      "hover:shadow-md hover:border-primary/30 cursor-pointer",
+                      disabled ? "opacity-50 cursor-not-allowed" : "hover:shadow-md hover:border-primary/30 cursor-pointer",
                       isSelected && "bg-primary/5 border-primary/50 shadow-sm",
                       "animate-in fade-in slide-in-from-left-2 duration-300"
                     )}
                     style={{ animationDelay: `${index * 30}ms` }}
-                    onClick={() => handleToggle(cust.customizationId, !isSelected)}
+                    onClick={() => !disabled && handleToggle(cust.customizationId, !isSelected)}
                   >
                     <div className="flex items-center gap-3 flex-1">
                       <Checkbox
                         checked={isSelected}
-                        onCheckedChange={(checked) => handleToggle(cust.customizationId, checked as boolean)}
+                        onCheckedChange={(checked) => !disabled && handleToggle(cust.customizationId, checked as boolean)}
+                        disabled={disabled}
                         className="pointer-events-none"
                       />
                       <div className="flex-1">
@@ -219,18 +254,26 @@ export const CategoryManagementDialog = ({
             )}
           </div>
 
-          <div className="flex gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleCancel} className="flex-1 h-9">
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSave} 
-              className="flex-1 h-9"
-              disabled={updateCategoryMutation.isPending}
-            >
-              {updateCategoryMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
+          {/* Footer */}
+          <div className="flex flex-col gap-2 pt-4 border-t">
+            {isOverLimit && (
+              <p className="text-red-500 text-sm text-center">
+                You have selected more than the allowed limit ({limit}).
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleCancel} className="flex-1 h-9">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSave} 
+                className="flex-1 h-9"
+                disabled={updateCategoryMutation.isPending || isOverLimit}
+              >
+                {updateCategoryMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

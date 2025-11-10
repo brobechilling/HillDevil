@@ -6,9 +6,8 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, AlertTriangle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { MenuItemCard } from '@/components/menu/MenuItemCard';
 
@@ -18,7 +17,7 @@ import { useRestaurantByBranch } from "@/hooks/queries/useBranches";
 import { useBranchMenuItems, useUpdateAvailability } from "@/hooks/queries/useBranchMenuItems";
 import { useCategories } from "@/hooks/queries/useCategories";
 import { BranchMenuItemDTO } from "@/dto/branchMenuItem.dto";
-import { MenuItemViewDialog } from "@/components/owner/MenuItemViewDialog";
+import { MenuItemViewDialog } from "@/components/menu/MenuItemViewDialog";
 
 export const MenuManagement = () => {
     const { user } = useSessionStore();

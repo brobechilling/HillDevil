@@ -6,6 +6,7 @@ import {
   updateCustomization,
   deleteCustomization,
   canCreateCustomization,
+  getCustomizationLimit,
 } from "@/api/customizationApi";
 import { CustomizationDTO, CustomizationCreateRequest } from "@/dto/customization.dto";
 
@@ -61,6 +62,15 @@ export const useCanCreateCustomization = (restaurantId: string | undefined, cate
     queryKey: ["customizations", "can-create", restaurantId, categoryId],
     queryFn: () => canCreateCustomization(restaurantId!, categoryId!),
     enabled: !!restaurantId && !!categoryId,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export const useCustomizationLimit = (restaurantId: string | undefined) => {
+  return useQuery<number>({
+    queryKey: ["customizations", "limit", restaurantId],
+    queryFn: () => getCustomizationLimit(restaurantId!),
+    enabled: !!restaurantId,
     refetchOnWindowFocus: false,
   });
 }
