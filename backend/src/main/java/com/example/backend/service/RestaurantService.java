@@ -154,7 +154,7 @@ public class RestaurantService {
 
     public PageResponse<RestaurantDTO> getRestaurantPaginated(int page, int size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
-        Page<Restaurant> pageData = restaurantRepository.findAll(pageable);
+        Page<Restaurant> pageData = restaurantRepository.findByStatus(pageable, true);
         PageResponse<RestaurantDTO> pageResponse = new PageResponse<>();
         pageResponse.setItems(pageData.map(restaurantMapper::toRestaurantDto).toList());
         pageResponse.setTotalElements(pageData.getTotalElements());

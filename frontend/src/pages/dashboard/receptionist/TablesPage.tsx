@@ -1,11 +1,12 @@
-import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
 
 const TablesPage = () => {
-  const { user } = useAuthStore();
-  const branchId = user?.branchId || '';
+  const { user } = useSessionStore(); 
+  const branchId = isStaffAccountDTO(user) ? user.branchId : "";
   // const { getTablesByBranchAndFloor } = useTableStore();
 
   // const floorMap = getTablesByBranchAndFloor(branchId);

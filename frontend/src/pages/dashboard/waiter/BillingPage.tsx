@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuthStore } from '@/store/authStore';
 import { useOrderStore } from '@/store/orderStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,10 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Receipt, Percent, Clock } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
 
 const BillingPage = () => {
-  const { user } = useAuthStore();
-  const branchId = user?.branchId;
+  const { user } = useSessionStore(); 
+  const branchId = isStaffAccountDTO(user) ? user.branchId : "";
   const { orders, updateOrderStatus } = useOrderStore();
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [discount, setDiscount] = useState('0');

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuthStore } from '@/store/authStore';
 import { useOrderStore, Order } from '@/store/orderStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,10 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Check, X, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { ManualOrderDialog } from '@/components/waiter/ManualOrderDialog';
+import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
 
 const OrdersPage = () => {
-  const { user } = useAuthStore();
-  const branchId = user?.branchId || '1';
+  const { user } = useSessionStore(); 
+  const branchId = isStaffAccountDTO(user) ? user.branchId : "";
   const { orders, updateOrderStatus } = useOrderStore();
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [addOrderlineDialogOpen, setAddOrderlineDialogOpen] = useState(false);

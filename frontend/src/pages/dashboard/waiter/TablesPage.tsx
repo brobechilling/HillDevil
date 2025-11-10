@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users, Eye, Calendar } from 'lucide-react';
 import { TableStatusDialog } from '@/components/waiter/TableStatusDialog';
 import { TableDetailsDialog } from '@/components/waiter/TableDetailsDialog';
+import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
 
 const TablesPage = () => {
-  const { user } = useAuthStore();
-  const branchId = user?.branchId || '';
+  const { user } = useSessionStore(); 
+  const branchId = isStaffAccountDTO(user) ? user.branchId : "";
   // const { getTablesByBranchAndFloor } = useTableStore();
   // const { getReservationsByTable } = useReservationStore();
 
@@ -152,7 +153,7 @@ const TablesPage = () => {
           />
           <TableDetailsDialog
             tableId={selectedTable}
-            branchId={branchId}
+            branchId={'mock'}
             open={detailsDialogOpen}
             onOpenChange={setDetailsDialogOpen}
           />

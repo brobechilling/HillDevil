@@ -3,16 +3,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Users, Table2, Tag, DollarSign } from 'lucide-react';
 import { mockTables, mockPromotions } from '@/data/mockData';
-import { useAuthStore } from '@/store/authStore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useBranches } from '@/hooks/queries/useBranches';
+import { useBranch, useBranches } from '@/hooks/queries/useBranches';
+import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
 
 export default function OverviewPage() {
-  const { user } = useAuthStore();
-  const branchId = user?.branchId || '1';
-  const { data: branches, isLoading } = useBranches();
+  const { user } = useSessionStore(); 
+  const branchId = isStaffAccountDTO(user) ? user.branchId : "";
+  const { data: branch, isLoading } = useBranch(branchId);
 
-  const activeBranch = branches?.find(b => String(b.branchId) === branchId) || branches?.[0];
   // const { getStaffByBranch } = useStaffStore();
   // const { getAreasByBranch } = useAreaStore();
   // const branchStaff = getStaffByBranch(branchId);
@@ -41,7 +41,7 @@ export default function OverviewPage() {
       <div>
         <h1 className="text-3xl font-bold">Manager Overview</h1>
         <p className="text-muted-foreground mt-2">
-          {activeBranch?.address || 'Branch'} - Branch Operations
+          {branch?.address || 'Branch'} - Branch Operations
         </p>
       </div>
 
