@@ -94,7 +94,6 @@ const RegisterConfirm = () => {
       userId: owner.userId,
     };
 
-    console.log("Register mutation starting...", restaurantDto);
     registerMutation.mutate(
       { data: restaurantDto, packageId: selectedPackage.packageId },
       {
@@ -121,17 +120,14 @@ const RegisterConfirm = () => {
       restaurantName,
     };
 
-    console.log(`${action === "renew" ? "Renew" : "Change"} starting...`, commonData);
 
     if (action === "renew") {
       renewMutation.mutate(commonData as any, {
         onSuccess: (payment: any) => {
-          console.log("Renew success:", payment);
           toast({ title: "Renewal initiated!", description: "Redirecting to payment..." });
           navigate(`/payment/${payment.payOsOrderCode}`, { state: { ...payment, restaurantName } });
         },
         onError: (error: any) => {
-          console.error("Renew failed:", error);
           toast({ variant: "destructive", title: "Renew failed", description: error.message || "Try again." });
         },
       });
@@ -140,12 +136,10 @@ const RegisterConfirm = () => {
         { ...commonData, newPackageId: selectedPackage.packageId } as any,
         {
           onSuccess: (payment: any) => {
-            console.log("Change package success:", payment);
             toast({ title: "Package changed!", description: "Redirecting to payment..." });
             navigate(`/payment/${payment.payOsOrderCode}`, { state: { ...payment, restaurantName } });
           },
           onError: (error: any) => {
-            console.error("Change package failed:", error);
             toast({ variant: "destructive", title: "Change failed", description: error.message || "Try again." });
           },
         }
