@@ -6,7 +6,7 @@ export const useBranchMenuItems = (branchId: string | undefined) => {
   return useQuery<BranchMenuItemDTO[]>({
     queryKey: ["branch-menu-items", branchId],
     queryFn: () => getMenuItemsByBranch(branchId!),
-    enabled: !!branchId,
+    enabled: !!branchId && branchId.trim() !== "",
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,

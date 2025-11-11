@@ -24,10 +24,27 @@ public class PayOSConfig {
     private String cancelUrl;
 
     // Getter
-    public String getClientId() { return clientId; }
-    public String getApiKey() { return apiKey; }
-    public String getChecksumKey() { return checksumKey; }
-    public String getBaseUrl() { return baseUrl; }
-    public String getReturnUrl() { return returnUrl; }
-    public String getCancelUrl() { return cancelUrl; }
+    public String getClientId() {
+        return clientId;
+    }
+
+    public String getApiKey() {
+        return apiKey;
+    }
+
+    public String getChecksumKey() {
+        return checksumKey;
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    public String getReturnUrl() {
+        return returnUrl;
+    }
+
+    public String getCancelUrl() {
+        return cancelUrl;
+    }
 }

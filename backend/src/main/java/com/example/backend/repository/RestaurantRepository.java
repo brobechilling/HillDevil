@@ -7,6 +7,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.backend.entities.Restaurant;
@@ -22,4 +24,6 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, UUID> {
             "subscriptions.aPackage"
     })
     List<Restaurant> findAllByUser_UserId(UUID userId);
+    @Query("SELECT r FROM Restaurant r WHERE r.publicUrl LIKE %:suffix")
+    List<Restaurant> findByPublicUrlEndingWith(@Param("suffix") String suffix);
 }

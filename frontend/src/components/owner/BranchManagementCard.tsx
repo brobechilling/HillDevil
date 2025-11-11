@@ -217,12 +217,12 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
                 {activeBranches.length > 0 && (
                   <div className="flex items-center gap-3 p-4 border rounded-lg bg-destructive/5">
                     <AlertCircle className="h-5 w-5 text-destructive" />
-                        <div className="flex-1">
+                    <div className="flex-1">
                       <p className="text-sm font-medium">Deactivate All Branches</p>
                       <p className="text-xs text-muted-foreground">
                         This will make all branches unavailable for orders.
                       </p>
-                          </div>
+                    </div>
                     <Switch
                       onCheckedChange={(checked) => checked && handleToggleAll(false)}
                       disabled={processingIds['all']}
@@ -231,7 +231,7 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
                 )}
                 <div className="space-y-4">
                   {activeBranches.map(renderBranchItem)}
-                        </div>
+                </div>
               </TabsContent>
 
               {/* === TAB INACTIVE === */}
@@ -245,11 +245,11 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
                         This will make all inactive branches available again.
                       </p>
                     </div>
-                            <Switch
+                    <Switch
                       onCheckedChange={(checked) => checked && handleToggleAll(true)}
                       disabled={processingIds['all']}
-                            />
-                          </div>
+                    />
+                  </div>
                 )}
 
                 {inactiveBranches.length === 0 ? (
@@ -259,7 +259,7 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
                 ) : (
                   <div className="space-y-4">
                     {inactiveBranches.map(renderBranchItem)}
-            </div>
+                  </div>
                 )}
               </TabsContent>
             </Tabs>
@@ -288,8 +288,8 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
                   ? 'Activate All Branches?'
                   : 'Deactivate All Branches?'
                 : confirmDialog.isActivating
-                ? 'Activate Branch?'
-                : 'Deactivate Branch?'}
+                  ? 'Activate Branch?'
+                  : 'Deactivate Branch?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmDialog.type === 'all'
@@ -297,8 +297,8 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
                   ? 'All inactive branches will become active and accept orders.'
                   : 'All active branches will be deactivated. Customers will not be able to place orders.'
                 : confirmDialog.isActivating
-                ? 'This branch will become active and accept orders again.'
-                : 'This branch will be inactive. Are you sure you want to proceed?'}
+                  ? 'This branch will become active and accept orders again.'
+                  : 'This branch will be inactive. Are you sure you want to proceed?'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

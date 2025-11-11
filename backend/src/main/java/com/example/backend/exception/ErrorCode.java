@@ -76,6 +76,8 @@ public enum ErrorCode {
     TABLE_ALREADY_HAS_PENDING_ORDER(5003, "Table already has pending order", HttpStatus.BAD_REQUEST),
     ORDER_ALREADY_COMPLETED(5004, "Order already completed", HttpStatus.BAD_REQUEST),
 
+    // Reservation errors
+    RESERVATION_NOT_FOUND(5001, "Reservation not found", HttpStatus.NOT_FOUND),
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
 

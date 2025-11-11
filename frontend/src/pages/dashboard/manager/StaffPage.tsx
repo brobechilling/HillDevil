@@ -38,12 +38,14 @@ export default function StaffPage() {
   const location = useLocation();
   const navigate = useNavigate();
   // get the branchId when the person access this page is the owner, this branchId is passed in OwnerStaffManagement.tsx
-  const { branchId: branchIdFromState } =location.state || {};
+  const { branchId: branchIdFromState } = location.state || {};
   const { user } = useSessionStore();
   // if the person access is the manager
   const manager: StaffAccountDTO | null = isStaffAccountDTO(user) ? user : null;
   const branchIdFromStore = manager?.branchId || "";
-  const branchId: string = branchIdFromState || branchIdFromStore;
+  // Try to get branchId from sessionStorage (for owner viewing as manager)
+  const branchIdFromSession = sessionStorage.getItem('owner_selected_branch_id') || "";
+  const branchId: string = branchIdFromState || branchIdFromStore || branchIdFromSession;
   
   
   const [page, setPage] = useState(1);
@@ -60,6 +62,9 @@ export default function StaffPage() {
   const waiterNumberQuery = useWaiterNumberQuery(branchId);
   const receptionistNumberQuery = useReceptionistNumberQuery(branchId);
   const updateStaffStatusMutation = useSetStaffAccountStatusMutation(page, size, branchId);
+
+  // Check if branchId is missing
+  const isBranchIdMissing = !branchId || branchId.trim() === "";
 
   const filteredStaffs: StaffAccountDTO[] = (staffQuery.data?.items ?? []).filter((staff) => {
     const matchSearch = staff.username?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -95,7 +100,10 @@ export default function StaffPage() {
             Manage staff members in your branch
           </p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)}>
+        <Button 
+          onClick={() => setAddDialogOpen(true)}
+          disabled={isBranchIdMissing}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Add Staff Account
         </Button>
@@ -186,7 +194,11 @@ export default function StaffPage() {
           <CardTitle>Staff Accounts</CardTitle>
         </CardHeader>
         <CardContent>
-          {staffQuery.isLoading ? (
+          {isBranchIdMissing ? (
+            <div className="text-center text-muted-foreground py-8">
+              Branch ID is missing. Please navigate from a valid branch context.
+            </div>
+          ) : staffQuery.isLoading ? (
             <div className="text-center text-muted-foreground">
               Loading staff accounts...
             </div>

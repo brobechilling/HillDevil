@@ -39,13 +39,13 @@ export default function BranchSelectionPage() {
                     Loading staff accounts...
                 </div>
             )}
-            {branches.length === 0 && (
+            {branches?.length === 0 && (
                 <div className="text-center text-muted-foreground py-8">
                     No branch found.
                 </div>
             )}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {branches.map((branch) => (
+            {branches?.map((branch) => (
                 <Card
                     key={String(branch.branchId)}
                     className="cursor-pointer hover:border-primary transition-smooth"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -10,50 +10,32 @@ import {
 import { Button } from "@/components/ui/button";
 import { Building2, ArrowRight, ArrowLeft, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { UserDTO } from "@/dto/user.dto";
 import { useRestaurantsByOwner } from "@/hooks/queries/useRestaurants";
+import { useSessionStore } from "@/store/sessionStore";
 
 const BrandSelection = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<UserDTO | null>(null);
+  const { user } = useSessionStore();
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      navigate("/login");
-      return;
-    }
-    const userData = JSON.parse(storedUser) as UserDTO;
-    setUser(userData);
-  }, [navigate]);
+  // Route protection ensures user exists and is a restaurant owner
+  if (!user) return null;
 
-  // Gọi React Query hook (tự fetch dữ liệu)
+  // Fetch restaurants owned by this user
   const { data: restaurants = [], isLoading, isError } = useRestaurantsByOwner(
-    user?.userId
+    user.userId
   );
 
+  // Optional: store fetched restaurants in localStorage for cross-page usage
   useEffect(() => {
-    if (restaurants && restaurants.length > 0) {
+    if (restaurants.length > 0) {
       localStorage.setItem("user_restaurants", JSON.stringify(restaurants));
     }
   }, [restaurants]);
 
+  // Handle selecting a restaurant
   const handleRestaurantSelect = (restaurantId: string) => {
-    const restaurant = restaurants.find(
-      (r) => r.restaurantId === restaurantId
-    );
+    const restaurant = restaurants.find((r) => r.restaurantId === restaurantId);
     if (!restaurant) return;
-
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      toast({
-        title: "Error",
-        description: "User session expired. Please login again.",
-        variant: "destructive",
-      });
-      navigate("/login");
-      return;
-    }
 
     localStorage.setItem("selected_restaurant", JSON.stringify(restaurant));
 
@@ -65,6 +47,7 @@ const BrandSelection = () => {
     navigate("/dashboard/owner");
   };
 
+  // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-muted/30 py-12 px-4">
@@ -78,6 +61,7 @@ const BrandSelection = () => {
     );
   }
 
+  // Error state
   if (isError) {
     return (
       <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center">
@@ -89,6 +73,7 @@ const BrandSelection = () => {
     );
   }
 
+  // Main content
   return (
     <div className="min-h-screen bg-muted/30 py-12 px-4">
       <div className="container max-w-5xl">
@@ -137,9 +122,7 @@ const BrandSelection = () => {
                 <Card
                   key={restaurant.restaurantId}
                   className="cursor-pointer transition-smooth hover:shadow-medium hover:border-primary border-border/50"
-                  onClick={() =>
-                    handleRestaurantSelect(restaurant.restaurantId)
-                  }
+                  onClick={() => handleRestaurantSelect(restaurant.restaurantId)}
                 >
                   <CardHeader>
                     <div className="flex items-center justify-between mb-4">
@@ -147,11 +130,10 @@ const BrandSelection = () => {
                         <Building2 className="h-8 w-8 text-primary" />
                       </div>
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          restaurant.status
-                            ? "bg-green-500/10 text-green-500"
-                            : "bg-red-500/10 text-red-500"
-                        }`}
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${restaurant.status
+                          ? "bg-green-500/10 text-green-500"
+                          : "bg-red-500/10 text-red-500"
+                          }`}
                       >
                         {restaurant.status ? "Active" : "Inactive"}
                       </span>
@@ -164,14 +146,10 @@ const BrandSelection = () => {
                   <CardContent>
                     <div className="space-y-3 mb-6">
                       {restaurant.email && (
-                        <p className="text-sm text-muted-foreground">
-                          {restaurant.email}
-                        </p>
+                        <p className="text-sm text-muted-foreground">{restaurant.email}</p>
                       )}
                       {restaurant.restaurantPhone && (
-                        <p className="text-sm text-muted-foreground">
-                          {restaurant.restaurantPhone}
-                        </p>
+                        <p className="text-sm text-muted-foreground">{restaurant.restaurantPhone}</p>
                       )}
                     </div>
                     <Button className="w-full" variant="outline">

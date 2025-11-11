@@ -1,8 +1,7 @@
-import { getRestaurants, getAllRestaurants, getRestaurantsByOwner } from "@/api/restaurantApi";
+import { getRestaurants, getAllRestaurants, getRestaurantsByOwner, getRestaurantById, updateRestaurant, deleteRestaurant } from "@/api/restaurantApi";
 import { PageResponse } from "@/dto/pageResponse";
 import { RestaurantDTO } from "@/dto/restaurant.dto";
 import { useQuery } from "@tanstack/react-query";
-import { getRestaurantById, updateRestaurant, deleteRestaurant } from '@/api/restaurantApi';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 
@@ -11,6 +10,14 @@ export const useRestaurantsPaginatedQuery = (page: number, size: number) => {
     queryKey: ["restaurants", page, size],
     queryFn: () => getRestaurants(page, size),
     // staleTime: 1000 * 60 * 2,
+  });
+};
+
+export const useRestaurant = (restaurantId: string | undefined) => {
+  return useQuery<RestaurantDTO, Error>({
+    queryKey: ['restaurant', restaurantId],
+    queryFn: () => getRestaurantById(restaurantId!),
+    enabled: !!restaurantId, // chỉ fetch nếu có id
   });
 };
 
@@ -31,15 +38,6 @@ export const useRestaurantsByOwner = (userId: string | undefined) => {
   });
 };
 
-export const useRestaurant = (id?: string) => {
-  return useQuery<RestaurantDTO | null>({
-    queryKey: ['restaurant', id],
-    queryFn: () => getRestaurantById(id!),
-    enabled: !!id,
-    staleTime: 1000 * 60 * 2,
-    refetchOnWindowFocus: false,
-  });
-};
 
 export const useUpdateRestaurant = () => {
   const qc = useQueryClient();

@@ -1,5 +1,10 @@
-import { useMemo, useState } from 'react';
-import { Calendar, Users, Clock, Check, X, Trash2, Search, Plus } from 'lucide-react';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { useReservations, useCreateReservationReceptionist } from '@/hooks/queries/useReservations';
+import { useTables } from '@/hooks/queries/useTables';
+import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
+import { Calendar, Users, Clock, Check, X, Trash2, Search, Plus, Mail } from 'lucide-react';
+import { reservationApi } from '@/api/reservationApi';
 
 const ReservationsPage = () => {
   const [search, setSearch] = useState('');
@@ -16,58 +21,71 @@ const ReservationsPage = () => {
     table_id: '',
   });
 
-  const [bookings, setBookings] = useState([
-    {
-      id: '1',
-      guestName: 'Carol Williams',
-      guestPhone: '0123456789',
-      guestEmail: 'carol@example.com',
-      numberOfGuests: 6,
-      startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      endTime: new Date(Date.now() + 26 * 60 * 60 * 1000).toISOString(),
-      status: 'pending',
-      specialRequests: 'Window seat preferred',
-      tableId: null,
-      branchId: '1',
-    },
-    {
-      id: '2',
-      guestName: 'John Smith',
-      guestPhone: '0987654321',
-      guestEmail: 'john@example.com',
-      numberOfGuests: 4,
-      startTime: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-      endTime: new Date(Date.now() + 50 * 60 * 60 * 1000).toISOString(),
-      status: 'approved',
-      specialRequests: '',
-      tableId: null,
-      branchId: '1',
-    },
-    {
-      id: '3',
-      guestName: 'Sarah Johnson',
-      guestPhone: '0912345678',
-      guestEmail: 'sarah@example.com',
-      numberOfGuests: 2,
-      startTime: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
-      endTime: new Date(Date.now() + 74 * 60 * 60 * 1000).toISOString(),
-      status: 'confirmed',
-      specialRequests: 'Birthday celebration',
-      tableId: '5',
-      branchId: '1',
-    },
-  ]);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [tables, setTables] = useState<any[]>([]);
+  const { user } = useSessionStore();
 
-  const [tables] = useState([
-    { id: '1', number: 1, capacity: 2, status: 'available', branchId: '1' },
-    { id: '2', number: 2, capacity: 4, status: 'available', branchId: '1' },
-    { id: '3', number: 3, capacity: 4, status: 'occupied', branchId: '1' },
-    { id: '4', number: 4, capacity: 6, status: 'available', branchId: '1' },
-    { id: '5', number: 5, capacity: 6, status: 'reserved', branchId: '1' },
-    { id: '6', number: 6, capacity: 8, status: 'available', branchId: '1' },
-  ]);
+  const branchId = isStaffAccountDTO(user) ? user.branchId : null;
 
-  const branchId = '1';
+  const reservationsQuery = useReservations(branchId ?? undefined, 0, 100);
+  const tablesQuery = useTables(branchId ?? undefined, 0, 200);
+  const createMutation = useCreateReservationReceptionist();
+  const apiAssignTable = reservationApi.assignTable;
+
+  useEffect(() => {
+    if (!reservationsQuery.data) {
+      setBookings([]);
+      return;
+    }
+
+    const res = reservationsQuery.data;
+    const data = res && res.result ? res.result.content || res.result : res;
+    const list = data && data.content ? data.content : data;
+
+    const normalized = Array.isArray(list)
+      ? list.map((r: any) => ({
+        id: r.reservationId || r.id,
+        reservationId: r.reservationId || r.id,
+        branchId: r.branchId,
+        tableId: r.areaTableId || r.tableId || null,
+        guestName: r.customerName || r.guestName || '',
+        guestPhone: r.customerPhone || r.guestPhone || '',
+        guestEmail: r.customerEmail || r.guestEmail || '',
+        numberOfGuests: r.guestNumber || r.numberOfGuests || 1,
+        startTime: r.startTime ? (typeof r.startTime === 'string' ? r.startTime : r.startTime.toString()) : null,
+        endTime: r.endTime || (r.startTime ? new Date(new Date(r.startTime).getTime() + 2 * 60 * 60 * 1000).toISOString() : null),
+        status: (r.status || '').toString().toLowerCase(),
+        specialRequests: r.note || r.specialRequests || '',
+      }))
+      : [];
+
+    setBookings(normalized);
+  }, [reservationsQuery.data]);
+
+  useEffect(() => {
+    if (!tablesQuery.data) {
+      setTables([]);
+      return;
+    }
+
+    const tblRes = tablesQuery.data;
+    const tbls = tblRes && (tblRes.content || tblRes) ? (tblRes.content || tblRes) : [];
+    const normalizedTables = (Array.isArray(tbls) ? tbls : []).map((t: any) => {
+      // Backend uses enum values like 'FREE' / 'OCCUPIED'.
+      // Normalize to UI-friendly values: treat 'FREE' as 'available'.
+      const rawStatus = (t.status || 'ACTIVE').toString().toLowerCase();
+      const status = rawStatus === 'free' ? 'available' : rawStatus;
+      return {
+        id: t.id,
+        number: t.tag || t.id,
+        capacity: t.capacity || 0,
+        status,
+        branchId: branchId,
+      };
+    });
+    setTables(normalizedTables);
+  }, [tablesQuery.data, branchId]);
+
 
   const tabs = [
     { id: 'pending', label: 'Pending', icon: '⏳' },
@@ -77,17 +95,18 @@ const ReservationsPage = () => {
   ];
 
   const branchBookings = useMemo(() => {
-    return bookings.filter(b => b.branchId === branchId);
+    if (!branchId) return [];
+    return bookings.filter(b => String(b.branchId) === String(branchId));
   }, [bookings, branchId]);
 
   const searchedBookings = useMemo(() => {
     if (!search.trim()) return branchBookings;
-    
+
     const query = search.toLowerCase();
     return branchBookings.filter(
       b =>
-        b.guestName.toLowerCase().includes(query) ||
-        b.guestPhone.includes(query)
+        (b.guestName || '').toLowerCase().includes(query) ||
+        (b.guestPhone || '').includes(query)
     );
   }, [branchBookings, search]);
 
@@ -101,11 +120,11 @@ const ReservationsPage = () => {
   }, [searchedBookings]);
 
   const getAvailableTables = (booking) => {
+    // Only check capacity and branch — receptionist may assign multiple bookings to same table.
     return tables.filter(
       t =>
         t.branchId === branchId &&
-        t.capacity >= booking.numberOfGuests &&
-        t.status === 'available'
+        t.capacity >= booking.numberOfGuests
     );
   };
 
@@ -123,59 +142,115 @@ const ReservationsPage = () => {
     });
   };
 
-  const handleCreateReservation = () => {
+  const handleCreateReservation = async () => {
     if (!newReservation.customer_name || !newReservation.customer_phone || !newReservation.start_time) {
       alert('Please fill in all required fields');
       return;
     }
 
-    const newBooking = {
-      id: String(Date.now()),
-      guestName: newReservation.customer_name,
-      guestPhone: newReservation.customer_phone,
-      guestEmail: newReservation.customer_email,
-      numberOfGuests: newReservation.guest_number,
-      startTime: new Date(newReservation.start_time).toISOString(),
-      endTime: new Date(new Date(newReservation.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString(),
-      status: newReservation.table_id ? 'confirmed' : 'pending',
-      specialRequests: newReservation.note,
-      tableId: newReservation.table_id || null,
+    if (!branchId) {
+      alert('Branch is not selected. Please ensure you are logged in as a staff/receptionist.');
+      return;
+    }
+
+    // Prepare payload expected by backend CreateReservationRequest
+    // datetime-local input usually returns "YYYY-MM-DDTHH:mm" — ensure seconds are present
+    let startTime = newReservation.start_time;
+    if (startTime && startTime.length === 16) startTime = `${startTime}:00`;
+
+    const payload: any = {
       branchId: branchId,
+      areaTableId: newReservation.table_id || null,
+      startTime: startTime,
+      customerName: newReservation.customer_name,
+      customerPhone: newReservation.customer_phone || null,
+      customerEmail: newReservation.customer_email || null,
+      guestNumber: newReservation.guest_number || 1,
+      note: newReservation.note || null,
     };
 
-    setBookings(prev => [...prev, newBooking]);
-    setShowNewReservationModal(false);
-    setNewReservation({
-      customer_name: '',
-      customer_phone: '',
-      customer_email: '',
-      guest_number: 2,
-      start_time: '',
-      note: '',
-      table_id: '',
-    });
-    setActiveTab(newReservation.table_id ? 'confirmed' : 'pending');
+    try {
+      const res = await createMutation.mutateAsync(payload);
+      const saved = res && res.result ? res.result : res;
+
+      const savedBooking = {
+        id: saved.reservationId || saved.id || String(Date.now()),
+        reservationId: saved.reservationId || saved.id,
+        branchId: saved.branchId || branchId,
+        tableId: saved.areaTableId || saved.tableId || newReservation.table_id || null,
+        guestName: saved.customerName || newReservation.customer_name,
+        guestPhone: saved.customerPhone || newReservation.customer_phone,
+        guestEmail: saved.customerEmail || newReservation.customer_email,
+        numberOfGuests: saved.guestNumber || newReservation.guest_number || 1,
+        startTime: saved.startTime || startTime,
+        endTime: saved.endTime || (saved.startTime ? new Date(new Date(saved.startTime).getTime() + 2 * 60 * 60 * 1000).toISOString() : null),
+        status: (saved.status || (newReservation.table_id ? 'confirmed' : 'pending') || '').toString().toLowerCase(),
+        specialRequests: saved.note || newReservation.note || '',
+      };
+
+      setBookings(prev => [savedBooking, ...prev]);
+      setShowNewReservationModal(false);
+      setNewReservation({
+        customer_name: '',
+        customer_phone: '',
+        customer_email: '',
+        guest_number: 2,
+        start_time: '',
+        note: '',
+        table_id: '',
+      });
+      setActiveTab(savedBooking.status === 'confirmed' ? 'confirmed' : 'pending');
+    } catch (err) {
+      console.error('Failed to create reservation', err);
+      alert('Failed to create reservation. Please try again.');
+    }
   };
 
   const handleApprove = (bookingId) => {
-    setBookings(prev =>
-      prev.map(b =>
-        b.id === bookingId ? { ...b, status: 'approved' } : b
-      )
-    );
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking) return;
+
+    (async () => {
+      try {
+        // Persist status change to backend
+        const resp = await reservationApi.updateStatus(booking.reservationId || booking.id, 'approved');
+        const saved = resp && resp.result ? resp.result : resp;
+
+        setBookings(prev =>
+          prev.map(b =>
+            b.id === bookingId ? { ...b, status: (saved.status || 'approved').toString().toLowerCase() } : b
+          )
+        );
+      } catch (err) {
+        console.error('Failed to update reservation status', err);
+        alert('Failed to update reservation status. Please try again.');
+      }
+    })();
   };
 
-  const handleDecline = (bookingId) => {
-    setBookings(prev =>
-      prev.map(b =>
-        b.id === bookingId ? { ...b, status: 'cancelled' } : b
-      )
-    );
+  const handleCancel = (bookingId) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking) return;
+
+    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+
+    (async () => {
+      try {
+        const resp = await reservationApi.updateStatus(booking.reservationId || booking.id, 'CANCELLED');
+        const saved = resp && resp.result ? resp.result : resp;
+        setBookings(prev =>
+          prev.map(b => (b.id === bookingId ? { ...b, status: (saved.status || 'cancelled').toString().toLowerCase(), tableId: null } : b))
+        );
+      } catch (err) {
+        console.error('Failed to cancel reservation', err);
+        alert('Failed to cancel reservation. Please try again.');
+      }
+    })();
   };
 
   const handleAssignTable = (bookingId, tableId) => {
     const booking = bookings.find(b => b.id === bookingId);
-    
+
     if (!booking) return;
 
     if (hasTimeConflict(booking, bookingId)) {
@@ -183,24 +258,30 @@ const ReservationsPage = () => {
       return;
     }
 
-    setBookings(prev =>
-      prev.map(b =>
-        b.id === bookingId
-          ? { ...b, tableId, status: 'confirmed' }
-          : b
-      )
-    );
+    // Persist assignment to backend then update UI
+    (async () => {
+      try {
+        const resp = await apiAssignTable(booking.reservationId || booking.id, tableId);
+        const saved = resp && resp.result ? resp.result : resp;
+
+        setBookings(prev =>
+          prev.map(b =>
+            b.id === bookingId
+              ? {
+                ...b,
+                tableId: saved.areaTableId || saved.tableId || tableId,
+                status: (saved.status || 'confirmed').toString().toLowerCase(),
+              }
+              : b
+          )
+        );
+      } catch (err) {
+        console.error('Failed to assign table', err);
+        alert('Failed to assign table. Please try again.');
+      }
+    })();
   };
 
-  const handleCancel = (bookingId) => {
-    if (window.confirm('Are you sure you want to cancel this booking?')) {
-      setBookings(prev =>
-        prev.map(b =>
-          b.id === bookingId ? { ...b, status: 'cancelled', tableId: null } : b
-        )
-      );
-    }
-  };
 
   const formatDateTime = (dateString) => {
     const date = new Date(dateString);
@@ -224,8 +305,8 @@ const ReservationsPage = () => {
   };
 
   const getTabColor = (isActive) => {
-    return isActive 
-      ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
+    return isActive
+      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
       : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white';
   };
 
@@ -234,8 +315,8 @@ const ReservationsPage = () => {
     const assignedTable = booking.tableId ? tables.find(t => t.id === booking.tableId) : null;
 
     return (
-      <div 
-        className="p-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+      <div
+        className="p-5 rounded-lg border border-border bg-card hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
         style={{
           animation: `slideIn 0.4s ease-out ${index * 0.1}s both`
         }}
@@ -243,9 +324,16 @@ const ReservationsPage = () => {
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-1">{booking.guestName}</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-              <span>📞</span> {booking.guestPhone}
-            </p>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p className="flex items-center gap-2">
+                <span>📞</span>
+                <span>{booking.guestPhone || '—'}</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                <span>{booking.guestEmail || '—'}</span>
+              </p>
+            </div>
           </div>
           <span className={`px-3 py-1 rounded-md text-xs font-semibold whitespace-nowrap ${getStatusColor(booking.status)}`}>
             {booking.status.toUpperCase()}
@@ -260,7 +348,7 @@ const ReservationsPage = () => {
               <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatDateTime(booking.startTime)}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <Users className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
             <div className="flex-1">
@@ -282,19 +370,22 @@ const ReservationsPage = () => {
         {booking.status === 'pending' && (
           <div className="space-y-2 mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
             <p className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wide">
-              Available Tables ({availableTables.length})
+              Matching Tables ({availableTables.length})
             </p>
             {availableTables.length > 0 ? (
-              <div className="flex gap-2 flex-wrap">
-                {availableTables.slice(0, 3).map(t => (
-                  <span key={t.id} className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-md text-xs font-semibold text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 shadow-sm">
-                    Table {t.number} • {t.capacity} seats
-                  </span>
-                ))}
+              // Make the list scrollable so the reservation card height is bounded
+              <div className="max-h-40 overflow-y-auto pr-2">
+                <div className="flex flex-col gap-2">
+                  {availableTables.map(t => (
+                    <span key={t.id} className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-md text-xs font-semibold text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 shadow-sm">
+                      {t.number} • {t.capacity} seats
+                    </span>
+                  ))}
+                </div>
               </div>
             ) : (
               <p className="text-xs text-red-600 dark:text-red-400 font-bold flex items-center gap-1">
-                ❌ No available tables
+                ❌ No matching tables
               </p>
             )}
           </div>
@@ -303,7 +394,7 @@ const ReservationsPage = () => {
         {booking.status === 'confirmed' && assignedTable && (
           <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              ✓ Assigned to <span className="text-green-600 dark:text-green-400">Table {assignedTable.number}</span>
+              ✓ Assigned to <span className="text-green-600 dark:text-green-400">{assignedTable.number}</span>
             </p>
           </div>
         )}
@@ -319,11 +410,11 @@ const ReservationsPage = () => {
                 <span>Approve</span>
               </button>
               <button
-                onClick={() => handleDecline(booking.id)}
+                onClick={() => handleCancel(booking.id)}
                 className="flex-1 min-w-fit px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 transition-all duration-200 transform hover:scale-105"
               >
                 <X className="h-4 w-4" />
-                <span>Decline</span>
+                <span>Cancel</span>
               </button>
             </>
           )}
@@ -339,7 +430,7 @@ const ReservationsPage = () => {
                 <span>Select Table</span>
               </button>
               <button
-                onClick={() => handleDecline(booking.id)}
+                onClick={() => handleCancel(booking.id)}
                 className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-medium rounded-md flex items-center justify-center gap-2 transition-all duration-200 transform hover:scale-105"
               >
                 <X className="h-4 w-4" />
@@ -403,7 +494,7 @@ const ReservationsPage = () => {
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Reservation Management</h2>
             <p className="text-gray-600 dark:text-gray-400">Manage and track all your restaurant bookings</p>
           </div>
-          <button 
+          <button
             onClick={() => setShowNewReservationModal(true)}
             className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-md flex items-center gap-2 transition-all duration-200 transform hover:scale-105"
           >
@@ -450,7 +541,7 @@ const ReservationsPage = () => {
               ))}
             </div>
           ) : (
-            <div 
+            <div
               className="flex flex-col items-center justify-center p-16 bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600"
               style={{ animation: 'fadeIn 0.5s ease-out' }}
             >
@@ -464,11 +555,11 @@ const ReservationsPage = () => {
 
       {/* New Reservation Modal */}
       {showNewReservationModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={() => setShowNewReservationModal(false)}
         >
-          <div 
+          <div
             className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
             style={{ animation: 'modalIn 0.3s ease-out' }}
@@ -581,13 +672,12 @@ const ReservationsPage = () => {
                           key={table.id}
                           type="button"
                           onClick={() => setNewReservation({ ...newReservation, table_id: table.id === newReservation.table_id ? '' : table.id })}
-                          className={`p-3 rounded-lg border-2 transition-all duration-200 transform hover:scale-105 ${
-                            newReservation.table_id === table.id
-                              ? 'border-orange-600 bg-orange-50 dark:bg-orange-900/20 shadow-md'
-                              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-orange-400'
-                          }`}
+                          className={`p-3 rounded-lg border-2 transition-all duration-200 transform hover:scale-105 ${newReservation.table_id === table.id
+                            ? 'border-orange-600 bg-orange-50 dark:bg-orange-900/20 shadow-md'
+                            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-orange-400'
+                            }`}
                         >
-                          <div className="text-lg font-bold text-gray-900 dark:text-white">Table {table.number}</div>
+                          <div className="text-lg font-bold text-gray-900 dark:text-white">{table.number}</div>
                           <div className="text-xs text-gray-600 dark:text-gray-400">{table.capacity} seats</div>
                         </button>
                       ))}
@@ -620,11 +710,11 @@ const ReservationsPage = () => {
 
       {/* Table Selector Modal */}
       {showTableSelector && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={() => setShowTableSelector(null)}
         >
-          <div 
+          <div
             className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
             style={{ animation: 'modalIn 0.3s ease-out' }}
@@ -646,7 +736,7 @@ const ReservationsPage = () => {
                 const booking = bookings.find(b => b.id === showTableSelector);
                 if (!booking) return null;
                 const availableTables = getAvailableTables(booking);
-                
+
                 return (
                   <div className="space-y-4">
                     <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
