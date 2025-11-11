@@ -1,4 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -78,11 +79,35 @@ export const ManagerSidebar = () => {
   const { user, clearSession } = useSessionStore();
   const isOwner = isUserDTO(user) ? true : false;
   const navigate = useNavigate();
-  // TODO: test get branchId from state
+  
+  // Get branchId from multiple sources (similar to StaffPage)
   const branchIdFromStore = isStaffAccountDTO(user) ? user.branchId : "";
   // branchIdFromState is get when owner navigate to manager dashboard
-  const { branchId: branchIdFromState } =location.state || {};
-  const { data: branch } = useBranch(branchIdFromState || branchIdFromStore);
+  const { branchId: branchIdFromState } = location.state || {};
+  
+  // Initialize branchId from sessionStorage immediately
+  const [branchIdFromSession, setBranchIdFromSession] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('owner_selected_branch_id') || "";
+    }
+    return "";
+  });
+  
+  // Update branchIdFromSession when location changes
+  useEffect(() => {
+    const sessionBranchId = sessionStorage.getItem('owner_selected_branch_id') || "";
+    setBranchIdFromSession(prev => {
+      // Only update if the value actually changed
+      if (prev !== sessionBranchId) {
+        return sessionBranchId;
+      }
+      return prev;
+    });
+  }, [location.pathname]); // Only depend on pathname to avoid unnecessary re-runs
+  
+  // Priority: state > store > sessionStorage
+  const branchId = branchIdFromState || branchIdFromStore || branchIdFromSession;
+  const { data: branch, isLoading: isBranchLoading } = useBranch(branchId);
 
   const handleLogout = () => {
     if (isOwner) {
@@ -113,26 +138,30 @@ export const ManagerSidebar = () => {
 
       {isOwner && (
         <div className="px-4 pt-4 space-y-2">
-          {isOwner && (
-            <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="default" className="text-xs">Owner View</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Viewing as manager: {branch?.address}
-              </p>
+          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="default" className="text-xs">Owner View</Badge>
             </div>
-          )}
-          {isOwner && (
-            <Button
-              variant="outline"
-              className="w-full justify-start bg-background border-2 border-primary/30 hover:border-primary hover:bg-primary/10 text-foreground font-medium shadow-sm hover:shadow-md transition-all"
-              onClick={() => navigate('/dashboard/owner/overview')}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Owner Dashboard
-            </Button>
-          )}
+            <p className="text-xs text-muted-foreground">
+              Viewing as manager: {
+                isBranchLoading && branchId 
+                  ? "Loading..." 
+                  : branch?.address 
+                    ? branch.address 
+                    : branchId 
+                      ? "Loading branch info..." 
+                      : "No branch selected"
+              }
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="w-full justify-start bg-background border-2 border-primary/30 hover:border-primary hover:bg-primary/10 text-foreground font-medium shadow-sm hover:shadow-md transition-all"
+            onClick={() => navigate('/dashboard/owner/overview')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Owner Dashboard
+          </Button>
         </div>
       )}
 

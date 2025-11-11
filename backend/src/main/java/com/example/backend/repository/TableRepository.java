@@ -78,6 +78,25 @@ public interface TableRepository extends JpaRepository<AreaTable, UUID> {
         WHERE t.areaTableId = :tableId
     """)
     Optional<AreaTable> findByIdWithDetails(@Param("tableId") UUID tableId);
+    
+    /**
+     * Lấy table với eager loading và filter theo cả branchId và tableId
+     * Dùng cho public endpoint: /api/public/tables/{branchId}/{tableId}
+     * Query này đảm bảo table thuộc branch được chỉ định và load đầy đủ dữ liệu
+     * Sử dụng DISTINCT để tránh duplicate rows khi JOIN FETCH với reservations
+     */
+    @Query("""
+        SELECT DISTINCT t
+        FROM AreaTable t
+        JOIN FETCH t.area a
+        JOIN FETCH a.branch b
+        LEFT JOIN FETCH t.reservations r
+        WHERE t.areaTableId = :tableId 
+          AND b.branchId = :branchId
+    """)
+    Optional<AreaTable> findByBranchIdAndTableIdWithDetails(
+            @Param("branchId") UUID branchId, 
+            @Param("tableId") UUID tableId);
 
     /**
      * Kiểm tra table có thuộc branch không (dùng cho security)

@@ -22,7 +22,7 @@ export const useRestaurantByBranch = (branchId: string | undefined) => {
     return useQuery<string>({
         queryKey: ['restaurant', 'byBranch', branchId],
         queryFn: () => getRestaurantByBranchId(branchId!),
-        enabled: !!branchId,
+        enabled: !!branchId && branchId.trim() !== "",
     });
 };
 

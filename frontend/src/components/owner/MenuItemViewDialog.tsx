@@ -66,14 +66,14 @@ export const MenuItemViewDialog = ({
   if (itemLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               <Skeleton className="h-8 w-48" />
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
-            <Skeleton className="w-full h-64 rounded-xl" />
+            <Skeleton className="w-full rounded-xl" style={{ minHeight: '280px', maxHeight: '420px', height: '380px' }} />
             <div className="space-y-4">
               <Skeleton className="h-6 w-32" />
               <Skeleton className="h-10 w-24" />
@@ -113,26 +113,28 @@ export const MenuItemViewDialog = ({
 
         <div className="space-y-6 pt-4">
           {/* Image */}
-          <div className="relative group">
+          <div className="relative group w-full flex items-center justify-center">
             {imageUrl ? (
-              <div className="w-full h-72 rounded-xl overflow-hidden bg-gradient-to-br from-muted to-muted/50 border-2 border-border/50 shadow-lg">
+              <div className="w-full rounded-xl bg-gradient-to-br from-muted to-muted/50 border-2 border-border/50 shadow-lg flex items-center justify-center p-4" style={{ minHeight: '280px', maxHeight: '420px' }}>
                 <img
                   src={imageUrl}
                   alt={item.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="max-w-full max-h-[400px] w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-[1.02]"
+                  loading="eager"
+                  decoding="async"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
                     const parent = target.parentElement;
                     if (parent) {
                       parent.innerHTML =
-                        '<div class="flex items-center justify-center h-full text-muted-foreground"><div class="text-center space-y-2"><div class="w-16 h-16 rounded-lg bg-muted mx-auto flex items-center justify-center"><span class="text-2xl">Photo</span></div><p class="text-sm font-medium">Unable to load image</p></div></div>';
+                        '<div class="flex items-center justify-center w-full h-full min-h-[280px] text-muted-foreground"><div class="text-center space-y-2"><div class="w-16 h-16 rounded-lg bg-muted mx-auto flex items-center justify-center"><span class="text-2xl">Photo</span></div><p class="text-sm font-medium">Unable to load image</p></div></div>';
                     }
                   }}
                 />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-72 bg-gradient-to-br from-muted to-muted/50 rounded-xl border-2 border-dashed border-border text-muted-foreground">
+              <div className="flex items-center justify-center h-[200px] w-full bg-gradient-to-br from-muted to-muted/50 rounded-xl border-2 border-dashed border-border text-muted-foreground">
                 <div className="text-center space-y-3">
                   <div className="w-20 h-20 rounded-xl bg-muted mx-auto flex items-center justify-center">
                     <span className="text-4xl">Plate</span>
