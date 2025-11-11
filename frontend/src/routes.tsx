@@ -11,7 +11,8 @@ import ManagerDashboard from './pages/dashboard/ManagerDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import WaiterDashboard from './pages/dashboard/WaiterDashboard';
 import ReceptionistDashboard from './pages/dashboard/ReceptionistDashboard';
-import GuestLanding from './pages/ReservationGuestLanding';
+import ReservationGuestLanding from './pages/ReservationGuestLanding';
+import GuestLanding from './pages/GuestLanding';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import RestaurantLoginPage from './pages/auth/RestaurantLoginPage';
@@ -104,7 +105,7 @@ export const routes: RouteObject[] = [
   {
     
     path: '/:restaurantSlug',
-    element: <GuestLanding />,
+    element: <ReservationGuestLanding />,
   },
   // {
   //   path: '/:restaurantSlug/branch/:branchId',

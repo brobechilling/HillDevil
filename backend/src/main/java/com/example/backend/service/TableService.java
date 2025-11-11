@@ -60,15 +60,6 @@ public class TableService {
         // Map entity sang DTO bằng MapStruct
         TableResponse response = tableMapper.toTableResponse(table);
         
-        // Set reservedBy nếu có reservation RESERVED
-        // String reservedBy = table.getReservations().stream()
-        //         .filter(r -> "RESERVED".equals(r.getStatus().toString()))
-        //         .findFirst()
-        //         .map(r -> r.getCustomerName())
-        //         .orElse(null);
-        
-        // response.setReservedBy(reservedBy);
-        
         // Set branchId từ area.branch for short URL support
         if (table.getArea() != null && table.getArea().getBranch() != null) {
             response.setBranchId(table.getArea().getBranch().getBranchId());
@@ -208,19 +199,6 @@ public class TableService {
             // MapStruct should handle the mapping, but area and branch must be initialized
             TableResponse response = tableMapper.toTableResponse(table);
             
-            // Set reservedBy nếu có reservation RESERVED
-            // Reservations should be loaded by JOIN FETCH, but handle gracefully if not
-            // try {
-            //     String reservedBy = table.getReservations().stream()
-            //             .filter(r -> r != null && "RESERVED".equals(r.getStatus().toString()))
-            //             .findFirst()
-            //             .map(r -> r.getCustomerName())
-            //             .orElse(null);
-            //     response.setReservedBy(reservedBy);
-            // } catch (Exception e) {
-            //     // If reservations can't be accessed, just set null
-            //     response.setReservedBy(null);
-            // }
             
             // Set branchId từ area.branch for short URL support
             // This should already be set by MapStruct, but set it explicitly to be safe
@@ -243,15 +221,6 @@ public class TableService {
         return tables.stream()
                 .map(table -> {
                     TableResponse response = tableMapper.toTableResponse(table);
-                    
-                    // Set reservedBy nếu có
-                    // String reservedBy = table.getReservations().stream()
-                    //         .filter(r -> "RESERVED".equals(r.getStatus().toString()))
-                    //         .findFirst()
-                    //         .map(r -> r.getCustomerName())
-                    //         .orElse(null);
-                    
-                    // response.setReservedBy(reservedBy);
                     return response;
                 })
                 .collect(Collectors.toList());
@@ -346,7 +315,6 @@ public class TableService {
         // logic
         TableResponse r = tableMapper.toTableResponse(t);
 
-        // Note: removed reservedBy population — field is not stored in DB anymore.
 
         return r;
     }
