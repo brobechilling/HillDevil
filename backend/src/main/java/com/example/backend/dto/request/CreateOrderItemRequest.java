@@ -11,7 +11,7 @@ public class CreateOrderItemRequest {
     // totalPrice is calculated in frontend by List<CreateOrderItemCustomizationRequest>
     // can change later
     private BigDecimal totalPrice;
-    private String note;
+    private String note = "";
     private boolean status = true;
     private List<CreateOrderItemCustomizationRequest> customizations;
 

@@ -36,48 +36,6 @@ public class OrderService {
         this.orderLineService = orderLineService;
     }
 
-    public Order createOrder(UUID areaTableId) {
-        Order order = new Order();
-        order.setAreaTable(tableRepository.findById(areaTableId).orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND)));
-        order.setStatus(OrderStatus.EATING);
-        return orderRepository.save(order);
-    }
-
-    public Order checkOrderExist(UUID areaTableId) {
-        return orderRepository.findTopByAreaTable_AreaTableIdAndStatusOrderByUpdatedAtDesc(areaTableId, OrderStatus.EATING).orElseGet( () -> createOrder(areaTableId));
-    }
-
-    // @Transactional
-    // public OrderDTO create(CreateOrderRequest request) {
-    //     if (request == null || request.getAreaTableId() == null
-    //             || request.getOrderLines() == null || request.getOrderLines().isEmpty()) {
-    //         throw new AppException(ErrorCode.INVALID_REQUEST);
-    //     }
-
-    //     AreaTable table = tableRepository.findById(request.getAreaTableId())
-    //             .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
-
-    //     if (orderRepository.existsByAreaTable_AreaTableIdAndStatus(request.getAreaTableId(), OrderStatus.PENDING)) {
-    //         throw new AppException(ErrorCode.TABLE_ALREADY_HAS_PENDING_ORDER);
-    //     }
-
-    //     Order order = new Order();
-    //     order.setAreaTable(table);
-    //     order.setStatus(OrderStatus.PENDING);
-    //     order.setTotalPrice(BigDecimal.ZERO);
-    //     Order savedOrder = orderRepository.save(order);
-
-    //     List<OrderLineDTO> createdLines = orderLineService.createOrderLines(request.getOrderLines(), savedOrder);
-
-    //     BigDecimal grandTotal = createdLines.stream()
-    //             .map(OrderLineDTO::getTotalPrice)
-    //             .filter(Objects::nonNull)
-    //             .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-    //     savedOrder.setTotalPrice(grandTotal);
-    //     savedOrder = orderRepository.save(savedOrder);
-
-    //     return orderMapper.toOrderDTO(savedOrder);
-    // }
+   
 
 }
