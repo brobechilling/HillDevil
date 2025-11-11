@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -6,7 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar, Clock, Users } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useBookingStore, BookingItem } from '@/store/bookingStore';
+import type { BookingItem } from '@/dto/bookingItem.dto';
+import { useCreateReservationPublic } from '@/hooks/queries/useReservations';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const bookingSchema = z.object({
   guestName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -15,24 +18,38 @@ const bookingSchema = z.object({
   bookingDate: z.string().min(1, 'Date is required'),
   bookingTime: z.string().min(1, 'Time is required'),
   numberOfGuests: z.coerce.number().min(1, 'At least 1 guest required').max(20, 'Maximum 20 guests'),
+  note: z.string().max(1000).optional(),
+}).superRefine((data, ctx) => {
+  // Ensure combined date+time is in the future
+  if (!data.bookingDate || !data.bookingTime) return;
+  const dt = new Date(`${data.bookingDate}T${data.bookingTime}:00`);
+  if (isNaN(dt.getTime()) || dt.getTime() <= Date.now()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['bookingDate'],
+      message: 'Reservation date/time must be in the future',
+    });
+  }
 });
 
 type BookingFormData = z.infer<typeof bookingSchema>;
 
 interface ReservationBookingFormProps {
-  branchId: string;
-  branchName: string;
+  branchId?: string | null;
+  branchName?: string;
+  branches?: any[];
   selectedItems?: BookingItem[];
   onBookingComplete?: () => void;
 }
 
-export function ReservationBookingForm({ 
-  branchId, 
-  branchName, 
-  selectedItems = [], 
-  onBookingComplete 
+export function ReservationBookingForm({
+  branchId,
+  branchName,
+  branches,
+  selectedItems = [],
+  onBookingComplete
 }: ReservationBookingFormProps) {
-  const addBooking = useBookingStore((state) => state.addBooking);
+
 
   const {
     register,
@@ -43,31 +60,75 @@ export function ReservationBookingForm({
     resolver: zodResolver(bookingSchema),
   });
 
+  const createMutation = useCreateReservationPublic();
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null | undefined>(branchId ?? null);
+
   const onSubmit = (data: BookingFormData) => {
-    addBooking({
-      branchId,
-      branchName,
-      guestName: data.guestName,
-      guestEmail: data.guestEmail,
-      guestPhone: data.guestPhone,
-      bookingDate: data.bookingDate,
-      bookingTime: data.bookingTime,
-      numberOfGuests: data.numberOfGuests,
-      items: selectedItems,
-    });
+    const bid = selectedBranchId ?? branchId;
+    if (!bid) {
+      toast({ title: 'Select Branch', description: 'Please select a branch before making a reservation.' });
+      return;
+    }
+    // Prepare payload for backend CreateReservationRequest
+    const startTime = `${data.bookingDate}T${data.bookingTime}:00`;
+    // combine typed note with pre-order items if present
+    const preOrderText = selectedItems && selectedItems.length > 0 ? `Pre-order items: ${selectedItems.map(i => `${i.name}x${i.quantity}`).join(', ')}` : '';
+    const combinedNote = [data.note, preOrderText].filter(Boolean).join('\n').trim() || undefined;
 
-    toast({
-      title: 'Reservation Confirmed!',
-      description: 'Your table reservation has been submitted. We\'ll send you a confirmation email shortly.',
-      duration: 8000,
-    });
+    const payload = {
+      branchId: bid,
+      areaTableId: null,
+      startTime,
+      customerName: data.guestName,
+      customerPhone: data.guestPhone,
+      customerEmail: data.guestEmail,
+      guestNumber: data.numberOfGuests,
+      note: combinedNote,
+    } as any;
 
-    reset();
-    onBookingComplete?.();
+    (async () => {
+      try {
+        // Call backend public reservation endpoint (react-query mutation)
+        await createMutation.mutateAsync(payload);
+
+        toast({
+          title: 'Reservation Confirmed!',
+          description: "Your table reservation has been submitted. We'll send you a confirmation email shortly.",
+          duration: 8000,
+        });
+
+        reset();
+        onBookingComplete?.();
+      } catch (err: any) {
+        console.error('Create reservation failed', err);
+        toast({ title: 'Reservation Failed', description: err?.response?.data?.message || 'Please try again later.' });
+      }
+    })();
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {branches && branches.length > 0 && (
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">Branch *</Label>
+          <Select value={selectedBranchId ?? undefined} onValueChange={(value) => setSelectedBranchId(value)}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a branch" />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.map((b, idx) => {
+                const bid = b.branchId ?? b.id;
+                const label = b.branchName ?? b.name ?? b.displayName ?? b.address ?? b.email ?? `Branch ${idx + 1}`;
+                return (
+                  <SelectItem key={bid} value={bid}>
+                    {label}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="guestName">Your Name *</Label>
         <Input
@@ -170,6 +231,16 @@ export function ReservationBookingForm({
           </div>
         </div>
       )}
+
+      <div className="space-y-2">
+        <Label htmlFor="note">Special requests (optional)</Label>
+        <textarea
+          {...register('note')}
+          id="note"
+          placeholder="Any special requests, dietary restrictions, or notes for the restaurant"
+          className="w-full min-h-[90px] p-3 rounded-md bg-muted/10 text-sm"
+        />
+      </div>
 
       <div className="flex gap-3 pt-4">
         <Button type="submit" size="lg" className="flex-1">

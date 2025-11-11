@@ -1,4 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -22,49 +23,49 @@ import { isStaffAccountDTO, isUserDTO } from '@/utils/typeCast';
 import { useBranch } from '@/hooks/queries/useBranches';
 
 const menuItems = [
-  { 
+  {
     id: 'overview',
     path: '/dashboard/manager',
     icon: LayoutDashboard,
     label: 'Overview',
     description: 'Dashboard summary'
   },
-  { 
+  {
     id: 'branch',
     path: '/dashboard/manager/branch',
     icon: Building2,
     label: 'Branch Info',
     description: 'Branch details'
   },
-  { 
+  {
     id: 'tables',
     path: '/dashboard/manager/tables',
     icon: Table2,
     label: 'Tables',
     description: 'Table management'
   },
-  { 
+  {
     id: 'menu',
     path: '/dashboard/manager/menu',
     icon: ChefHat,
     label: 'Menu',
     description: 'Menu management'
   },
-  { 
+  {
     id: 'bills',
     path: '/dashboard/manager/bills',
     icon: Receipt,
     label: 'Bills',
     description: 'View bill history'
   },
-  { 
+  {
     id: 'staff',
     path: '/dashboard/manager/staff',
     icon: Users,
     label: 'Staff',
     description: 'Staff management'
   },
-  { 
+  {
     id: 'promotions',
     path: '/dashboard/manager/promotions',
     icon: Tag,
@@ -78,11 +79,36 @@ export const ManagerSidebar = () => {
   const { user, clearSession } = useSessionStore();
   const isOwner = isUserDTO(user) ? true : false;
   const navigate = useNavigate();
-  // TODO: test get branchId from state
+  
+  // Get branchId from multiple sources (similar to StaffPage)
   const branchIdFromStore = isStaffAccountDTO(user) ? user.branchId : "";
   // branchIdFromState is get when owner navigate to manager dashboard
-  const { branchId: branchIdFromState } =location.state || {};
-  const { data: branch } = useBranch(branchIdFromState || branchIdFromStore);
+  const { branchId: branchIdFromState } = location.state || {};
+  
+  // may remove sessionStorage later, but keep for now for compatibility with other files
+  // Initialize branchId from sessionStorage immediately
+  const [branchIdFromSession, setBranchIdFromSession] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('owner_selected_branch_id') || "";
+    }
+    return "";
+  });
+  
+  // Update branchIdFromSession when location changes
+  useEffect(() => {
+    const sessionBranchId = sessionStorage.getItem('owner_selected_branch_id') || "";
+    setBranchIdFromSession(prev => {
+      // Only update if the value actually changed
+      if (prev !== sessionBranchId) {
+        return sessionBranchId;
+      }
+      return prev;
+    });
+  }, [location.pathname]); // Only depend on pathname to avoid unnecessary re-runs
+  
+  // Priority: state > store > sessionStorage
+  const branchId = branchIdFromState || branchIdFromStore || branchIdFromSession;
+  const { data: branch, isLoading: isBranchLoading } = useBranch(branchId);
 
   const handleLogout = () => {
     if (isOwner) {
@@ -113,26 +139,30 @@ export const ManagerSidebar = () => {
 
       {isOwner && (
         <div className="px-4 pt-4 space-y-2">
-          {isOwner && (
-            <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="default" className="text-xs">Owner View</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Viewing as manager: {branch?.address}
-              </p>
+          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="default" className="text-xs">Owner View</Badge>
             </div>
-          )}
-          {isOwner && (
-            <Button
-              variant="outline"
-              className="w-full justify-start bg-background border-2 border-primary/30 hover:border-primary hover:bg-primary/10 text-foreground font-medium shadow-sm hover:shadow-md transition-all"
-              onClick={() => navigate('/dashboard/owner/overview')}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Owner Dashboard
-            </Button>
-          )}
+            <p className="text-xs text-muted-foreground">
+              Viewing as manager: {
+                isBranchLoading && branchId 
+                  ? "Loading..." 
+                  : branch?.address 
+                    ? branch.address 
+                    : branchId 
+                      ? "Loading branch info..." 
+                      : "No branch selected"
+              }
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="w-full justify-start bg-background border-2 border-primary/30 hover:border-primary hover:bg-primary/10 text-foreground font-medium shadow-sm hover:shadow-md transition-all"
+            onClick={() => navigate('/dashboard/owner/overview')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Owner Dashboard
+          </Button>
         </div>
       )}
 
@@ -174,7 +204,7 @@ export const ManagerSidebar = () => {
         <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-card">
           <Avatar className="h-10 w-10">
             <AvatarFallback className="gradient-primary text-primary-foreground">
-              
+
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">

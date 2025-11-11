@@ -32,8 +32,7 @@ public class Reservation {
     @JoinColumn(name = "branch_id")
     private Branch branch;
 
-    // this can be set later by the receptionist
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "area_table_id")
     private AreaTable areaTable;
 

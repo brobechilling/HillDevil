@@ -8,7 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAreas, useCreateArea, useDeleteArea } from '@/hooks/queries/useAreas';
 import { useTables, useDeleteTable, useUpdateTableStatus, useUpdateTable } from '@/hooks/queries/useTables';
 import { useBranches, useBranchesByRestaurant } from '@/hooks/queries/useBranches';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { BranchSelection } from '@/components/common/BranchSelection';
 import { BranchDTO } from '@/dto/branch.dto';
 import { TableDTO } from '@/dto/table.dto';
@@ -35,6 +35,7 @@ import { TableQRDialog } from '@/components/owner/TableQRDialog';
 import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { getReservationsByTable as apiGetReservationsByTable } from '@/api/reservationApi';
 
 interface ManagerTableManagementEnhancedProps {
   branchId?: string;
@@ -43,27 +44,27 @@ interface ManagerTableManagementEnhancedProps {
   disableStatusChange?: boolean;
 }
 
-export const ManagerTableManagementEnhanced = ({ 
+export const ManagerTableManagementEnhanced = ({
   branchId: initialBranchId,
   allowBranchSelection = false,
   hideAddButtons = false,
   disableStatusChange = false,
 }: ManagerTableManagementEnhancedProps) => {
   // const { getTablesByBranchAndFloor } = useTableStore();
-  
+
   const selectedRestaurant: RestaurantDTO | null = useMemo(() => {
     return getLocalStorageObject<RestaurantDTO>("selected_restaurant");
   }, []);
 
   const [selectedBranch, setSelectedBranch] = useState<string | undefined>(initialBranchId);
-  
+
   const branchesByRestaurantQuery = useBranchesByRestaurant(selectedRestaurant?.restaurantId);
   const allBranchesQuery = useBranches();
-  
+
   const { data: branches = [] } = selectedRestaurant?.restaurantId
     ? branchesByRestaurantQuery
     : allBranchesQuery;
-  
+
   const validBranchId = useMemo(() => {
     if (allowBranchSelection) {
       const branchId = selectedBranch?.trim();
@@ -72,21 +73,21 @@ export const ManagerTableManagementEnhanced = ({
     const branchId = initialBranchId?.trim();
     return branchId && branchId !== '' && branchId !== 'undefined' ? branchId : undefined;
   }, [allowBranchSelection, selectedBranch, initialBranchId]);
-  
+
   const { data: areas = [] } = useAreas(validBranchId);
   const createAreaMutation = useCreateArea();
   const deleteAreaMutation = useDeleteArea();
   const queryClient = useQueryClient();
-  
+
   const { data: tablesData, isLoading: isTablesLoading, error: tablesError, refetch: refetchTables } = useTables(validBranchId);
   const existingTables: TableDTO[] = tablesData?.content || [];
-  
+
   const deleteTableMutation = useDeleteTable();
   const updateTableStatusMutation = useUpdateTableStatus();
   const updateTableMutation = useUpdateTable();
   const [isDeleteLoading, setIsDeleteLoading] = useState<string | null>(null);
   const [isStatusUpdating, setIsStatusUpdating] = useState<string | null>(null);
-  
+
   // Edit mode state for Details dialog
   const [isEditMode, setIsEditMode] = useState(false);
   const [editFormData, setEditFormData] = useState<{
@@ -105,13 +106,19 @@ export const ManagerTableManagementEnhanced = ({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reservationIndex, setReservationIndex] = useState(0);
 
+  const selectedTableReservationsQuery = useQuery({
+    queryKey: ['reservationsByTable', selectedTable?.id],
+    queryFn: () => apiGetReservationsByTable(selectedTable?.id),
+    enabled: !!selectedTable && !!dialogOpen,
+  });
+
   const [isAddTableOpen, setIsAddTableOpen] = useState(false);
   const [isAreaDialogOpen, setIsAreaDialogOpen] = useState(false);
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const [qrTable, setQrTable] = useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [tableToDelete, setTableToDelete] = useState<{ id: string; name: string } | null>(null);
-  
+
   // Area filter state
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [isDeleteAreaDialogOpen, setIsDeleteAreaDialogOpen] = useState(false);
@@ -121,36 +128,36 @@ export const ManagerTableManagementEnhanced = ({
   const [initialTableCount, setInitialTableCount] = useState<number>(0);
 
   const apiTables = useMemo(() => tablesData?.content || [], [tablesData?.content]);
-  
+
   const areaMap = useMemo(() => {
     const map = new Map<string, { areaName: string; tables: TableDTO[] }>();
-    
+
     apiTables.forEach((table) => {
       const areaId = table.areaId || 'unknown';
       const areaName = table.areaName || areas.find(a => a.areaId === areaId)?.name || 'Unassigned';
-      
+
       if (!map.has(areaId)) {
         map.set(areaId, { areaName, tables: [] });
       }
       map.get(areaId)!.tables.push(table);
     });
-    
+
     return map;
   }, [apiTables, areas]);
 
   // Filter areas based on selectedAreaId
   const filteredAreaEntries = useMemo(() => {
-    const entries = Array.from(areaMap.entries()).sort((a, b) => 
+    const entries = Array.from(areaMap.entries()).sort((a, b) =>
       a[1].areaName.localeCompare(b[1].areaName)
     );
-    
+
     if (selectedAreaId === null || selectedAreaId === 'all') {
       return entries;
     }
-    
+
     return entries.filter(([areaId]) => areaId === selectedAreaId);
   }, [areaMap, selectedAreaId]);
-  
+
   const sortedAreaEntries = filteredAreaEntries;
 
   const normalizeStatus = (status: string): string => {
@@ -170,7 +177,7 @@ export const ManagerTableManagementEnhanced = ({
   };
 
   const branchShortCode = validBranchId || '';
-  
+
   const availableTables = apiTables.filter(t => normalizeStatus(t.status) === 'available').length;
   const occupiedTables = apiTables.filter(t => normalizeStatus(t.status) === 'occupied').length;
   const outOfServiceTables = apiTables.filter(t => normalizeStatus(t.status) === 'out_of_service').length;
@@ -179,10 +186,10 @@ export const ManagerTableManagementEnhanced = ({
     setIsStatusUpdating(tableId);
     try {
       await updateTableStatusMutation.mutateAsync({ tableId, status: newStatus });
-    toast({
-      title: 'Table status updated',
-      description: `Table status has been changed to ${newStatus.replace('_', ' ')}.`,
-    });
+      toast({
+        title: 'Table status updated',
+        description: `Table status has been changed to ${newStatus.replace('_', ' ')}.`,
+      });
       // Query sẽ tự động invalidate và refetch từ useUpdateTableStatus hook
     } catch (error: any) {
       console.error('Error updating table status:', error);
@@ -207,10 +214,10 @@ export const ManagerTableManagementEnhanced = ({
 
     setIsDeleteLoading(tableToDelete.id);
     setIsDeleteDialogOpen(false);
-    
+
     try {
       await deleteTableMutation.mutateAsync(tableToDelete.id);
-    toast({
+      toast({
         title: 'Table deleted',
         description: `Table "${tableToDelete.name}" has been deleted successfully.`,
       });
@@ -237,7 +244,7 @@ export const ManagerTableManagementEnhanced = ({
         description: `Area "${areaName}" has ${areaTables.length} table(s). These tables will be moved to "Undefined Area" after deletion.`,
       });
     }
-    
+
     setAreaToDelete({ id: areaId, name: areaName });
     setIsDeleteAreaDialogOpen(true);
   };
@@ -248,12 +255,12 @@ export const ManagerTableManagementEnhanced = ({
     try {
       const areaTables = areaMap.get(areaToDelete.id)?.tables || [];
       await deleteAreaMutation.mutateAsync(areaToDelete.id);
-      
+
       let description = `Area "${areaToDelete.name}" has been deleted successfully.`;
       if (areaTables.length > 0) {
         description += ` ${areaTables.length} table(s) have been moved to "Undefined Area".`;
       }
-      
+
       toast({
         title: 'Area deleted',
         description: description,
@@ -301,7 +308,7 @@ export const ManagerTableManagementEnhanced = ({
 
   const handleSaveChanges = async () => {
     if (!selectedTable || !editFormData) return;
-    
+
     setIsStatusUpdating(selectedTable.id);
     try {
       // Convert status to API format if needed
@@ -344,7 +351,7 @@ export const ManagerTableManagementEnhanced = ({
 
       // Find area name for the new areaId
       const newArea = areas.find(a => a.areaId === editFormData.areaId);
-      
+
       // Prepare updated table data with area name
       const updatedTableData = {
         ...finalTableData,
@@ -379,7 +386,7 @@ export const ManagerTableManagementEnhanced = ({
         title: 'Table updated successfully',
         description: 'Table information has been saved.',
       });
-      
+
       setIsEditMode(false);
       setEditFormData(null);
     } catch (error: any) {
@@ -425,7 +432,160 @@ export const ManagerTableManagementEnhanced = ({
 
   // const selectedTableReservations = selectedTable ? getReservationsByTable(selectedTable.id) : [];
 
-  const [hoveredTable, setHoveredTable] = useState<string | null>(null);
+  // Child component to render a single table card and fetch its reservations.
+  // Use local hover state inside the card so hovering one card doesn't re-render the whole list.
+  const TableCard = ({ table, tableIndex }: { table: any; tableIndex: number }) => {
+    const [isHovered, setIsHovered] = useState(false);
+
+    const reservationsQuery = useQuery({
+      queryKey: ['reservationsByTable', table.id],
+      queryFn: () => apiGetReservationsByTable(table.id),
+      // Only fetch when the user hovers the table or opens the details dialog for it
+      enabled: !!table?.id && (isHovered || (dialogOpen && selectedTable?.id === table.id)),
+      staleTime: 60_000,
+      cacheTime: 5 * 60_000,
+      // Avoid refetch storms from focus/reconnect/mount
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+    });
+
+    const reservations = reservationsQuery.data || [];
+
+    return (
+      <div
+        key={table.id}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className="relative group"
+        style={{
+          animation: `slideIn 0.4s ease-out ${tableIndex * 0.05}s both`,
+        }}
+      >
+        <Card
+          className={cn(
+            "border-2 transition-all duration-500 cursor-pointer overflow-hidden",
+            isHovered ? 'border-primary shadow-2xl' : 'border-border/50 hover:shadow-lg',
+            normalizeStatus(table.status) === 'out_of_service' && 'opacity-60',
+            normalizeStatus(table.status) === 'occupied' && 'bg-destructive/5'
+          )}
+          style={{
+            transition: 'transform 0.3s ease-out, box-shadow 0.3s ease-out',
+            transform: isHovered ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)',
+          }}
+        >
+          <CardContent
+            className="relative pt-5 h-full flex flex-col"
+            style={{
+              transition: 'padding-bottom 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-3xl pointer-events-none" />
+
+            <div className="space-y-3 relative flex-1 pb-4">
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-bold text-lg bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent break-words">
+                  {table.tag}
+                </span>
+              </div>
+
+              <div className="flex items-center flex-wrap gap-2">
+                <Badge className={cn(getStatusColor(table.status), "transition-all duration-300 text-white font-semibold")}>
+                  {getStatusLabel(table.status)}
+                </Badge>
+                {reservations.length > 0 && (
+                  <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100 animate-pulse font-semibold">
+                    {reservations.length} {reservations.length === 1 ? 'Booking' : 'Bookings'}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <svg
+                  className="w-4 h-4 flex-shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <span className="font-medium">
+                  {table.capacity} {table.capacity === 1 ? 'seat' : 'seats'}
+                </span>
+              </div>
+            </div>
+
+            <div
+              className={cn(
+                "mt-4 pt-4 border-t-2 transition-all duration-500 overflow-hidden",
+                isHovered ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0',
+                "bg-muted/50 dark:bg-muted/30 rounded-b-lg"
+              )}
+              style={{
+                transition: 'max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease-out',
+              }}
+            >
+              <div className="flex gap-2 justify-center items-center px-2 py-3">
+                <Button
+                  size="default"
+                  variant="outline"
+                  className="h-10 w-10 p-0 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 rounded-lg shadow-sm hover:shadow-md border-2"
+                  onClick={() => handleViewDetails(table)}
+                  title="View Details"
+                >
+                  <Eye className="w-5 h-5" />
+                </Button>
+
+                <Button
+                  size="default"
+                  variant="outline"
+                  className="h-10 w-10 p-0 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 rounded-lg shadow-sm hover:shadow-md border-2"
+                  onClick={() => {
+                    const currentBranchId = validBranchId;
+                    if (!currentBranchId || currentBranchId.trim() === '' || currentBranchId === 'undefined') {
+                      toast({
+                        variant: 'destructive',
+                        title: 'Error',
+                        description: 'Please select a branch first to view QR code.',
+                      });
+                      return;
+                    }
+                    setQrTable(table);
+                    setIsQRDialogOpen(true);
+                  }}
+                  title="View QR Code"
+                >
+                  <QrCode className="w-5 h-5" />
+                </Button>
+
+                {!hideAddButtons && (
+                  <Button
+                    size="default"
+                    variant="outline"
+                    className="h-10 w-10 p-0 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all duration-200 rounded-lg shadow-sm hover:shadow-md border-2 disabled:opacity-50"
+                    onClick={() => handleDeleteClick(table.id, table.tag)}
+                    disabled={isDeleteLoading === table.id}
+                    title="Delete Table"
+                  >
+                    {isDeleteLoading === table.id ? (
+                      <div className="w-5 h-5 border-2 border-destructive/40 border-t-destructive rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 className="w-5 h-5" />
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
 
   useEffect(() => {
     // Only auto-select first branch if no branchId was provided initially
@@ -521,7 +681,7 @@ export const ManagerTableManagementEnhanced = ({
             description="Choose a branch to view its tables"
           />
         )}
-        
+
         {!validBranchId ? (
           <div className="flex items-center justify-center min-h-[40vh]">
             <p className="text-muted-foreground">
@@ -530,26 +690,26 @@ export const ManagerTableManagementEnhanced = ({
           </div>
         ) : (
           <>
-        <div className="flex items-center justify-between">
-          <div />
+            <div className="flex items-center justify-between">
+              <div />
               {!hideAddButtons && (
-          <div className="flex gap-2">
-                  <Button 
+                <div className="flex gap-2">
+                  <Button
                     onClick={() => setIsAreaDialogOpen(true)}
                     className="transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Area
-            </Button>
-                  <Button 
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Area
+                  </Button>
+                  <Button
                     onClick={() => { setInitialTableCount(apiTables.length); setIsAddTableOpen(true); }}
                     className="transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Table
-            </Button>
-                  <Button 
-                    variant="outline" 
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Table
+                  </Button>
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       const currentBranchId = validBranchId;
                       if (!currentBranchId || currentBranchId.trim() === '' || currentBranchId === 'undefined') {
@@ -565,289 +725,143 @@ export const ManagerTableManagementEnhanced = ({
                     }}
                     className="transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   >
-              <QrCode className="mr-2 h-4 w-4" />
-              Branch QR
-            </Button>
-          </div>
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Branch QR
+                  </Button>
+                </div>
               )}
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="transition-all duration-300 hover:shadow-xl hover:scale-105">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Available</CardTitle>
-              <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{availableTables}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="transition-all duration-300 hover:shadow-xl hover:scale-105">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Occupied</CardTitle>
-              <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{occupiedTables}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="transition-all duration-300 hover:shadow-xl hover:scale-105">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Out of Service</CardTitle>
-              <div className="h-3 w-3 rounded-full bg-gray-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{outOfServiceTables}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
-          <CardHeader className="relative z-10">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Table Management by Floor
-            </CardTitle>
-            <CardDescription>
-              Manage table status, area status, and view reservations
-            </CardDescription>
-              </div>
             </div>
-            <div className="mt-4 flex items-center gap-3">
-              <Label className="text-sm font-medium whitespace-nowrap">Filter by Area:</Label>
-              <Select
-                value={selectedAreaId || 'all'}
-                onValueChange={(value) => {
-                  setSelectedAreaId(value === 'all' ? null : value);
-                }}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="All Areas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Areas</SelectItem>
-                  {areas.map((area) => (
-                    <SelectItem key={area.areaId} value={area.areaId}>
-                      {area.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card className="transition-all duration-300 hover:shadow-xl hover:scale-105">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Available</CardTitle>
+                  <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{availableTables}</div>
+                </CardContent>
+              </Card>
+
+              <Card className="transition-all duration-300 hover:shadow-xl hover:scale-105">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Occupied</CardTitle>
+                  <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{occupiedTables}</div>
+                </CardContent>
+              </Card>
+
+              <Card className="transition-all duration-300 hover:shadow-xl hover:scale-105">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Out of Service</CardTitle>
+                  <div className="h-3 w-3 rounded-full bg-gray-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{outOfServiceTables}</div>
+                </CardContent>
+              </Card>
             </div>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            {apiTables.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Table2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No tables available</p>
-              </div>
-            ) : (
-              <div className="space-y-8">
-                {sortedAreaEntries.map(([areaId, { areaName, tables: areaTables }], areaIndex) => {
-                  const sortedTables = [...areaTables].sort((a, b) => {
-                    const numA = parseInt(a.tag.match(/\d+/)?.[0] || '0');
-                    const numB = parseInt(b.tag.match(/\d+/)?.[0] || '0');
-                    if (numA && numB) return numA - numB;
-                    return a.tag.localeCompare(b.tag);
-                  });
-                  
-                  return (
-                    <div 
-                      key={areaId} 
-                      className="space-y-4"
-                      style={{
-                        animation: `fadeInScale 0.5s ease-out ${areaIndex * 0.1}s both`
-                      }}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg px-5 py-2.5 shadow-sm">
-                          <h3 className="text-lg font-semibold text-primary">{areaName}</h3>
-                        </div>
-                        <div className="flex-1 h-px bg-gradient-to-r from-border via-border/50 to-transparent" />
-                        <Badge variant="secondary" className="text-sm">
-                          {areaTables.length} table{areaTables.length !== 1 ? 's' : ''}
-                        </Badge>
-                        {!hideAddButtons && (
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="h-9 px-3 gap-2 hover:bg-destructive/90 transition-all duration-200 rounded-lg shadow-sm hover:shadow-md border border-destructive/20"
-                            onClick={() => handleDeleteAreaClick(areaId, areaName)}
-                            title="Delete Area"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            <span className="text-xs font-semibold">Delete Area</span>
-                          </Button>
-                        )}
-                      </div>
 
-                      <div 
-                        className="grid gap-5"
-                        style={{
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                        }}
-                      >
-                        {sortedTables.map((table, tableIndex) => {
-                          // const reservations = getReservationsByTable(table.id);
-                          
-                          return (
-                            <div
-                              key={table.id} 
-                              onMouseEnter={() => setHoveredTable(table.id)}
-                              onMouseLeave={() => setHoveredTable(null)}
-                              className="relative group"
-                              style={{
-                                animation: `slideIn 0.4s ease-out ${tableIndex * 0.05}s both`,
-                              }}
-                            >
-                              <Card
-                              className={cn(
-                                  "border-2 transition-all duration-500 cursor-pointer overflow-hidden",
-                                  hoveredTable === table.id
-                                    ? 'border-primary shadow-2xl'
-                                    : 'border-border/50 hover:shadow-lg',
-                                  normalizeStatus(table.status) === 'out_of_service' && 'opacity-60',
-                                  normalizeStatus(table.status) === 'occupied' && 'bg-destructive/5'
-                                )}
-                                style={{
-                                  transition: 'transform 0.3s ease-out, box-shadow 0.3s ease-out',
-                                  transform: hoveredTable === table.id ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)',
-                                }}
-                              >
-                                <CardContent 
-                                  className="relative pt-5 h-full flex flex-col"
-                                  style={{
-                                    transition: 'padding-bottom 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                                  }}
-                                >
-                                  {/* Decorative Corner */}
-                                  <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-3xl pointer-events-none" />
+            <Card className="relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
+              <CardHeader className="relative z-10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                      Table Management by Floor
+                    </CardTitle>
+                    <CardDescription>
+                      Manage table status, area status, and view reservations
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center gap-3">
+                  <Label className="text-sm font-medium whitespace-nowrap">Filter by Area:</Label>
+                  <Select
+                    value={selectedAreaId || 'all'}
+                    onValueChange={(value) => {
+                      setSelectedAreaId(value === 'all' ? null : value);
+                    }}
+                  >
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="All Areas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Areas</SelectItem>
+                      {areas.map((area) => (
+                        <SelectItem key={area.areaId} value={area.areaId}>
+                          {area.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent className="relative z-10">
+                {apiTables.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Table2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No tables available</p>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {sortedAreaEntries.map(([areaId, { areaName, tables: areaTables }], areaIndex) => {
+                      const sortedTables = [...areaTables].sort((a, b) => {
+                        const numA = parseInt(a.tag.match(/\d+/)?.[0] || '0');
+                        const numB = parseInt(b.tag.match(/\d+/)?.[0] || '0');
+                        if (numA && numB) return numA - numB;
+                        return a.tag.localeCompare(b.tag);
+                      });
 
-                                  {/* Table Info */}
-                                  <div className="space-y-3 relative flex-1 pb-4">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <span className="font-bold text-lg bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent break-words">
-                                        {table.tag}
-                                      </span>
-                                      </div>
-
-                                    {/* Status Badge & Reservations */}
-                                    <div className="flex items-center flex-wrap gap-2">
-                                      <Badge className={cn(getStatusColor(table.status), "transition-all duration-300 text-white font-semibold")}>
-                                        {getStatusLabel(table.status)}
-                                      </Badge>
-                                      {/* {reservations.length > 0 && (
-                                        <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100 animate-pulse font-semibold">
-                                          {reservations.length} {reservations.length === 1 ? 'Booking' : 'Bookings'}
-                                        </Badge>
-                                      )} */}
-                                  </div>
-
-                                    {/* Capacity Info */}
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                      <svg
-                                        className="w-4 h-4 flex-shrink-0"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                                        />
-                                      </svg>
-                                      <span className="font-medium">
-                                        {table.capacity} {table.capacity === 1 ? 'seat' : 'seats'}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  {/* Action Buttons Section - Hiển thị rõ ràng với background sáng */}
-                                  <div
-                                    className={cn(
-                                      "mt-4 pt-4 border-t-2 transition-all duration-500 overflow-hidden",
-                                      hoveredTable === table.id 
-                                        ? 'max-h-20 opacity-100' 
-                                        : 'max-h-0 opacity-0',
-                                      "bg-muted/50 dark:bg-muted/30 rounded-b-lg"
-                                    )}
-                                    style={{
-                                      transition: 'max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease-out',
-                                    }}
-                                  >
-                                    <div className="flex gap-2 justify-center items-center px-2 py-3">
-                                      {/* Details Button */}
-                                      <Button
-                                        size="default"
-                                        variant="outline"
-                                        className="h-10 w-10 p-0 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 rounded-lg shadow-sm hover:shadow-md border-2"
-                                        onClick={() => handleViewDetails(table)}
-                                        title="View Details"
-                                      >
-                                        <Eye className="w-5 h-5" />
-                                      </Button>
-
-                                      {/* QR Button */}
-                                      <Button
-                                        size="default"
-                                        variant="outline"
-                                        className="h-10 w-10 p-0 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 rounded-lg shadow-sm hover:shadow-md border-2"
-                                        onClick={() => {
-                                          const currentBranchId = validBranchId;
-                                          if (!currentBranchId || currentBranchId.trim() === '' || currentBranchId === 'undefined') {
-                                            toast({
-                                              variant: 'destructive',
-                                              title: 'Error',
-                                              description: 'Please select a branch first to view QR code.',
-                                            });
-                                            return;
-                                          }
-                                          setQrTable(table);
-                                          setIsQRDialogOpen(true);
-                                        }}
-                                        title="View QR Code"
-                                      >
-                                        <QrCode className="w-5 h-5" />
-                                      </Button>
-
-                                      {/* Delete Button */}
-                                      {!hideAddButtons && (
-                                        <Button
-                                          size="default"
-                                          variant="outline"
-                                          className="h-10 w-10 p-0 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all duration-200 rounded-lg shadow-sm hover:shadow-md border-2 disabled:opacity-50"
-                                          onClick={() => handleDeleteClick(table.id, table.tag)}
-                                          disabled={isDeleteLoading === table.id}
-                                          title="Delete Table"
-                                        >
-                                          {isDeleteLoading === table.id ? (
-                                            <div className="w-5 h-5 border-2 border-destructive/40 border-t-destructive rounded-full animate-spin" />
-                                          ) : (
-                                            <Trash2 className="w-5 h-5" />
-                                          )}
-                                        </Button>
-                                      )}
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
+                      return (
+                        <div
+                          key={areaId}
+                          className="space-y-4"
+                          style={{
+                            animation: `fadeInScale 0.5s ease-out ${areaIndex * 0.1}s both`
+                          }}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg px-5 py-2.5 shadow-sm">
+                              <h3 className="text-lg font-semibold text-primary">{areaName}</h3>
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                            <div className="flex-1 h-px bg-gradient-to-r from-border via-border/50 to-transparent" />
+                            <Badge variant="secondary" className="text-sm">
+                              {areaTables.length} table{areaTables.length !== 1 ? 's' : ''}
+                            </Badge>
+                            {!hideAddButtons && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="h-9 px-3 gap-2 hover:bg-destructive/90 transition-all duration-200 rounded-lg shadow-sm hover:shadow-md border border-destructive/20"
+                                onClick={() => handleDeleteAreaClick(areaId, areaName)}
+                                title="Delete Area"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                <span className="text-xs font-semibold">Delete Area</span>
+                              </Button>
+                            )}
+                          </div>
+
+                          <div
+                            className="grid gap-5"
+                            style={{
+                              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                            }}
+                          >
+                            {sortedTables.map((table, tableIndex) => (
+                              <TableCard key={table.id} table={table} tableIndex={tableIndex} />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </>
         )}
       </div>
@@ -863,10 +877,10 @@ export const ManagerTableManagementEnhanced = ({
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div>
-            <DialogTitle>Table Details</DialogTitle>
-            <DialogDescription>
+                <DialogTitle>Table Details</DialogTitle>
+                <DialogDescription>
                   {isEditMode ? 'Edit table information' : 'View complete table information and reservations'}
-            </DialogDescription>
+                </DialogDescription>
               </div>
               {!isEditMode && !disableStatusChange && (
                 <Button
@@ -913,7 +927,7 @@ export const ManagerTableManagementEnhanced = ({
               )}
             </div>
           </DialogHeader>
-          
+
           {selectedTable && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
@@ -968,9 +982,9 @@ export const ManagerTableManagementEnhanced = ({
                   <Label className="text-sm text-muted-foreground">Status</Label>
                   {!isEditMode ? (
                     <div className="mt-1">
-                  <Badge className={getStatusColor(selectedTable.status)}>
-                    {getStatusLabel(selectedTable.status)}
-                  </Badge>
+                      <Badge className={getStatusColor(selectedTable.status)}>
+                        {getStatusLabel(selectedTable.status)}
+                      </Badge>
                     </div>
                   ) : (
                     <Select
@@ -1018,7 +1032,7 @@ export const ManagerTableManagementEnhanced = ({
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground mb-2">QR Code URL</p>
                   <div className="flex gap-2">
-                    <Input 
+                    <Input
                       value={(() => {
                         // Use new URL format: /t/{branchId}/{tableId}
                         // This format is unique and prevents conflicts
@@ -1037,7 +1051,7 @@ export const ManagerTableManagementEnhanced = ({
                         const tableId = selectedTable.id || selectedTable.areaTableId || 'unknown';
                         const branchId = validBranchId || selectedTable.branchId || 'unknown';
                         const tableUrl = `${window.location.origin}/t/${branchId}/${tableId}`;
-                        
+
                         navigator.clipboard.writeText(tableUrl);
                         toast({ title: 'Copied!', description: 'URL copied to clipboard' });
                       }}
@@ -1048,78 +1062,88 @@ export const ManagerTableManagementEnhanced = ({
                 </div>
               </div>
 
-              {/* {selectedTableReservations.length > 0 && (
-                <div className="border-t pt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
-                        {selectedTableReservations.length} Reservation{selectedTableReservations.length > 1 ? 's' : ''}
-                      </Badge>
-                    </h4>
-                    {selectedTableReservations.length > 1 && (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setReservationIndex(Math.max(0, reservationIndex - 1))}
-                          disabled={reservationIndex === 0}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm text-muted-foreground">
-                          {reservationIndex + 1} / {selectedTableReservations.length}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setReservationIndex(Math.min(selectedTableReservations.length - 1, reservationIndex + 1))}
-                          disabled={reservationIndex === selectedTableReservations.length - 1}
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
+              {(() => {
+                const reservations = selectedTableReservationsQuery.data || [];
+                const isLoading = selectedTableReservationsQuery.isLoading;
+                if (isLoading) {
+                  return (
+                    <div className="border-t pt-6">
+                      <p className="text-sm text-muted-foreground">Loading reservations...</p>
+                    </div>
+                  );
+                }
+
+                if (!reservations || reservations.length === 0) return null;
+
+                const current = reservations[reservationIndex];
+
+                return (
+                  <div className="border-t pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
+                          {reservations.length} Reservation{reservations.length > 1 ? 's' : ''}
+                        </Badge>
+                      </h4>
+                      {reservations.length > 1 && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setReservationIndex(Math.max(0, reservationIndex - 1))}
+                            disabled={reservationIndex === 0}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <span className="text-sm text-muted-foreground">
+                            {reservationIndex + 1} / {reservations.length}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setReservationIndex(Math.min(reservations.length - 1, reservationIndex + 1))}
+                            disabled={reservationIndex === reservations.length - 1}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {current && (
+                      <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Guest Name</p>
+                            <p className="font-semibold">{current.customerName || current.customerEmail || 'Unknown'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Guests</p>
+                            <p className="font-semibold">{current.guestNumber ?? current.guestNumber === 0 ? current.guestNumber : current.guestNumber ?? '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Start Time</p>
+                            <p className="font-semibold">
+                              {current.startTime ? format(new Date(current.startTime), 'PPp') : '-'}
+                            </p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-sm text-muted-foreground">Contact</p>
+                            <p className="text-sm">{current.customerEmail || '-'}</p>
+                            <p className="text-sm">{current.customerPhone || '-'}</p>
+                          </div>
+                          {current.note && (
+                            <div className="col-span-2">
+                              <p className="text-sm text-muted-foreground">Notes</p>
+                              <p className="text-sm">{current.note}</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
-
-                  {selectedTableReservations[reservationIndex] && (
-                    <div className="bg-muted/30 rounded-lg p-4 space-y-3">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Guest Name</p>
-                          <p className="font-semibold">{selectedTableReservations[reservationIndex].guestName}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Guests</p>
-                          <p className="font-semibold">{selectedTableReservations[reservationIndex].numberOfGuests}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Start Time</p>
-                          <p className="font-semibold">
-                            {format(new Date(selectedTableReservations[reservationIndex].reservationStart), 'PPp')}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">End Time</p>
-                          <p className="font-semibold">
-                            {format(new Date(selectedTableReservations[reservationIndex].reservationEnd), 'PPp')}
-                          </p>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-sm text-muted-foreground">Contact</p>
-                          <p className="text-sm">{selectedTableReservations[reservationIndex].guestEmail}</p>
-                          <p className="text-sm">{selectedTableReservations[reservationIndex].guestPhone}</p>
-                        </div>
-                        {selectedTableReservations[reservationIndex].notes && (
-                          <div className="col-span-2">
-                            <p className="text-sm text-muted-foreground">Notes</p>
-                            <p className="text-sm">{selectedTableReservations[reservationIndex].notes}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )} */}
+                );
+              })()}
             </div>
           )}
         </DialogContent>
@@ -1133,8 +1157,8 @@ export const ManagerTableManagementEnhanced = ({
               const latest = tablesData.content[tablesData.content.length - 1];
               const currentBranchId = validBranchId;
               if (currentBranchId && currentBranchId.trim() !== '' && currentBranchId !== 'undefined') {
-              setQrTable(latest);
-              setIsQRDialogOpen(true);
+                setQrTable(latest);
+                setIsQRDialogOpen(true);
               } else {
                 toast({
                   variant: 'destructive',
@@ -1168,11 +1192,11 @@ export const ManagerTableManagementEnhanced = ({
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="areaName">Area Name *</Label>
-              <Input 
-                id="areaName" 
-                value={areaName} 
-                onChange={(e) => setAreaName(e.target.value)} 
-                placeholder="e.g. Main Dining, Patio, Outdoor" 
+              <Input
+                id="areaName"
+                value={areaName}
+                onChange={(e) => setAreaName(e.target.value)}
+                placeholder="e.g. Main Dining, Patio, Outdoor"
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
@@ -1180,7 +1204,7 @@ export const ManagerTableManagementEnhanced = ({
                 setIsAreaDialogOpen(false);
                 setAreaName('');
               }}>Cancel</Button>
-              <Button 
+              <Button
                 onClick={async () => {
                   if (!areaName.trim()) {
                     toast({
@@ -1195,7 +1219,7 @@ export const ManagerTableManagementEnhanced = ({
                       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                       return uuidRegex.test(str);
                     };
-                    
+
                     if (!validBranchId || !isValidUUID(validBranchId)) {
                       toast({
                         variant: 'destructive',
@@ -1204,13 +1228,13 @@ export const ManagerTableManagementEnhanced = ({
                       });
                       return;
                     }
-                    
+
                     // Check for duplicate area name before creating
                     const trimmedAreaName = areaName.trim();
-                    const existingArea = areas.find(a => 
+                    const existingArea = areas.find(a =>
                       a.name.toLowerCase().trim() === trimmedAreaName.toLowerCase()
                     );
-                    
+
                     if (existingArea) {
                       toast({
                         variant: 'destructive',
@@ -1219,20 +1243,20 @@ export const ManagerTableManagementEnhanced = ({
                       });
                       return;
                     }
-                    
+
                     await createAreaMutation.mutateAsync({
                       branchId: validBranchId,
                       name: trimmedAreaName,
                     });
-                    toast({ 
-                      title: 'Area added', 
-                      description: 'New area has been created successfully.' 
+                    toast({
+                      title: 'Area added',
+                      description: 'New area has been created successfully.'
                     });
                     setAreaName('');
-                setIsAreaDialogOpen(false);
+                    setIsAreaDialogOpen(false);
                   } catch (error: any) {
-                    const errorMessage = error?.response?.data?.message 
-                      || error?.message 
+                    const errorMessage = error?.response?.data?.message
+                      || error?.message
                       || 'Failed to create area. Please check if branchId is valid.';
                     toast({
                       variant: 'destructive',
@@ -1259,17 +1283,17 @@ export const ManagerTableManagementEnhanced = ({
           <div className="flex flex-col items-center gap-4 py-4">
             {validBranchId ? (
               <>
-            <div className="bg-white p-6 rounded-lg border-2 border-border">
+                <div className="bg-white p-6 rounded-lg border-2 border-border">
                   <QRCodeSVG value={`${window.location.origin}/branch/${validBranchId}`} size={200} />
-            </div>
-            <div className="text-sm font-mono select-all break-all">
+                </div>
+                <div className="text-sm font-mono select-all break-all">
                   {`${window.location.origin}/branch/${validBranchId}`}
-            </div>
+                </div>
               </>
             ) : (
               <div className="text-center text-muted-foreground">
                 <p>Branch ID is missing. Cannot generate QR code.</p>
-            </div>
+              </div>
             )}
           </div>
         </DialogContent>
@@ -1279,21 +1303,21 @@ export const ManagerTableManagementEnhanced = ({
         const hasTable = !!qrTable;
         const hasBranchId = !!validBranchId && typeof validBranchId === 'string' && validBranchId.trim() !== '' && validBranchId !== 'undefined';
         const isDialogOpen = isQRDialogOpen;
-        
+
         if (!isDialogOpen || !hasTable || !hasBranchId) {
           return null;
         }
-        
+
         const branchIdValue = validBranchId;
         if (!branchIdValue || branchIdValue.trim() === '' || branchIdValue === 'undefined') {
           return null;
         }
-        
+
         return (
-      <TableQRDialog
+          <TableQRDialog
             key={`qr-${qrTable?.id}-${branchIdValue}`}
             open={isDialogOpen}
-        onOpenChange={(open) => {
+            onOpenChange={(open) => {
               if (!open) {
                 setIsQRDialogOpen(false);
                 setQrTable(null);
@@ -1308,11 +1332,11 @@ export const ManagerTableManagementEnhanced = ({
                   setIsQRDialogOpen(false);
                   setQrTable(null);
                 } else {
-          setIsQRDialogOpen(open);
+                  setIsQRDialogOpen(open);
                 }
               }
-        }}
-        table={qrTable}
+            }}
+            table={qrTable}
             branchId={branchIdValue}
           />
         );
@@ -1368,7 +1392,7 @@ export const ManagerTableManagementEnhanced = ({
               Delete Area
             </DialogTitle>
             <DialogDescription className="pt-2">
-              Are you sure you want to delete area <strong>"{areaToDelete?.name}"</strong>? 
+              Are you sure you want to delete area <strong>"{areaToDelete?.name}"</strong>?
               {(() => {
                 const areaTables = areaToDelete ? areaMap.get(areaToDelete.id)?.tables || [] : [];
                 if (areaTables.length > 0) {

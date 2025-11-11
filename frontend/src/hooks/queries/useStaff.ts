@@ -6,14 +6,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 export const useStaffAccountPaginatedQuery = (page: number, size: number, branchId: string) => {
     return useQuery<PageResponse<StaffAccountDTO>, Error>({
         queryKey: ["staffs", page, size, branchId],
-        queryFn: () => getStaffAccounts(page, size, branchId)
+        queryFn: () => getStaffAccounts(page, size, branchId),
+        enabled: !!branchId && branchId.trim() !== ""
     });
 };
 
 export const useStaffAccountByRestaurantPaginatedQuery = (page: number, size: number, restaurantId: string) => {
     return useQuery<PageResponse<StaffAccountDTO>, Error>({
         queryKey: ["staffs", page, size, restaurantId],
-        queryFn: () => getStaffAccountsByRestaurant(page, size, restaurantId)
+        queryFn: () => getStaffAccountsByRestaurant(page, size, restaurantId),
+        enabled: !!restaurantId && restaurantId.trim() !== ""
     });
 };
 
@@ -34,21 +36,24 @@ export const useCreateStaffAccountMutation = (page: number, size: number, id: st
 export const useWaiterNumberQuery = (branchId: string) => {
     return useQuery<number>({
         queryKey: ["statistic", "waiter", branchId],
-        queryFn: () => getWaiterNumber(branchId)
+        queryFn: () => getWaiterNumber(branchId),
+        enabled: !!branchId && branchId.trim() !== ""
     });
 };
 
 export const useReceptionistNumberQuery = (branchId: string) => {
     return useQuery<number>({
         queryKey: ["statistic", "receptionist", branchId],
-        queryFn: () => getReceptionistNumber(branchId)
+        queryFn: () => getReceptionistNumber(branchId),
+        enabled: !!branchId && branchId.trim() !== ""
     });
 };
 
 export const useManagerNumberQuery = (branchId: string) => {
     return useQuery<number>({
         queryKey: ["statistic", "manager", branchId],
-        queryFn: () => getManagerNumber(branchId)
+        queryFn: () => getManagerNumber(branchId),
+        enabled: !!branchId && branchId.trim() !== ""
     });
 };
 

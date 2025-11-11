@@ -23,19 +23,39 @@ export const getTablesByBranch = async (
   if (!branchId || branchId.trim() === '') {
     throw new Error('BranchId is required');
   }
-  
-  const res = await axiosClient.get<ApiResponse<PagedTableResponse>>(
-    "/owner/tables",
-    {
-      params: {
-        branchId: branchId.trim(),
-        page,
-        size,
-        ...(sort && { sort }),
-      },
+
+  try {
+    const res = await axiosClient.get<ApiResponse<PagedTableResponse>>(
+      "/owner/tables",
+      {
+        params: {
+          branchId: branchId.trim(),
+          page,
+          size,
+          ...(sort && { sort }),
+        },
+      }
+    );
+    return res.data.result;
+  } catch (err: any) {
+    // If owner endpoint is forbidden for the current user (403), fallback to public tables
+    if (err && err.response && err.response.status === 403) {
+      // try public endpoint which the guest/staff client uses.
+      // Use the safer branch listing endpoint implemented at /public/tables/branch/{branchId}
+      const path = `/public/tables/branch/${encodeURIComponent(branchId.trim())}`;
+      const pubRes = await axiosClient.get<ApiResponse<PagedTableResponse>>(path, {
+        params: {
+          page,
+          size,
+          ...(sort && { sort }),
+        },
+      });
+      return pubRes.data.result;
     }
-  );
-  return res.data.result;
+
+    // otherwise rethrow to allow the caller to handle
+    throw err;
+  }
 };
 
 /**
@@ -214,4 +234,25 @@ export const downloadBranchQrPdf = async (
     console.error("Error downloading QR PDF:", error);
     throw error;
   }
+};
+
+/**
+ * Public branch listing: directly call the public endpoint which does not require owner role.
+ * Used by staff/guest clients to avoid hitting the /owner API and receiving 403.
+ */
+export const getPublicTablesByBranch = async (
+  branchId: string,
+  page: number = 0,
+  size: number = 20,
+  sort?: string
+) => {
+  if (!branchId || branchId.trim() === '') {
+    throw new Error('BranchId is required');
+  }
+
+  const path = `/public/tables/branch/${encodeURIComponent(branchId.trim())}`;
+  const res = await axiosClient.get<ApiResponse<PagedTableResponse>>(path, {
+    params: { page, size, ...(sort && { sort }) },
+  });
+  return res.data.result;
 };

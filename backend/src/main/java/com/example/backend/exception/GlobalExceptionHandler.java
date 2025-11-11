@@ -57,13 +57,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ErrorCode.INVALID_REQUEST.getStatusCode()).body(apiResponse);
     }
 
-     // handle unexpected exception
-    // @ExceptionHandler(value = Exception.class)
-    // ResponseEntity<ApiResponse<Void>> handleUncategorizedException(Exception e) {
-    //     ApiResponse<Void> apiResponse = new ApiResponse<>();
-    //     apiResponse.setCode(ErrorCode.WE_COOKED.getCode());
-    //     apiResponse.setMessage(ErrorCode.WE_COOKED.getMessage());
-    //     return ResponseEntity.status(ErrorCode.WE_COOKED.getStatusCode()).body(apiResponse);
-    // }
+    // handle NullPointerException
+    @ExceptionHandler(value = NullPointerException.class)
+    ResponseEntity<ApiResponse<Void>> handleNullPointerException(NullPointerException e) {
+        ApiResponse<Void> apiResponse = new ApiResponse<>();
+        apiResponse.setCode(ErrorCode.WE_COOKED.getCode());
+        apiResponse.setMessage("Data loading error: Null pointer exception. " + (e.getMessage() != null ? e.getMessage() : ""));
+        e.printStackTrace(); // Log stack trace for debugging
+        return ResponseEntity.status(ErrorCode.WE_COOKED.getStatusCode()).body(apiResponse);
+    }
+
+    // handle unexpected exception (enable for debugging)
+    @ExceptionHandler(value = Exception.class)
+    ResponseEntity<ApiResponse<Void>> handleUncategorizedException(Exception e) {
+        ApiResponse<Void> apiResponse = new ApiResponse<>();
+        apiResponse.setCode(ErrorCode.WE_COOKED.getCode());
+        apiResponse.setMessage("Unexpected error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+        e.printStackTrace(); // Log full stack trace for debugging
+        return ResponseEntity.status(ErrorCode.WE_COOKED.getStatusCode()).body(apiResponse);
+    }
     
 }
