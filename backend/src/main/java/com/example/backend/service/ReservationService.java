@@ -20,20 +20,20 @@ import com.example.backend.entities.Reservation;
 import com.example.backend.entities.ReservationStatus;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
-import com.example.backend.repository.AreaTableRepository;
 import com.example.backend.repository.BranchRepository;
 import com.example.backend.repository.ReservationRepository;
+import com.example.backend.repository.TableRepository;
 
 @Service
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final BranchRepository branchRepository;
-    private final AreaTableRepository areaTableRepository;
+    private final TableRepository areaTableRepository;
     private final ReservationMapper reservationMapper;
 
     public ReservationService(ReservationRepository reservationRepository, BranchRepository branchRepository,
-            AreaTableRepository areaTableRepository,
+            TableRepository areaTableRepository,
             ReservationMapper reservationMapper) {
         this.reservationRepository = reservationRepository;
         this.branchRepository = branchRepository;
