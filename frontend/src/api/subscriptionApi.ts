@@ -3,6 +3,7 @@ import { ApiResponse } from "@/dto/apiResponse";
 import { SubscriptionResponse } from "@/dto/subscription.dto";
 import { SubscriptionPaymentResponse } from "@/dto/subscriptionPayment.dto";
 import { RestaurantSubscriptionOverviewDTO } from "@/dto/subscription.dto";
+
 export const subscriptionApi = {
   getOverviewForOwner: async (): Promise<RestaurantSubscriptionOverviewDTO[]> => {
     const res = await axiosClient.get<ApiResponse<RestaurantSubscriptionOverviewDTO[]>>(
@@ -12,31 +13,32 @@ export const subscriptionApi = {
   },
 
   getStats: async (): Promise<Record<string, number>> => {
-    const res = await axiosClient.get<ApiResponse<Record<string, number>>>("/subscriptions/stats");
+    const res = await axiosClient.get<ApiResponse<Record<string, number>>>(
+      "/subscriptions/stats"
+    );
     return res.data.result || {};
   },
 
   getAllActive: async (): Promise<SubscriptionResponse[]> => {
-    const res = await axiosClient.get<ApiResponse<SubscriptionResponse[]>>("/subscriptions/active");
+    const res = await axiosClient.get<ApiResponse<SubscriptionResponse[]>>(
+      "/subscriptions/active"
+    );
     return res.data.result || [];
   },
 
-  // api/subscriptionApi.ts
   getActiveByRestaurant: async (restaurantId: string): Promise<SubscriptionResponse | null> => {
     try {
       const res = await axiosClient.get<ApiResponse<SubscriptionResponse>>(
         `/subscriptions/restaurant/${restaurantId}/active`
       );
-      return res.data.result ?? null; // Luôn trả về null nếu không có
+      return res.data.result ?? null;
     } catch (error: any) {
       if (error.response?.status === 404) return null;
       throw error;
     }
   },
 
-  getPaymentHistory: async (
-    restaurantId: string
-  ): Promise<SubscriptionPaymentResponse[]> => {
+  getPaymentHistory: async (restaurantId: string): Promise<SubscriptionPaymentResponse[]> => {
     const res = await axiosClient.get<ApiResponse<SubscriptionPaymentResponse[]>>(
       `/subscriptions/restaurant/${restaurantId}/payments`
     );
@@ -50,7 +52,7 @@ export const subscriptionApi = {
       const res = await axiosClient.get<ApiResponse<SubscriptionPaymentResponse>>(
         `/subscriptions/restaurant/${restaurantId}/latest-payment`
       );
-      return res.data.result;
+      return res.data.result ?? null;
     } catch (error: any) {
       if (error.response?.status === 404) return null;
       throw error;
@@ -59,7 +61,7 @@ export const subscriptionApi = {
 
   activate: async (
     subscriptionId: string,
-    durationMonths: number
+    durationMonths: number = 1
   ): Promise<SubscriptionResponse> => {
     const res = await axiosClient.put<ApiResponse<SubscriptionResponse>>(
       `/subscriptions/${subscriptionId}/activate`,
@@ -69,35 +71,8 @@ export const subscriptionApi = {
     return res.data.result;
   },
 
-  renew: async (
-    subscriptionId: string,
-    additionalMonths: number
-  ): Promise<SubscriptionResponse> => {
-    const res = await axiosClient.put<ApiResponse<SubscriptionResponse>>(
-      `/subscriptions/${subscriptionId}/renew`,
-      null,
-      { params: { additionalMonths } }
-    );
-    return res.data.result;
-  },
-
-  cancel: async (subscriptionId: string): Promise<SubscriptionResponse> => {
-    const res = await axiosClient.put<ApiResponse<SubscriptionResponse>>(
-      `/subscriptions/${subscriptionId}/cancel`
-    );
-    return res.data.result;
-  },
-
-  changePackage: async (
-    restaurantId: string,
-    newPackageId: string
-  ): Promise<SubscriptionResponse> => {
-    const res = await axiosClient.post<ApiResponse<SubscriptionResponse>>(
-      `/subscriptions/change`,
-      null,
-      { params: { restaurantId, newPackageId } }
-    );
-    return res.data.result;
+  cancel: async (subscriptionId: string): Promise<void> => {
+    await axiosClient.put<ApiResponse<void>>(`/subscriptions/${subscriptionId}/cancel`);
   },
 
   getById: async (id: string): Promise<SubscriptionResponse> => {
@@ -106,16 +81,4 @@ export const subscriptionApi = {
     );
     return res.data.result;
   },
-
-  getByRestaurant: async (restaurantId: string) => {
-    const res = await axiosClient.get<ApiResponse<any>>(`/subscriptions/restaurant/${restaurantId}`);
-    return res.data.result ?? null;
-  },
-
-  getAllByRestaurant: async (restaurantId: string): Promise<SubscriptionResponse[]> => {
-  const res = await axiosClient.get<ApiResponse<SubscriptionResponse[]>>(
-    `/subscriptions/restaurant/${restaurantId}`
-  );
-  return res.data.result || [];
-},
 };

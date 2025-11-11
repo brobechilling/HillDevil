@@ -37,30 +37,12 @@ public class SubscriptionController {
         return res;
     }
 
-    @PutMapping("/{subscriptionId}/renew")
-    public ApiResponse<SubscriptionResponse> renewSubscription(
-            @PathVariable UUID subscriptionId,
-            @RequestParam UUID packageId) {
-        ApiResponse<SubscriptionResponse> res = new ApiResponse<>();
-        res.setResult(subscriptionService.renewSubscription(subscriptionId, packageId));
-        return res;
-    }
-
     @PutMapping("/{subscriptionId}/cancel")
     public ApiResponse<Void> cancelSubscription(@PathVariable UUID subscriptionId) {
         subscriptionService.cancelSubscription(subscriptionId);
         ApiResponse<Void> res = new ApiResponse<>();
         res.setCode(1000);
         res.setMessage("Subscription cancelled successfully");
-        return res;
-    }
-
-    @PostMapping("/change")
-    public ApiResponse<SubscriptionResponse> changePackage(
-            @RequestParam UUID restaurantId,
-            @RequestParam UUID newPackageId) {
-        ApiResponse<SubscriptionResponse> res = new ApiResponse<>();
-        res.setResult(subscriptionService.changePackage(restaurantId, newPackageId));
         return res;
     }
 

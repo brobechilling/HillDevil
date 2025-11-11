@@ -87,36 +87,6 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public SubscriptionResponse renewSubscription(UUID subscriptionId, UUID packageId) {
-        Subscription sub = subscriptionRepository.findById(subscriptionId)
-                .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
-
-        Package pack = packageRepository.findById(packageId)
-                .orElseThrow(() -> new AppException(ErrorCode.PACKAGE_NOTEXISTED));
-
-        if (!sub.getaPackage().getPackageId().equals(packageId)) {
-            sub.setaPackage(pack);
-        }
-
-        LocalDate now = LocalDate.now();
-        LocalDate newEnd = (sub.getEndDate() != null && sub.getEndDate().isAfter(now))
-                ? sub.getEndDate().plusMonths(pack.getBillingPeriod())
-                : now.plusMonths(pack.getBillingPeriod());
-        sub.setEndDate(newEnd);
-        sub.setStatus(SubscriptionStatus.PENDING_PAYMENT);
-        subscriptionRepository.save(sub);
-
-        SubscriptionPayment payment = new SubscriptionPayment();
-        payment.setSubscription(sub);
-        payment.setAmount(pack.getPrice());
-        payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.PENDING);
-        payment.setDate(Instant.now());
-        subscriptionPaymentRepository.save(payment);
-
-        return mapToResponse(sub);
-    }
-
-    @Transactional
     public SubscriptionResponse cancelSubscription(UUID subscriptionId) {
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
@@ -135,51 +105,6 @@ public class SubscriptionService {
         subscription.setUpdatedAt(Instant.now());
         Subscription saved = subscriptionRepository.save(subscription);
         return mapToResponse(saved);
-    }
-
-    @Transactional
-    public SubscriptionResponse changePackage(UUID restaurantId, UUID newPackageId) {
-        Subscription current = subscriptionRepository.findTopByRestaurant_RestaurantIdOrderByCreatedAtDesc(restaurantId)
-                .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
-
-        if (current.getStatus() != SubscriptionStatus.ACTIVE) {
-            throw new AppException(ErrorCode.SUBSCRIPTION_NOT_ACTIVE);
-        }
-
-        Package oldPack = current.getaPackage();
-        Package newPack = packageRepository.findById(newPackageId)
-                .orElseThrow(() -> new AppException(ErrorCode.PACKAGE_NOTEXISTED));
-
-        LocalDate today = LocalDate.now();
-        long remainingDays = ChronoUnit.DAYS.between(today, current.getEndDate());
-        long totalDays = ChronoUnit.DAYS.between(current.getStartDate(), current.getEndDate());
-        if (remainingDays <= 0)
-            throw new AppException(ErrorCode.SUBSCRIPTION_ALREADY_EXPIRED);
-
-        // calculate prorate
-        double credit = oldPack.getPrice() * (remainingDays / (double) totalDays);
-        double cost = newPack.getPrice() * (remainingDays / (double) totalDays);
-        int proratedAmount = (int) Math.max(cost - credit, 0);
-
-        // new subscription with PENDING_PAYMENT status
-        Subscription newSub = new Subscription();
-        newSub.setRestaurant(current.getRestaurant());
-        newSub.setaPackage(newPack);
-        newSub.setStatus(SubscriptionStatus.PENDING_PAYMENT);
-        newSub.setCreatedAt(Instant.now());
-        newSub.setStartDate(today); // start date = today
-        newSub.setEndDate(current.getEndDate()); // end date = end date of current(old) subscription
-        subscriptionRepository.save(newSub);
-
-        // create pending payment for the prorated amount
-        SubscriptionPayment payment = new SubscriptionPayment();
-        payment.setSubscription(newSub);
-        payment.setAmount(proratedAmount);
-        payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.PENDING);
-        payment.setDate(Instant.now());
-        subscriptionPaymentRepository.save(payment);
-
-        return mapToResponse(newSub);
     }
 
     // -------------------------

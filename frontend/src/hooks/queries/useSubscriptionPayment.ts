@@ -14,7 +14,7 @@ export const usePaymentStatus = (orderCode: string) => {
     enabled: !!orderCode,
     staleTime: 1000 * 30, // keep status for 30s when not polling
     refetchInterval: (query) => {
-      // ✅ Chỉ polling khi status là PENDING
+      // polling logic: stop polling if status is not PENDING
       const data = query.state.data;
       if (data?.subscriptionPaymentStatus && data.subscriptionPaymentStatus !== "PENDING") {
         return false; // Stop polling

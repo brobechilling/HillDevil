@@ -122,9 +122,14 @@ public class SubscriptionPaymentService {
 
                 if (subscription.getStatus() == SubscriptionStatus.PENDING_PAYMENT) {
                     if (subscription.getStartDate() == null) {
+                        // register subscription
                         subscription.setStartDate(LocalDate.now());
-                        subscription
-                                .setEndDate(LocalDate.now().plusMonths(subscription.getaPackage().getBillingPeriod()));
+                        subscription.setEndDate(LocalDate.now()
+                                .plusMonths(subscription.getaPackage().getBillingPeriod()));
+                    } else {
+                        // renew subscription
+                        subscription.setEndDate(subscription.getEndDate()
+                                .plusMonths(subscription.getaPackage().getBillingPeriod()));
                     }
                     subscription.setStatus(SubscriptionStatus.ACTIVE);
                     subscription.setUpdatedAt(Instant.now());
@@ -134,6 +139,12 @@ public class SubscriptionPaymentService {
                 if (restaurant != null) {
                     restaurant.setStatus(true);
                 }
+            } else {
+                payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.FAILED);
+                subscription.setStatus(SubscriptionStatus.CANCELED);
+                subscriptionRepository.save(subscription);
+                if (restaurant != null)
+                    restaurant.setStatus(false);
             }
 
             subscriptionPaymentRepository.save(payment);

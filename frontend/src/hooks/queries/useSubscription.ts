@@ -16,8 +16,8 @@ export const useActiveSubscriptionByRestaurant = (restaurantId: string) => {
   return useQuery<SubscriptionResponse | null, Error>({
     queryKey: ["subscriptions", "active", restaurantId],
     queryFn: () => subscriptionApi.getActiveByRestaurant(restaurantId),
-    enabled: !!restaurantId
-    ,staleTime: 1000 * 60 * 2, // 2 minutes
+    enabled: !!restaurantId,
+    staleTime: 1000 * 60 * 2,
     refetchOnWindowFocus: false,
   });
 };
@@ -31,7 +31,6 @@ export const useOverviewForOwner = () => {
   });
 };
 
-// 🔹 Lấy payment history theo restaurant
 export const usePaymentHistory = (restaurantId: string) => {
   return useQuery({
     queryKey: ["subscriptions", "payments", restaurantId],
@@ -69,18 +68,7 @@ export const useActivateSubscription = () => {
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["subscriptions", variables.id] });
       qc.invalidateQueries({ queryKey: ["subscriptions", "active"] });
-    },
-  });
-};
-
-export const useRenewSubscription = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, additionalMonths }: { id: string; additionalMonths: number }) =>
-      subscriptionApi.renew(id, additionalMonths),
-    onSuccess: (_, variables) => {
-      qc.invalidateQueries({ queryKey: ["subscriptions", variables.id] });
-      qc.invalidateQueries({ queryKey: ["subscriptions", "active"] });
+      qc.invalidateQueries({ queryKey: ["subscriptions", "overview"] });
     },
   });
 };
@@ -92,33 +80,7 @@ export const useCancelSubscription = () => {
     onSuccess: (_, subscriptionId) => {
       qc.invalidateQueries({ queryKey: ["subscriptions", subscriptionId] });
       qc.invalidateQueries({ queryKey: ["subscriptions", "overview"] });
+      qc.invalidateQueries({ queryKey: ["subscriptions", "active"] });
     },
-  });
-};
-
-export const useChangePackage = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      restaurantId,
-      newPackageId,
-    }: {
-      restaurantId: string;
-      newPackageId: string;
-    }) => subscriptionApi.changePackage(restaurantId, newPackageId),
-    onSuccess: (_, variables) => {
-      qc.invalidateQueries({ queryKey: ["subscriptions", "active", variables.restaurantId] });
-      qc.invalidateQueries({ queryKey: ["subscriptions", "overview"] });
-    },
-  });
-};
-
-export const useAllSubscriptionsByRestaurant = (restaurantId: string) => {
-  return useQuery<SubscriptionResponse[], Error>({
-    queryKey: ['subscriptions', 'all', restaurantId],
-    queryFn: () => subscriptionApi.getAllByRestaurant(restaurantId),
-    enabled: !!restaurantId,
-    staleTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: false,
   });
 };
