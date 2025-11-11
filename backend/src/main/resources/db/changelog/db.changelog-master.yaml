@@ -54,3 +54,9 @@ databaseChangeLog:
       file: fix-packages-features-changelog.sql
       relativeToChangelogFile: true
 
+
+  - include:
+      file: alter-reservation-area-table-changelog.sql
+      relativeToChangelogFile: true
+
+

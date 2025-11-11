@@ -16,56 +16,54 @@ import {
 import { useMemo } from 'react';
 import { TableDTO, CreateTableRequest, TableStatus, QrCodeJsonResponse } from '@/dto/table.dto';
 import { useSessionStore } from '@/store/sessionStore';
+import { isStaffAccountDTO } from '@/utils/typeCast';
+import { getPublicTablesByBranch } from '@/api/tableApi';
 
-/**
- * Query hook: Lấy danh sách tables theo branch (có phân trang)
- */
 export const useTables = (
   branchId: string | undefined,
   page: number = 0,
   size: number = 20,
   sort?: string
 ) => {
-  // Helper function to validate UUID format
   const isValidUUID = (str: string): boolean => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
   };
 
-  // Kiểm tra token và branchId hợp lệ (phải là UUID format)
   const isValidBranchId = useMemo(() => {
     if (!branchId || typeof branchId !== 'string') return false;
-    const trimmed = branchId.trim();
-    return trimmed !== '' && isValidUUID(trimmed);
+    return branchId.trim() !== '';
   }, [branchId]);
-  
+
   const { token } = useSessionStore();
-  
+
   const hasToken = useMemo(() => {
     return !!token && token.trim() !== '';
-  }, []); // Check token mỗi lần component render
-  
+  }, [token]);
+
   return useQuery({
     queryKey: ['tables', branchId, page, size, sort],
     queryFn: () => {
-      // Double check trước khi gọi API
       if (!branchId || branchId.trim() === '') {
         throw new Error('BranchId is required');
       }
       if (!isValidUUID(branchId.trim())) {
         throw new Error('BranchId must be a valid UUID');
       }
+
+      const { user } = useSessionStore.getState();
+      if (isStaffAccountDTO(user) || !hasToken) {
+        return getPublicTablesByBranch(branchId, page, size, sort);
+      }
+
       return getTablesByBranch(branchId, page, size, sort);
     },
-    enabled: isValidBranchId && hasToken,
-    retry: false, // Không retry để tránh spam requests khi có lỗi
-    throwOnError: false, // Không throw error để tránh uncaught promise
+    enabled: isValidBranchId,
+    retry: false,
+    throwOnError: false,
   });
 };
 
-/**
- * Query hook: Lấy thông tin chi tiết một table
- */
 export const useTable = (tableId: string | undefined) => {
   return useQuery({
     queryKey: ['table', tableId],
@@ -74,9 +72,6 @@ export const useTable = (tableId: string | undefined) => {
   });
 };
 
-/**
- * Query hook: Lấy danh sách tables theo area
- */
 export const useTablesByArea = (areaId: string | undefined) => {
   return useQuery({
     queryKey: ['tables', 'area', areaId],
@@ -85,9 +80,6 @@ export const useTablesByArea = (areaId: string | undefined) => {
   });
 };
 
-/**
- * Mutation hook: Tạo table mới
- */
 export const useCreateTable = () => {
   const queryClient = useQueryClient();
 
@@ -130,10 +122,10 @@ export const useUpdateTable = () => {
           };
         }
       );
-      
+
       // Also update the specific table query
       queryClient.setQueryData(['table', updatedTable.id], updatedTable);
-      
+
       // Invalidate queries to refetch in background (but cache already updated above)
       queryClient.invalidateQueries({
         queryKey: ['table', updatedTable.id],
@@ -168,10 +160,10 @@ export const useUpdateTableStatus = () => {
           };
         }
       );
-      
+
       // Also update the specific table query
       queryClient.setQueryData(['table', updatedTable.id], updatedTable);
-      
+
       // Invalidate queries to refetch in background (but cache already updated above)
       queryClient.invalidateQueries({
         queryKey: ['table', updatedTable.id],
@@ -248,11 +240,11 @@ export const useDownloadTableQr = () => {
  */
 export const useExportBranchQrPdf = () => {
   return useMutation({
-    mutationFn: ({ branchId, areaId, cols, sizePt }: { 
-      branchId: string; 
-      areaId?: string; 
-      cols?: number; 
-      sizePt?: number 
+    mutationFn: ({ branchId, areaId, cols, sizePt }: {
+      branchId: string;
+      areaId?: string;
+      cols?: number;
+      sizePt?: number
     }) =>
       downloadBranchQrPdf(branchId, areaId, cols || 3, sizePt || 200),
   });

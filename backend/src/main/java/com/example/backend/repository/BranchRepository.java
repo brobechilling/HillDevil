@@ -15,7 +15,7 @@ import com.example.backend.entities.Branch;
 @Repository
 public interface BranchRepository extends JpaRepository<Branch, UUID> {
     List<Branch> findByRestaurant_RestaurantId(UUID restaurantId);
-
+    List<Branch> findByRestaurant_RestaurantIdAndIsActiveTrue(UUID restaurantId);
     @Modifying
     @Query("UPDATE Branch b SET b.isActive = false, b.updatedAt = CURRENT_TIMESTAMP WHERE b.restaurant.restaurantId = :restaurantId")
     void deactivateAllByRestaurantId(@Param("restaurantId") UUID restaurantId);

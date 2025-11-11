@@ -15,4 +15,5 @@ public interface BranchMenuItemRepository extends JpaRepository<BranchMenuItem, 
     @Query("SELECT b.restaurant.restaurantId FROM Branch b WHERE b.branchId = :branchId")
     UUID findRestaurantIdByBranchId(@Param("branchId") UUID branchId);
     Optional<BranchMenuItem> findByBranch_BranchIdAndMenuItem_MenuItemId(UUID branchId, UUID menuItemId);
+    List<BranchMenuItem> findByBranch_BranchId(UUID branchId);
 }

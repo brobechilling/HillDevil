@@ -16,34 +16,33 @@ import com.example.backend.dto.response.TableResponse;
 import com.example.backend.entities.Area;
 import com.example.backend.entities.AreaTable;
 import com.example.backend.entities.TableStatus;
-import com.example.backend.mapper.TableMapper;
+import com.example.backend.exception.AppException;
+import com.example.backend.exception.ErrorCode;
 import com.example.backend.repository.AreaRepository;
-import com.example.backend.repository.TableRepository;
+import com.example.backend.repository.AreaTableRepository;
 import com.example.backend.utils.QrCodeGenerator;
 import com.example.backend.utils.QrPdfExporter;
 import com.example.backend.utils.QrPdfExporter.QrItem;
+import com.example.backend.entities.Reservation;
+import com.example.backend.entities.ReservationStatus;
+import com.example.backend.mapper.TableMapper;
 
 @Service
 public class TableService {
 
-    private final TableRepository tableRepository;
+    private final AreaTableRepository tableRepository;
     private final AreaRepository areaRepository;
-    private final TableMapper tableMapper;
     private final AppProperties appProps;
+    private final TableMapper tableMapper;
 
-    public TableService(TableRepository tableRepository, 
-                       AreaRepository areaRepository,
-                       TableMapper tableMapper,
-                       AppProperties appProps) {
+    public TableService(AreaTableRepository tableRepository, AreaRepository areaRepository, AppProperties appProps,
+            TableMapper tableMapper) {
         this.tableRepository = tableRepository;
         this.areaRepository = areaRepository;
-        this.tableMapper = tableMapper;
         this.appProps = appProps;
+        this.tableMapper = tableMapper;
     }
 
-    /**
-     * Lấy danh sách tables của owner theo branch (có phân trang)
-     */
     @Transactional(readOnly = true)
     public Page<TableResponse> getOwnerTables(UUID branchId, int page, int size, String sort) {
         Pageable pageable = buildPageable(page, size, sort);
@@ -266,64 +265,26 @@ public class TableService {
         Area area = areaRepository.findById(req.getAreaId())
                 .orElseThrow(() -> new IllegalArgumentException("Area not found"));
 
-        // Map DTO sang entity bằng MapStruct
-        AreaTable table = tableMapper.toEntity(req);
+        AreaTable table = new AreaTable();
         table.setArea(area);
+        table.setTag(req.getTag());
+        table.setCapacity(req.getCapacity());
         table.setStatus(TableStatus.FREE);
 
-        table = tableRepository.save(table);
-        
-        return tableMapper.toTableResponse(table);
+        table = tableRepository.save(table); // để có UUID
+
+        // Không lưu Base64 vào DB theo phương án A (nhẹ DB)
+        return new TableResponse(
+                table.getAreaTableId(),
+                table.getTag(),
+                table.getCapacity(),
+                table.getStatus(),
+                area.getAreaId(),
+                area.getName());
     }
 
-    /**
-     * Cập nhật thông tin table
-     */
-    @Transactional
-    public TableResponse updateTable(UUID tableId, CreateTableRequest req) {
-        AreaTable table = tableRepository.findById(tableId)
-                .orElseThrow(() -> new NoSuchElementException("Table not found"));
-        
-        // Update entity từ request bằng MapStruct
-        tableMapper.updateEntityFromRequest(req, table);
-        
-        // Update area nếu areaId được cung cấp
-        if (req.getAreaId() != null) {
-            Area newArea = areaRepository.findById(req.getAreaId())
-                    .orElseThrow(() -> new IllegalArgumentException("Area not found with id: " + req.getAreaId()));
-            table.setArea(newArea);
-        }
-        
-        table = tableRepository.save(table);
-        
-        // Force initialize area để đảm bảo areaName được load khi map
-        if (table.getArea() != null) {
-            table.getArea().getName(); // Trigger lazy loading
-        }
-
-        return tableMapper.toTableResponse(table);
-    }
-
-    /**
-     * Cập nhật trạng thái table
-     */
-    @Transactional
-    public TableResponse updateTableStatus(UUID tableId, TableStatus status) {
-        AreaTable table = tableRepository.findById(tableId)
-                .orElseThrow(() -> new NoSuchElementException("Table not found"));
-        
-        table.setStatus(status);
-        table = tableRepository.save(table);
-        
-        return tableMapper.toTableResponse(table);
-    }
-
-    /**
-     * Lấy QR code PNG của table
-     */
     @Transactional(readOnly = true)
     public byte[] getTableQrPng(UUID tableId, int size) {
-        System.out.println("Getting QR for tableId: " + tableId); //DEBUG
         AreaTable t = tableRepository.findById(tableId)
                 .orElseThrow(() -> new NoSuchElementException("Table not found"));
 
@@ -331,9 +292,6 @@ public class TableService {
         return QrCodeGenerator.toPngBytes(orderUrl, Math.max(size, 128));
     }
 
-    /**
-     * Export QR codes PDF cho branch/area
-     */
     @Transactional(readOnly = true)
     public byte[] exportBranchQrPdf(UUID branchId, UUID areaId, int cols, int sizePt) {
         List<AreaTable> tables = tableRepository.findAllByBranchAndArea(branchId, areaId);
@@ -354,32 +312,12 @@ public class TableService {
         return QrPdfExporter.export(title, items, Math.max(cols, 2), sizePt);
     }
 
-    /**
-     * Xóa table
-     */
-    @Transactional
-    public void deleteTable(UUID tableId) {
-        AreaTable table = tableRepository.findById(tableId)
-                .orElseThrow(() -> new NoSuchElementException("Table not found"));
-        
-        // Optional: kiểm tra xem bàn có đang được sử dụng không
-        if (!table.getReservations().isEmpty()) {
-            throw new IllegalStateException("Cannot delete table with active reservations");
-        }
-        
-        tableRepository.delete(table);
-    }
-
-    // ==================== PRIVATE HELPERS ====================
-
     private String buildOrderUrl(UUID tableId) {
         String base = appProps.getBaseUrl();
-        if (base == null || base.isBlank()) {
-            base = "http://localhost:5000";
-        }
-        if (base.endsWith("/")) {
+        if (base == null || base.isBlank())
+            base = "http://localhost:5000"; // fallback khớp YAML
+        if (base.endsWith("/"))
             base = base.substring(0, base.length() - 1);
-        }
         return base + "/order?tableId=" + tableId;
     }
 
@@ -387,13 +325,78 @@ public class TableService {
         if (sort == null || sort.isBlank()) {
             return PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "tag"));
         }
-        
         String[] parts = sort.split(",", 2);
         String field = parts[0].trim();
         Sort.Direction dir = (parts.length > 1 && "desc".equalsIgnoreCase(parts[1].trim()))
                 ? Sort.Direction.DESC
                 : Sort.Direction.ASC;
-        
         return PageRequest.of(page, size, Sort.by(dir, field));
     }
+
+    @Transactional
+    public void deleteTable(UUID tableId) {
+        AreaTable table = tableRepository.findById(tableId)
+                .orElseThrow(() -> new NoSuchElementException("Table not found"));
+        tableRepository.delete(table);
+    }
+
+    // --- Public lookup helpers used by PublicTableController ---
+    @Transactional(readOnly = true)
+    public TableResponse getTableById(UUID tableId) {
+        AreaTable t = tableRepository.findById(tableId)
+                .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
+        return toTableResponse(t);
+    }
+
+    @Transactional(readOnly = true)
+    public TableResponse getTableByTag(String tag) {
+        AreaTable t = tableRepository.findByTag(tag)
+                .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
+        return toTableResponse(t);
+    }
+
+    @Transactional(readOnly = true)
+    public TableResponse getTableByBranchIdAndTableId(UUID branchId, UUID tableId) {
+        AreaTable t = tableRepository.findById(tableId)
+                .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
+        if (t.getArea() == null || t.getArea().getBranch() == null
+                || !branchId.equals(t.getArea().getBranch().getBranchId())) {
+            throw new AppException(ErrorCode.TABLE_NOT_FOUND);
+        }
+        return toTableResponse(t);
+    }
+
+    @Transactional(readOnly = true)
+    public TableResponse getTableByAreaNameAndTag(String areaName, String tag) {
+        AreaTable t = tableRepository.findByAreaNameAndTag(areaName, tag)
+                .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
+        return toTableResponse(t);
+    }
+
+    private TableResponse toTableResponse(AreaTable t) {
+        // Use MapStruct mapper for standard field mapping and then apply small custom
+        // logic
+        TableResponse r = tableMapper.toTableResponse(t);
+
+        // Note: removed reservedBy population — field is not stored in DB anymore.
+
+        return r;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TableResponse> getPublicTablesSimple(UUID branchId, int page, int size, String sort) {
+        java.util.List<AreaTable> tables = tableRepository.findAllByBranchAndArea(branchId, null);
+        java.util.List<TableResponse> dtos = tables.stream().map(this::toTableResponse)
+                .collect(java.util.stream.Collectors.toList());
+
+        if (sort == null || sort.isBlank()) {
+            // default already ordered by repository method
+        }
+
+        int from = Math.max(0, page * size);
+        int to = Math.min(dtos.size(), from + size);
+        java.util.List<TableResponse> pageContent = from <= to ? dtos.subList(from, to) : java.util.List.of();
+        return new PageImpl<>(pageContent, PageRequest.of(page, size), dtos.size());
+    }
+
 }

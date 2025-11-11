@@ -22,7 +22,6 @@ public interface TableMapper {
     @Mapping(source = "tag", target = "tag")
     @Mapping(source = "capacity", target = "capacity")
     @Mapping(source = "status", target = "status")
-    @Mapping(target = "reservedBy", ignore = true) // Set thủ công trong service
     @Mapping(source = "area.areaId", target = "areaId")
     @Mapping(source = "area.name", target = "areaName")
     TableResponse toTableResponse(AreaTable table);
