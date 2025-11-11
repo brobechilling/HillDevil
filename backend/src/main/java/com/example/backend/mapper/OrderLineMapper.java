@@ -13,7 +13,4 @@ public interface OrderLineMapper {
     // @Mapping(source = "orderLineStatus", target = "orderLineStatus")
     // OrderLineDTO toOrderLineDTO(OrderLine orderLine);
 
-    @Mapping(target = "order", ignore = true)
-    OrderLine createOrderLine(CreateOrderLineRequest createOrderLineRequest);
-
 }

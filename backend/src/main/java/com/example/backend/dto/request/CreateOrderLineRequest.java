@@ -8,19 +8,20 @@ import java.util.UUID;
 
 public class CreateOrderLineRequest {
 
-    private UUID orderId;    
+    // is this stateless
+    // private UUID orderId;    
     private UUID areaTableId;
     private OrderLineStatus orderLineStatus = OrderLineStatus.PENDING;
     private List<CreateOrderItemRequest> orderItems;
     private BigDecimal totalPrice;
 
-    public UUID getOrderId() {
-        return orderId;
-    }
+    // public UUID getOrderId() {
+    //     return orderId;
+    // }
 
-    public void setOrderId(UUID orderId) {
-        this.orderId = orderId;
-    }
+    // public void setOrderId(UUID orderId) {
+    //     this.orderId = orderId;
+    // }
 
     public OrderLineStatus getOrderLineStatus() {
         return orderLineStatus;
