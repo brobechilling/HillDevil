@@ -207,8 +207,15 @@ export default function RestaurantInfoPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="publicUrl">Public URL</Label>
-              <Input id="publicUrl" value={form.publicUrl} onChange={(e) => handleChange('publicUrl', e.target.value)} />
+              <Input
+                id="publicUrl"
+                value={form.publicUrl}
+                onChange={(e) => handleChange('publicUrl', e.target.value)}
+                readOnly
+                className="cursor-not-allowed bg-muted"
+              />
             </div>
+
             <div className="md:col-span-2 space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea id="description" value={form.description} onChange={(e) => handleChange('description', e.target.value)} />

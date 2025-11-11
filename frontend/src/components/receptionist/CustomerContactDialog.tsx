@@ -9,7 +9,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useBookingStore, Booking } from '@/store/bookingStore';
+import type { Booking } from '@/store/bookingStore';
+import { useCancelReservation } from '@/hooks/queries/usePendingReservations';
 import { toast } from '@/hooks/use-toast';
 import { Phone, Mail, MessageSquare } from 'lucide-react';
 
@@ -27,8 +28,8 @@ export function CustomerContactDialog({
   onCreateNewReservation,
 }: CustomerContactDialogProps) {
   const [notes, setNotes] = useState('');
-  const [customerResponse, setCustomerResponse] = useState<'agree' | 'decline' | null>(null);
-  const { declineBooking } = useBookingStore();
+  const [customerResponse, setCustomerResponse] = useState<'agree' | 'cancel' | null>(null);
+  const cancelMutation = useCancelReservation();
 
   const handleCallCustomer = () => {
     toast({
@@ -55,13 +56,20 @@ export function CustomerContactDialog({
   };
 
   const handleCustomerDeclines = () => {
-    declineBooking(booking.id);
-    toast({
-      title: 'Reservation Declined',
-      description: 'The reservation has been marked as declined.',
-      variant: 'destructive',
-    });
-    onOpenChange(false);
+    (async () => {
+      try {
+        await cancelMutation.mutateAsync(booking.id as string);
+        toast({
+          title: 'Reservation Cancelled',
+          description: 'The reservation has been marked as cancelled.',
+          variant: 'destructive',
+        });
+        onOpenChange(false);
+      } catch (err: any) {
+        console.error('Cancel reservation failed', err);
+        toast({ title: 'Cancel Failed', description: err?.response?.data?.message || 'Please try again later.' });
+      }
+    })();
   };
 
   return (
@@ -123,7 +131,7 @@ export function CustomerContactDialog({
                 onClick={handleCustomerDeclines}
                 className="w-full"
               >
-                Customer Declines
+                Customer Cancels
               </Button>
             </div>
           </div>

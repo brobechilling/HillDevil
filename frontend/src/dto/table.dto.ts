@@ -5,7 +5,6 @@ export interface TableDTO {
   tag: string;
   capacity: number;
   status: TableStatus;
-  reservedBy: string | null;
   areaId?: string;
   areaName?: string;
 }

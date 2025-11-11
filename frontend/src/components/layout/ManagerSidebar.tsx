@@ -22,49 +22,49 @@ import { isStaffAccountDTO, isUserDTO } from '@/utils/typeCast';
 import { useBranch } from '@/hooks/queries/useBranches';
 
 const menuItems = [
-  { 
+  {
     id: 'overview',
     path: '/dashboard/manager',
     icon: LayoutDashboard,
     label: 'Overview',
     description: 'Dashboard summary'
   },
-  { 
+  {
     id: 'branch',
     path: '/dashboard/manager/branch',
     icon: Building2,
     label: 'Branch Info',
     description: 'Branch details'
   },
-  { 
+  {
     id: 'tables',
     path: '/dashboard/manager/tables',
     icon: Table2,
     label: 'Tables',
     description: 'Table management'
   },
-  { 
+  {
     id: 'menu',
     path: '/dashboard/manager/menu',
     icon: ChefHat,
     label: 'Menu',
     description: 'Menu management'
   },
-  { 
+  {
     id: 'bills',
     path: '/dashboard/manager/bills',
     icon: Receipt,
     label: 'Bills',
     description: 'View bill history'
   },
-  { 
+  {
     id: 'staff',
     path: '/dashboard/manager/staff',
     icon: Users,
     label: 'Staff',
     description: 'Staff management'
   },
-  { 
+  {
     id: 'promotions',
     path: '/dashboard/manager/promotions',
     icon: Tag,
@@ -81,7 +81,7 @@ export const ManagerSidebar = () => {
   // TODO: test get branchId from state
   const branchIdFromStore = isStaffAccountDTO(user) ? user.branchId : "";
   // branchIdFromState is get when owner navigate to manager dashboard
-  const { branchId: branchIdFromState } =location.state || {};
+  const { branchId: branchIdFromState } = location.state || {};
   const { data: branch } = useBranch(branchIdFromState || branchIdFromStore);
 
   const handleLogout = () => {
@@ -174,7 +174,7 @@ export const ManagerSidebar = () => {
         <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-card">
           <Avatar className="h-10 w-10">
             <AvatarFallback className="gradient-primary text-primary-foreground">
-              
+
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">

@@ -70,10 +70,10 @@ type BranchLite = {
 };
 
 const GuestLanding = () => {
-  const { shortCode, tableId, areaName, tableName, branchId } = useParams<{ 
-    shortCode?: string; 
-    tableId?: string; 
-    areaName?: string; 
+  const { shortCode, tableId, areaName, tableName, branchId } = useParams<{
+    shortCode?: string;
+    tableId?: string;
+    areaName?: string;
     tableName?: string;
     branchId?: string; // New format: /t/:branchId/:tableId
   }>();
@@ -96,12 +96,12 @@ const GuestLanding = () => {
     const loadBranchData = async () => {
       try {
         setLoading(true);
-        
+
         // If we have tableName/tableId but no shortCode (from /t/:areaName/:tableName, /t/:branchId/:tableId, or /t/:tableName route), fetch table first to get branchId
         if (actualTableIdentifier && !shortCode) {
           try {
             let tableApiUrl = '';
-            
+
             // NEW FORMAT: /t/:branchId/:tableId - most reliable, unique, prevents conflicts
             if (branchId && tableId) {
               tableApiUrl = `http://localhost:8080/api/public/tables/${encodeURIComponent(branchId)}/${encodeURIComponent(tableId)}`;
@@ -109,15 +109,16 @@ const GuestLanding = () => {
             // OLD FORMAT: /t/:areaName/:tableName - for backward compatibility
             else if (areaName && tableName) {
               tableApiUrl = `http://localhost:8080/api/public/tables/${encodeURIComponent(areaName)}/${encodeURIComponent(tableName)}`;
-            } 
+            }
             // LEGACY FORMAT: /t/:tableId or /t/:tableName - for backward compatibility
             else {
-              tableApiUrl = `http://localhost:8080/api/public/tables/${encodeURIComponent(actualTableIdentifier)}`;
+              // Legacy single-identifier lookup moved to /id/{identifier}
+              tableApiUrl = `http://localhost:8080/api/public/tables/id/${encodeURIComponent(actualTableIdentifier)}`;
             }
-            
+
             // Fetch table from public endpoint - supports both UUID and table name
             const tableResponse = await fetch(tableApiUrl);
-            
+
             if (!tableResponse.ok) {
               // Handle error response from backend
               let errorMessage = `Failed to load table: ${tableResponse.status} ${tableResponse.statusText}`;
@@ -127,7 +128,7 @@ const GuestLanding = () => {
               } catch (e) {
                 // Ignore parse errors
               }
-              
+
               // For new format with branchId, we can still try to load branch directly
               if (branchId && tableId) {
                 try {
@@ -144,11 +145,11 @@ const GuestLanding = () => {
                       shortCode: branchId,
                     };
                     setBranch(branchData);
-                    
+
                     // Load menu
                     // const menuResponse = await menuApi.getAll(branchData.id);
                     // setMenuItems(menuResponse.data);
-                    
+
                     setFlowState('menu');
                     setOrderType('now');
                     setLoading(false);
@@ -161,7 +162,7 @@ const GuestLanding = () => {
                 throw new Error(errorMessage);
               }
             }
-            
+
             // Parse successful response
             const tableApiResponse = await tableResponse.json();
             if (tableApiResponse.result?.branchId) {
@@ -180,14 +181,14 @@ const GuestLanding = () => {
                   shortCode: resolvedBranchId,
                 };
                 setBranch(branchData);
-                
+
                 // Load table number
                 setTableNumber(tableApiResponse.result.tag || '');
-                
+
                 // Load menu
                 // const menuResponse = await menuApi.getAll(branchData.id);
                 // setMenuItems(menuResponse.data);
-                
+
                 setFlowState('menu');
                 setOrderType('now');
                 setLoading(false);
@@ -204,15 +205,15 @@ const GuestLanding = () => {
             throw new Error('Could not determine branch from table identifier. Please use full URL format.');
           }
         }
-        
+
         if (!shortCode && !tableId) throw new Error('Branch code or table ID not provided');
         if (!shortCode) throw new Error('Branch code not provided');
 
         // Check if shortCode is a UUID (from QR code with branchId)
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(shortCode);
-        
+
         let branchData: any = null;
-        
+
         if (isUUID) {
           // If shortCode is actually a UUID (branchId), try to fetch from API first
           try {
@@ -232,7 +233,7 @@ const GuestLanding = () => {
           } catch (apiError) {
             // Fallback to localStorage
           }
-          
+
           // If API failed, try localStorage by ID
           if (!branchData) {
             const branches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
@@ -243,11 +244,11 @@ const GuestLanding = () => {
           const branches = JSON.parse(localStorage.getItem('mock_branches') || '[]');
           branchData = branches.find((b: any) => b.shortCode === shortCode);
         }
-        
+
         if (!branchData) {
           throw new Error('Branch not found');
         }
-        
+
         setBranch(branchData);
 
         if (actualTableIdentifier) {
