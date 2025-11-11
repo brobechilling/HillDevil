@@ -19,7 +19,7 @@ import com.example.backend.entities.TableStatus;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.repository.AreaRepository;
-import com.example.backend.repository.AreaTableRepository;
+import com.example.backend.repository.TableRepository;
 import com.example.backend.utils.QrCodeGenerator;
 import com.example.backend.utils.QrPdfExporter;
 import com.example.backend.utils.QrPdfExporter.QrItem;
@@ -30,12 +30,12 @@ import com.example.backend.mapper.TableMapper;
 @Service
 public class TableService {
 
-    private final AreaTableRepository tableRepository;
+    private final TableRepository tableRepository;
     private final AreaRepository areaRepository;
     private final AppProperties appProps;
     private final TableMapper tableMapper;
 
-    public TableService(AreaTableRepository tableRepository, AreaRepository areaRepository, AppProperties appProps,
+    public TableService(TableRepository tableRepository, AreaRepository areaRepository, AppProperties appProps,
             TableMapper tableMapper) {
         this.tableRepository = tableRepository;
         this.areaRepository = areaRepository;
@@ -61,13 +61,13 @@ public class TableService {
         TableResponse response = tableMapper.toTableResponse(table);
         
         // Set reservedBy nếu có reservation RESERVED
-        String reservedBy = table.getReservations().stream()
-                .filter(r -> "RESERVED".equals(r.getStatus().toString()))
-                .findFirst()
-                .map(r -> r.getCustomerName())
-                .orElse(null);
+        // String reservedBy = table.getReservations().stream()
+        //         .filter(r -> "RESERVED".equals(r.getStatus().toString()))
+        //         .findFirst()
+        //         .map(r -> r.getCustomerName())
+        //         .orElse(null);
         
-        response.setReservedBy(reservedBy);
+        // response.setReservedBy(reservedBy);
         
         // Set branchId từ area.branch for short URL support
         if (table.getArea() != null && table.getArea().getBranch() != null) {
@@ -210,17 +210,17 @@ public class TableService {
             
             // Set reservedBy nếu có reservation RESERVED
             // Reservations should be loaded by JOIN FETCH, but handle gracefully if not
-            try {
-                String reservedBy = table.getReservations().stream()
-                        .filter(r -> r != null && "RESERVED".equals(r.getStatus().toString()))
-                        .findFirst()
-                        .map(r -> r.getCustomerName())
-                        .orElse(null);
-                response.setReservedBy(reservedBy);
-            } catch (Exception e) {
-                // If reservations can't be accessed, just set null
-                response.setReservedBy(null);
-            }
+            // try {
+            //     String reservedBy = table.getReservations().stream()
+            //             .filter(r -> r != null && "RESERVED".equals(r.getStatus().toString()))
+            //             .findFirst()
+            //             .map(r -> r.getCustomerName())
+            //             .orElse(null);
+            //     response.setReservedBy(reservedBy);
+            // } catch (Exception e) {
+            //     // If reservations can't be accessed, just set null
+            //     response.setReservedBy(null);
+            // }
             
             // Set branchId từ area.branch for short URL support
             // This should already be set by MapStruct, but set it explicitly to be safe
@@ -245,13 +245,13 @@ public class TableService {
                     TableResponse response = tableMapper.toTableResponse(table);
                     
                     // Set reservedBy nếu có
-                    String reservedBy = table.getReservations().stream()
-                            .filter(r -> "RESERVED".equals(r.getStatus().toString()))
-                            .findFirst()
-                            .map(r -> r.getCustomerName())
-                            .orElse(null);
+                    // String reservedBy = table.getReservations().stream()
+                    //         .filter(r -> "RESERVED".equals(r.getStatus().toString()))
+                    //         .findFirst()
+                    //         .map(r -> r.getCustomerName())
+                    //         .orElse(null);
                     
-                    response.setReservedBy(reservedBy);
+                    // response.setReservedBy(reservedBy);
                     return response;
                 })
                 .collect(Collectors.toList());
@@ -340,38 +340,6 @@ public class TableService {
         tableRepository.delete(table);
     }
 
-    // --- Public lookup helpers used by PublicTableController ---
-    @Transactional(readOnly = true)
-    public TableResponse getTableById(UUID tableId) {
-        AreaTable t = tableRepository.findById(tableId)
-                .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
-        return toTableResponse(t);
-    }
-
-    @Transactional(readOnly = true)
-    public TableResponse getTableByTag(String tag) {
-        AreaTable t = tableRepository.findByTag(tag)
-                .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
-        return toTableResponse(t);
-    }
-
-    @Transactional(readOnly = true)
-    public TableResponse getTableByBranchIdAndTableId(UUID branchId, UUID tableId) {
-        AreaTable t = tableRepository.findById(tableId)
-                .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
-        if (t.getArea() == null || t.getArea().getBranch() == null
-                || !branchId.equals(t.getArea().getBranch().getBranchId())) {
-            throw new AppException(ErrorCode.TABLE_NOT_FOUND);
-        }
-        return toTableResponse(t);
-    }
-
-    @Transactional(readOnly = true)
-    public TableResponse getTableByAreaNameAndTag(String areaName, String tag) {
-        AreaTable t = tableRepository.findByAreaNameAndTag(areaName, tag)
-                .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
-        return toTableResponse(t);
-    }
 
     private TableResponse toTableResponse(AreaTable t) {
         // Use MapStruct mapper for standard field mapping and then apply small custom
