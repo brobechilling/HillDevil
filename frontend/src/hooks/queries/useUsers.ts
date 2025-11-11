@@ -1,4 +1,4 @@
-import { changePassword, forgetPassword, getUsers, sendMailVerification, setUserStatus, updateUser, validateOTP } from "@/api/userApi";
+import { changePassword, forgetPassword, getUsers, sendMailVerification, setUserStatus, updateUser, validateOTP, getAllUsers } from "@/api/userApi";
 import { PageResponse } from "@/dto/pageResponse";
 import { UserDTO } from "@/dto/user.dto";
 import { useSessionStore } from "@/store/sessionStore";
@@ -93,3 +93,11 @@ export const useForgetPassword = () => {
   });
 };
 
+export const useAllUsers = () => {
+  return useQuery<UserDTO[]>({
+    queryKey: ['all-users'],
+    queryFn: () => getAllUsers(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+}

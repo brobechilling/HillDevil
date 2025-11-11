@@ -51,15 +51,6 @@ export const useLatestPaymentStatus = (restaurantId: string) => {
   });
 };
 
-export const useSubscriptionStats = () => {
-  return useQuery({
-    queryKey: ["subscriptions", "stats"],
-    queryFn: () => subscriptionApi.getStats(),
-    staleTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: false,
-  });
-};
-
 export const useActivateSubscription = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -82,5 +73,14 @@ export const useCancelSubscription = () => {
       qc.invalidateQueries({ queryKey: ["subscriptions", "overview"] });
       qc.invalidateQueries({ queryKey: ["subscriptions", "active"] });
     },
+  });
+};
+
+export const useActivePackageStats = () => {
+  return useQuery({
+    queryKey: ["subscriptions", "active-package-stats"],
+    queryFn: () => subscriptionApi.getActivePackageStats(),
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 };

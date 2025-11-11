@@ -8,6 +8,7 @@ export const useCreateSubscriptionPayment = () => {
 };
 
 export const usePaymentStatus = (orderCode: string) => {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ["payment-status", orderCode],
     queryFn: () => subscriptionPaymentApi.getStatus(orderCode),
@@ -17,6 +18,9 @@ export const usePaymentStatus = (orderCode: string) => {
       // polling logic: stop polling if status is not PENDING
       const data = query.state.data;
       if (data?.subscriptionPaymentStatus && data.subscriptionPaymentStatus !== "PENDING") {
+        qc.invalidateQueries({ queryKey: ["subscriptions", "active-package-stats"] });
+        qc.invalidateQueries({ queryKey: ["subscriptions", "overview"] });
+        qc.invalidateQueries({ queryKey: ["subscriptions", "payments"] });
         return false; // Stop polling
       }
       return 3000; // Poll every 3 seconds
@@ -30,5 +34,14 @@ export const useCancelPayment = () => {
   return useMutation({
     mutationFn: (orderCode: string) => subscriptionPaymentApi.cancel(orderCode),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["payment-status"] }),
+  });
+};
+
+export const useGetTop5SpendingUsers = () => {
+  return useQuery({
+    queryKey: ["subscription-payments", "top-spenders"],
+    queryFn: () => subscriptionPaymentApi.getTop5SpendingUsers(),
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 };

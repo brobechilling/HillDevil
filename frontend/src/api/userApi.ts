@@ -9,6 +9,11 @@ export const register = async (signupRequest: SignupRequest) => {
   return res.data.result;
 }
 
+export const getAllUsers = async () => {
+  const res = await axiosClient.get<ApiResponse<UserDTO[]>>("/users");
+  return res.data.result;
+};
+
 export const getUsers = async (page: number = 1, size: number = 2) => {
   const res = await axiosClient.get<ApiResponse<PageResponse<UserDTO>>>(
     `/users/paginated`,

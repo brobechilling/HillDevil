@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import com.example.backend.dto.TopSpenderDTO;
 import com.example.backend.dto.response.SubscriptionPaymentResponse;
 import com.example.backend.entities.*;
 import com.example.backend.entities.Package;
@@ -15,9 +16,13 @@ import vn.payos.type.CheckoutResponseData;
 import vn.payos.type.Webhook;
 import vn.payos.type.WebhookData;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.Comparator;
+import java.util.List;
 
 @Service
 public class SubscriptionPaymentService {
@@ -188,5 +193,19 @@ public class SubscriptionPaymentService {
     private void cancelSubscription(Subscription subscription) {
         subscription.setStatus(SubscriptionStatus.CANCELED);
         subscriptionRepository.save(subscription);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TopSpenderDTO> getTopSpenders(int limit) {
+        List<Object[]> results = subscriptionPaymentRepository.findTopSpenders(limit);
+
+        return results.stream().map(row -> {
+            TopSpenderDTO dto = new TopSpenderDTO();
+            dto.setUserId(UUID.fromString(row[0].toString()));
+            dto.setUsername((String) row[1]);
+            dto.setEmail((String) row[2]);
+            dto.setTotalSpent(new BigDecimal(row[3].toString()));
+            return dto;
+        }).collect(Collectors.toList());
     }
 }

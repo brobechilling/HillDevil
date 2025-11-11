@@ -11,3 +11,10 @@ export interface SubscriptionPaymentResponse {
   subscriptionPaymentStatus: "PENDING" | "SUCCESS" | "FAILED" | "CANCELED";
   date: string;
 }
+
+export interface TopSpenderDTO {
+  userId: string;
+  username: string;
+  email: string;
+  totalSpent: number;
+}

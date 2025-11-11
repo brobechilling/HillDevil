@@ -1,8 +1,7 @@
 import { axiosClient } from "@/api/axiosClient";
 import { ApiResponse } from "@/dto/apiResponse";
-import { SubscriptionResponse } from "@/dto/subscription.dto";
+import { SubscriptionResponse, RestaurantSubscriptionOverviewDTO, ActivePackageStatsDTO } from "@/dto/subscription.dto";
 import { SubscriptionPaymentResponse } from "@/dto/subscriptionPayment.dto";
-import { RestaurantSubscriptionOverviewDTO } from "@/dto/subscription.dto";
 
 export const subscriptionApi = {
   getOverviewForOwner: async (): Promise<RestaurantSubscriptionOverviewDTO[]> => {
@@ -10,13 +9,6 @@ export const subscriptionApi = {
       "/subscriptions/overview"
     );
     return res.data.result || [];
-  },
-
-  getStats: async (): Promise<Record<string, number>> => {
-    const res = await axiosClient.get<ApiResponse<Record<string, number>>>(
-      "/subscriptions/stats"
-    );
-    return res.data.result || {};
   },
 
   getAllActive: async (): Promise<SubscriptionResponse[]> => {
@@ -80,5 +72,12 @@ export const subscriptionApi = {
       `/subscriptions/${id}`
     );
     return res.data.result;
+  },
+
+  getActivePackageStats: async (): Promise<ActivePackageStatsDTO[]> => {
+    const res = await axiosClient.get<ApiResponse<ActivePackageStatsDTO[]>>(
+      "/subscriptions/active-packages"
+    );
+    return res.data.result || [];
   },
 };

@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import com.example.backend.dto.ActivePackageStatsDTO;
 import com.example.backend.dto.RestaurantSubscriptionOverviewDTO;
 import com.example.backend.dto.response.SubscriptionPaymentResponse;
 import com.example.backend.dto.response.SubscriptionResponse;
@@ -126,16 +127,6 @@ public class SubscriptionService {
                 .orElse(null);
     }
 
-    @Transactional(readOnly = true)
-    public Map<String, Long> getPackagePurchaseStats() {
-        List<Subscription> allSubs = subscriptionRepository.findAll();
-        return allSubs.stream()
-                .filter(s -> s.getaPackage() != null)
-                .collect(Collectors.groupingBy(
-                        s -> s.getaPackage().getName(),
-                        Collectors.counting()));
-    }
-
     // -------------------------
     // Payment queries
     // -------------------------
@@ -192,6 +183,43 @@ public class SubscriptionService {
             overview.setPaymentHistory(payments);
             return overview;
         }).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActivePackageStatsDTO> getActivePackageStats() {
+        // Lấy tất cả subscriptions (không chỉ active)
+        List<Subscription> subs = subscriptionRepository.findAllWithPayments();
+
+        Map<String, List<Subscription>> groupedByPackage = subs.stream()
+                .collect(Collectors.groupingBy(s -> s.getaPackage().getName()));
+
+        return groupedByPackage.entrySet().stream().map(entry -> {
+            String packageName = entry.getKey();
+            List<Subscription> packageSubs = entry.getValue();
+
+            long activeCount = packageSubs.stream()
+                    .filter(s -> s.getStatus() == SubscriptionStatus.ACTIVE)
+                    .count();
+
+            // calculate payment count and total revenue (all payments with SUCCESS status from all subscriptions, even canceled subscriptions)
+            List<SubscriptionPayment> payments = packageSubs.stream()
+                    .flatMap(s -> s.getSubscriptionPayments().stream())
+                    .filter(p -> p.getSubscriptionPaymentStatus() == SubscriptionPaymentStatus.SUCCESS)
+                    .toList();
+
+            long paymentCount = payments.size();
+            BigDecimal totalRevenue = payments.stream()
+                    .map(p -> BigDecimal.valueOf(p.getAmount()))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            ActivePackageStatsDTO dto = new ActivePackageStatsDTO();
+            dto.setPackageName(packageName);
+            dto.setActiveCount(activeCount);
+            dto.setPaymentCount(paymentCount);
+            dto.setTotalRevenue(totalRevenue);
+
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     // -------------------------

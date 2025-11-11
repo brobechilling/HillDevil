@@ -4,8 +4,6 @@ import com.example.backend.dto.request.RestaurantCreateRequest;
 import com.example.backend.dto.response.SubscriptionPaymentResponse;
 import com.example.backend.entities.Restaurant;
 import com.example.backend.entities.Subscription;
-import com.example.backend.entities.SubscriptionPayment;
-import com.example.backend.entities.SubscriptionPaymentStatus;
 import com.example.backend.entities.Package;
 import com.example.backend.entities.SubscriptionStatus;
 import com.example.backend.exception.AppException;
@@ -14,11 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.backend.repository.PackageRepository;
 import com.example.backend.repository.SubscriptionRepository;
-import com.example.backend.repository.SubscriptionPaymentRepository;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Service
@@ -29,20 +25,17 @@ public class RestaurantSubscriptionService {
     private final SubscriptionPaymentService subscriptionPaymentService;
     private final SubscriptionRepository subscriptionRepository;
     private final PackageRepository packageRepository;
-    private final SubscriptionPaymentRepository subscriptionPaymentRepository;
 
     public RestaurantSubscriptionService(RestaurantService restaurantService,
             SubscriptionService subscriptionService,
             SubscriptionPaymentService subscriptionPaymentService,
             SubscriptionRepository subscriptionRepository,
-            PackageRepository packageRepository,
-            SubscriptionPaymentRepository subscriptionPaymentRepository) {
+            PackageRepository packageRepository) {
         this.restaurantService = restaurantService;
         this.subscriptionService = subscriptionService;
         this.subscriptionPaymentService = subscriptionPaymentService;
         this.subscriptionRepository = subscriptionRepository;
         this.packageRepository = packageRepository;
-        this.subscriptionPaymentRepository = subscriptionPaymentRepository;
     }
 
     @Transactional(rollbackFor = Exception.class)

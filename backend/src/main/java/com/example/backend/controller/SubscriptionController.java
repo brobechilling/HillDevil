@@ -1,5 +1,6 @@
 package com.example.backend.controller;
 
+import com.example.backend.dto.ActivePackageStatsDTO;
 import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.RestaurantSubscriptionOverviewDTO;
 import com.example.backend.dto.response.SubscriptionPaymentResponse;
@@ -8,7 +9,6 @@ import com.example.backend.service.SubscriptionService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -68,13 +68,6 @@ public class SubscriptionController {
         return res;
     }
 
-    @GetMapping("/stats")
-    public ApiResponse<Map<String, Long>> getPackagePurchaseStats() {
-        ApiResponse<Map<String, Long>> res = new ApiResponse<>();
-        res.setResult(subscriptionService.getPackagePurchaseStats());
-        return res;
-    }
-
     @GetMapping("/restaurant/{restaurantId}/latest-payment")
     public ApiResponse<SubscriptionPaymentResponse> getLatestPaymentStatus(
             @PathVariable UUID restaurantId) {
@@ -94,6 +87,13 @@ public class SubscriptionController {
         ApiResponse<List<SubscriptionPaymentResponse>> res = new ApiResponse<>();
         List<SubscriptionPaymentResponse> result = subscriptionService.getPaymentHistoryByRestaurant(restaurantId);
         res.setResult(result);
+        return res;
+    }
+
+    @GetMapping("/active-packages")
+    public ApiResponse<List<ActivePackageStatsDTO>> getActivePackageStats() {
+        ApiResponse<List<ActivePackageStatsDTO>> res = new ApiResponse<>();
+        res.setResult(subscriptionService.getActivePackageStats());
         return res;
     }
 }

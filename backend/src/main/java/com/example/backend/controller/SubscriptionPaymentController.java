@@ -1,11 +1,13 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.ApiResponse;
+import com.example.backend.dto.TopSpenderDTO;
 import com.example.backend.dto.response.SubscriptionPaymentResponse;
 import com.example.backend.service.SubscriptionPaymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.payos.type.Webhook;
+import java.util.List;
 
 import java.util.UUID;
 
@@ -67,5 +69,12 @@ public class SubscriptionPaymentController {
         response.setResult(result);
 
         return ResponseEntity.ok(response);
+    }
+
+        @GetMapping("/top-spenders")
+    public ApiResponse<List<TopSpenderDTO>> getTopSpenders(@RequestParam(defaultValue = "5") int limit) {
+        ApiResponse<List<TopSpenderDTO>> res = new ApiResponse<>();
+        res.setResult(subscriptionPaymentService.getTopSpenders(limit));
+        return res;
     }
 }
