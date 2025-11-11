@@ -59,6 +59,7 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import { ROLE_NAME } from './dto/user.dto';
 
+import TestWebSocket from './pages/TestWebSocket';
 
 export const routes: RouteObject[] = [
   {
@@ -353,5 +354,9 @@ export const routes: RouteObject[] = [
   {
     path: '*',
     element: <NotFound />,
+  },
+  {
+    path: '/test/websocket',
+    element: <TestWebSocket />,
   },
 ];
