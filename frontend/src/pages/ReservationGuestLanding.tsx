@@ -54,7 +54,7 @@ type BranchLite = {
 };
 
 
-const GuestLanding = () => {
+const ReservationGuestLanding = () => {
   const navigate = useNavigate();
   const params = useParams<{ shortCode?: string; restaurantSlug?: string; tableId?: string; branchId?: string }>();
   const shortCode = params.shortCode || params.restaurantSlug;
@@ -327,5 +327,5 @@ const GuestLanding = () => {
   );
 };
 
-export default GuestLanding;
+export default ReservationGuestLanding;
 
