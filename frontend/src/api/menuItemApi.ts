@@ -77,3 +77,10 @@ export const updateBestSeller = async (menuItemId: string, bestSeller: boolean) 
   );
   return res.data.result;
 };
+
+export const canCreateMenuItem = async (restaurantId: string) => {
+  const res = await axiosClient.get<ApiResponse<boolean>>(
+    `/menu-items/restaurant/${restaurantId}/can-create`,
+  );
+  return res.data.result;
+}

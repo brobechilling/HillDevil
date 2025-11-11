@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.BatchSize;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -59,6 +60,7 @@ public class Restaurant {
     private String description;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "restaurant")
+    @BatchSize(size = 20)
     private Set<Subscription> subscriptions = new LinkedHashSet<>();
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "restaurant")

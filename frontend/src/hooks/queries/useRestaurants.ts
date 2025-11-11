@@ -21,6 +21,15 @@ export const useRestaurant = (restaurantId: string | undefined) => {
   });
 };
 
+export const useRestaurants = () => {
+  return useQuery<RestaurantDTO[]>({
+    queryKey: ['restaurants'],
+    queryFn: getAllRestaurants,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+  });
+};
+
 export const useRestaurantsByOwner = (userId: string | undefined) => {
   return useQuery<RestaurantDTO[]>({
     queryKey: ['restaurants', 'owner', userId],

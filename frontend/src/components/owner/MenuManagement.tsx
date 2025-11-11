@@ -8,12 +8,12 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Eye, ChevronRight, Sparkles, Menu, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, ChevronRight, Sparkles, Menu, X, AlertCircle } from 'lucide-react';
 import { MenuItemDialog } from '../menu/MenuItemDialog';
-import { MenuItemViewDialog } from './MenuItemViewDialog';
+import { MenuItemViewDialog } from '../menu/MenuItemViewDialog';
 import { toast } from '@/components/ui/use-toast';
 import { useSessionStore } from '@/store/sessionStore';
-import { useMenuItems, useDeleteMenuItem, useSetActiveStatus, useUpdateBestSeller } from '@/hooks/queries/useMenuItems';
+import { useMenuItems, useDeleteMenuItem, useSetActiveStatus, useUpdateBestSeller, useCanCreateMenuItem } from '@/hooks/queries/useMenuItems';
 import { useCategories } from '@/hooks/queries/useCategories';
 import { MenuItemDTO } from '@/dto/menuItem.dto';
 import {
@@ -115,6 +115,8 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  const canCreateItemQuery = useCanCreateMenuItem(restaurantId);
+
   // === Loading state ===
   if (isSessionLoading || isItemsLoading) {
     return (
@@ -198,31 +200,54 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
           className="max-w-6xl mx-auto px-6 lg:px-10 pt-8 pb-16 overflow-y-auto h-[calc(100vh-120px)] scroll-smooth"
         >
           {/* Header */}
-          <div className="flex items-center justify-between mb-8 animate-in slide-in-from-top-4 duration-500">
-            <div className="space-y-1">
-              <h1 className="text-3xl font-bold text-foreground tracking-tight">Menu Management</h1>
-              <p className="text-muted-foreground text-sm">
-                Manage your restaurant&apos;s menu items and categories
-              </p>
+          <div className="space-y-6 mb-8 animate-in slide-in-from-top-4 duration-500">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h1 className="text-3xl font-bold text-foreground tracking-tight">Menu Management</h1>
+                <p className="text-muted-foreground text-sm">
+                  Manage your restaurant&apos;s menu items and categories
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="xl:hidden"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+                <Button
+                  onClick={handleAdd}
+                  className="shadow-md hover:shadow-lg transition-all duration-300"
+                  size="lg"
+                  disabled={!canCreateItemQuery.data}
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Add Menu Item
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="xl:hidden"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-              <Button
-                onClick={handleAdd}
-                className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                size="lg"
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                Add Menu Item
-              </Button>
-            </div>
+
+            {!canCreateItemQuery.data && (
+              <Card className="border-amber-500">
+                <CardContent className="pt-6 pb-4 flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-amber-500/20">
+                    <AlertCircle className="h-6 w-6 text-amber-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-amber-500 mb-1">Menu Item Limit Reached</h4>
+                    <p className="text-sm text-muted-foreground">
+                      You've reached the maximum number of menu items in your current package. 
+                      Please upgrade to Premium to add more menu items and unlock additional features.
+                    </p>
+                  </div>
+                  <Button variant="outline" className="border-amber-500 text-amber-500 hover:bg-amber-500/10">
+                    Upgrade to Premium
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {Object.keys(groupedItems).length === 0 ? (
