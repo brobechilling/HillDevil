@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar, Clock, Users } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useBookingStore, BookingItem } from '@/store/bookingStore';
+import type { BookingItem } from '@/dto/bookingItem.dto';
 import { useCreateReservationPublic } from '@/hooks/queries/useReservations';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -19,6 +19,17 @@ const bookingSchema = z.object({
   bookingTime: z.string().min(1, 'Time is required'),
   numberOfGuests: z.coerce.number().min(1, 'At least 1 guest required').max(20, 'Maximum 20 guests'),
   note: z.string().max(1000).optional(),
+}).superRefine((data, ctx) => {
+  // Ensure combined date+time is in the future
+  if (!data.bookingDate || !data.bookingTime) return;
+  const dt = new Date(`${data.bookingDate}T${data.bookingTime}:00`);
+  if (isNaN(dt.getTime()) || dt.getTime() <= Date.now()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['bookingDate'],
+      message: 'Reservation date/time must be in the future',
+    });
+  }
 });
 
 type BookingFormData = z.infer<typeof bookingSchema>;
@@ -38,7 +49,7 @@ export function ReservationBookingForm({
   selectedItems = [],
   onBookingComplete
 }: ReservationBookingFormProps) {
-  const addBooking = useBookingStore((state) => state.addBooking);
+
 
   const {
     register,
@@ -79,19 +90,6 @@ export function ReservationBookingForm({
       try {
         // Call backend public reservation endpoint (react-query mutation)
         await createMutation.mutateAsync(payload);
-
-        // keep local booking store in sync
-        addBooking({
-          branchId: bid,
-          branchName,
-          guestName: data.guestName,
-          guestEmail: data.guestEmail,
-          guestPhone: data.guestPhone,
-          bookingDate: data.bookingDate,
-          bookingTime: data.bookingTime,
-          numberOfGuests: data.numberOfGuests,
-          items: selectedItems,
-        });
 
         toast({
           title: 'Reservation Confirmed!',

@@ -45,13 +45,13 @@ const loadBookings = (): Booking[] => {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw) as any[];
-      return parsed.map((b) => {
+    return parsed.map((b) => {
       // Nếu là shape cũ -> migrate sang startTime
       if (!b.startTime && b.bookingDate && b.bookingTime) {
         const iso = new Date(`${b.bookingDate}T${b.bookingTime}:00`).toISOString();
-  // Migrate legacy 'declined' status to 'cancelled'
-  const migratedStatus = b.status === 'declined' ? 'cancelled' : b.status;
-  return {
+        // Migrate legacy 'declined' status to 'cancelled'
+        const migratedStatus = b.status === 'declined' ? 'cancelled' : b.status;
+        return {
           id: String(b.id),
           branchId: b.branchId,
           areaTableId: b.areaTableId ?? null,
@@ -64,9 +64,9 @@ const loadBookings = (): Booking[] => {
         } as Booking;
       }
       // Nếu đã đúng shape mới
-        // Migrate legacy 'declined' status to 'cancelled' for existing saved items
-        const migratedStatus = b.status === 'declined' ? 'cancelled' : b.status;
-        return {
+      // Migrate legacy 'declined' status to 'cancelled' for existing saved items
+      const migratedStatus = b.status === 'declined' ? 'cancelled' : b.status;
+      return {
         id: String(b.id),
         branchId: b.branchId,
         areaTableId: b.areaTableId ?? null,
@@ -74,7 +74,7 @@ const loadBookings = (): Booking[] => {
         guestName: b.guestName,
         guestPhone: b.guestPhone ?? '',
         numberOfGuests: Number(b.numberOfGuests ?? 1),
-          status: (migratedStatus ?? 'pending') as Booking['status'],
+        status: (migratedStatus ?? 'pending') as Booking['status'],
         createdAt: b.createdAt,
       } as Booking;
     });
@@ -148,7 +148,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     }),
 
   // No-op: nếu cần đánh dấu đọc, bạn có thể thêm field UI-only (isRead) sau
-  markAsRead: (_bookingId: string) => {},
+  markAsRead: (_bookingId: string) => { },
 
   // Dùng get() thay vì useBookingStore.getState() để tránh vòng phụ thuộc
   getBookingsByBranch: (branchId?: string) => {

@@ -1,5 +1,6 @@
 package com.example.backend.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -66,13 +67,12 @@ public class ReservationController {
 
     // Public: get reservations assigned to a specific table
     @GetMapping("/public/reservations/table/{tableId}")
-    public ApiResponse<java.util.List<ReservationResponse>> getByTable(@PathVariable UUID tableId) {
-        ApiResponse<java.util.List<ReservationResponse>> res = new ApiResponse<>();
+    public ApiResponse<List<ReservationResponse>> getReservationsByTable(@PathVariable UUID tableId) {
+        ApiResponse<List<ReservationResponse>> res = new ApiResponse<>();
         res.setResult(reservationService.getReservationsByTable(tableId));
         return res;
     }
 
-    // Receptionist: update reservation status
     @PutMapping("/receptionist/reservations/{id}/status")
     public ApiResponse<ReservationResponse> updateStatus(
             @PathVariable UUID id,
@@ -97,7 +97,6 @@ public class ReservationController {
         return res;
     }
 
-    // Receptionist: delete reservation
     @DeleteMapping("/receptionist/reservations/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id) {

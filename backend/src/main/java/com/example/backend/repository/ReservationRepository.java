@@ -11,5 +11,6 @@ import com.example.backend.entities.Reservation;
 
 public interface ReservationRepository extends JpaRepository<Reservation, UUID> {
     Page<Reservation> findAllByBranch_BranchId(UUID branchId, Pageable pageable);
+
     List<Reservation> findAllByAreaTable_AreaTableId(UUID areaTableId);
 }

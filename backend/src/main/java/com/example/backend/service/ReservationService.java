@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -22,8 +23,6 @@ import com.example.backend.exception.ErrorCode;
 import com.example.backend.repository.AreaTableRepository;
 import com.example.backend.repository.BranchRepository;
 import com.example.backend.repository.ReservationRepository;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class ReservationService {
@@ -40,12 +39,6 @@ public class ReservationService {
         this.branchRepository = branchRepository;
         this.areaTableRepository = areaTableRepository;
         this.reservationMapper = reservationMapper;
-    }
-
-    @Transactional(readOnly = true)
-    public List<ReservationResponse> getReservationsByTable(UUID areaTableId) {
-        List<Reservation> list = reservationRepository.findAllByAreaTable_AreaTableId(areaTableId);
-        return list.stream().map(reservationMapper::toDto).collect(Collectors.toList());
     }
 
     @Transactional
@@ -82,6 +75,15 @@ public class ReservationService {
     }
 
     @Transactional(readOnly = true)
+    public List<ReservationResponse> getReservationsByTable(UUID tableId) {
+        if (tableId == null) {
+            return java.util.List.of();
+        }
+        List<Reservation> list = reservationRepository.findAllByAreaTable_AreaTableId(tableId);
+        return list.stream().map(reservationMapper::toDto).collect(java.util.stream.Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public Page<ReservationResponse> getReservationsByBranch(UUID branchId, int page, int size, String sort) {
         Sort s = Sort.by(Sort.Direction.ASC, "startTime");
         if (sort != null && !sort.isBlank()) {
@@ -107,21 +109,23 @@ public class ReservationService {
     }
 
     @Transactional
-    public ReservationResponse assignTable(UUID reservationId, java.util.UUID areaTableId) {
+    public ReservationResponse assignTable(UUID reservationId, UUID tableId) {
         Reservation r = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESERVATION_NOT_FOUND));
 
         AreaTable t = null;
-        if (areaTableId != null) {
-            t = areaTableRepository.findById(areaTableId)
+        if (tableId != null) {
+            t = areaTableRepository.findById(tableId)
                     .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
         }
 
         r.setAreaTable(t);
-        // When a table is assigned, we consider the reservation confirmed
-        r.setStatus(ReservationStatus.CONFIRMED);
+        if (t != null) {
+            r.setStatus(ReservationStatus.CONFIRMED);
+        }
 
         r = reservationRepository.save(r);
+
         return reservationMapper.toDto(r);
     }
 

@@ -44,19 +44,19 @@ const ReservationsPage = () => {
 
     const normalized = Array.isArray(list)
       ? list.map((r: any) => ({
-          id: r.reservationId || r.id,
-          reservationId: r.reservationId || r.id,
-          branchId: r.branchId,
-          tableId: r.areaTableId || r.tableId || null,
-          guestName: r.customerName || r.guestName || '',
-          guestPhone: r.customerPhone || r.guestPhone || '',
-          guestEmail: r.customerEmail || r.guestEmail || '',
-          numberOfGuests: r.guestNumber || r.numberOfGuests || 1,
-          startTime: r.startTime ? (typeof r.startTime === 'string' ? r.startTime : r.startTime.toString()) : null,
-          endTime: r.endTime || (r.startTime ? new Date(new Date(r.startTime).getTime() + 2 * 60 * 60 * 1000).toISOString() : null),
-          status: (r.status || '').toString().toLowerCase(),
-          specialRequests: r.note || r.specialRequests || '',
-        }))
+        id: r.reservationId || r.id,
+        reservationId: r.reservationId || r.id,
+        branchId: r.branchId,
+        tableId: r.areaTableId || r.tableId || null,
+        guestName: r.customerName || r.guestName || '',
+        guestPhone: r.customerPhone || r.guestPhone || '',
+        guestEmail: r.customerEmail || r.guestEmail || '',
+        numberOfGuests: r.guestNumber || r.numberOfGuests || 1,
+        startTime: r.startTime ? (typeof r.startTime === 'string' ? r.startTime : r.startTime.toString()) : null,
+        endTime: r.endTime || (r.startTime ? new Date(new Date(r.startTime).getTime() + 2 * 60 * 60 * 1000).toISOString() : null),
+        status: (r.status || '').toString().toLowerCase(),
+        specialRequests: r.note || r.specialRequests || '',
+      }))
       : [];
 
     setBookings(normalized);
@@ -120,11 +120,11 @@ const ReservationsPage = () => {
   }, [searchedBookings]);
 
   const getAvailableTables = (booking) => {
+    // Only check capacity and branch — receptionist may assign multiple bookings to same table.
     return tables.filter(
       t =>
         t.branchId === branchId &&
-        t.capacity >= booking.numberOfGuests &&
-        t.status === 'available'
+        t.capacity >= booking.numberOfGuests
     );
   };
 
@@ -268,10 +268,10 @@ const ReservationsPage = () => {
           prev.map(b =>
             b.id === bookingId
               ? {
-                  ...b,
-                  tableId: saved.areaTableId || saved.tableId || tableId,
-                  status: (saved.status || 'confirmed').toString().toLowerCase(),
-                }
+                ...b,
+                tableId: saved.areaTableId || saved.tableId || tableId,
+                status: (saved.status || 'confirmed').toString().toLowerCase(),
+              }
               : b
           )
         );
@@ -305,8 +305,8 @@ const ReservationsPage = () => {
   };
 
   const getTabColor = (isActive) => {
-    return isActive 
-      ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
+    return isActive
+      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
       : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white';
   };
 
@@ -316,7 +316,7 @@ const ReservationsPage = () => {
 
     return (
       <div
-          className="p-5 rounded-lg border border-border bg-card hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+        className="p-5 rounded-lg border border-border bg-card hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
         style={{
           animation: `slideIn 0.4s ease-out ${index * 0.1}s both`
         }}
@@ -324,14 +324,14 @@ const ReservationsPage = () => {
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-1">{booking.guestName}</h4>
-              <div className="text-sm text-muted-foreground space-y-1">
+            <div className="text-sm text-muted-foreground space-y-1">
               <p className="flex items-center gap-2">
                 <span>📞</span>
-                  <span>{booking.guestPhone || '—'}</span>
+                <span>{booking.guestPhone || '—'}</span>
               </p>
               <p className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                  <span>{booking.guestEmail || '—'}</span>
+                <span>{booking.guestEmail || '—'}</span>
               </p>
             </div>
           </div>
@@ -370,7 +370,7 @@ const ReservationsPage = () => {
         {booking.status === 'pending' && (
           <div className="space-y-2 mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
             <p className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wide">
-              Available Tables ({availableTables.length})
+              Matching Tables ({availableTables.length})
             </p>
             {availableTables.length > 0 ? (
               // Make the list scrollable so the reservation card height is bounded
@@ -385,7 +385,7 @@ const ReservationsPage = () => {
               </div>
             ) : (
               <p className="text-xs text-red-600 dark:text-red-400 font-bold flex items-center gap-1">
-                ❌ No available tables
+                ❌ No matching tables
               </p>
             )}
           </div>
@@ -494,7 +494,7 @@ const ReservationsPage = () => {
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Reservation Management</h2>
             <p className="text-gray-600 dark:text-gray-400">Manage and track all your restaurant bookings</p>
           </div>
-          <button 
+          <button
             onClick={() => setShowNewReservationModal(true)}
             className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-md flex items-center gap-2 transition-all duration-200 transform hover:scale-105"
           >
@@ -673,11 +673,11 @@ const ReservationsPage = () => {
                           type="button"
                           onClick={() => setNewReservation({ ...newReservation, table_id: table.id === newReservation.table_id ? '' : table.id })}
                           className={`p-3 rounded-lg border-2 transition-all duration-200 transform hover:scale-105 ${newReservation.table_id === table.id
-                              ? 'border-orange-600 bg-orange-50 dark:bg-orange-900/20 shadow-md'
-                              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-orange-400'
+                            ? 'border-orange-600 bg-orange-50 dark:bg-orange-900/20 shadow-md'
+                            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-orange-400'
                             }`}
                         >
-                          <div className="text-lg font-bold text-gray-900 dark:text-white">Table {table.number}</div>
+                          <div className="text-lg font-bold text-gray-900 dark:text-white">{table.number}</div>
                           <div className="text-xs text-gray-600 dark:text-gray-400">{table.capacity} seats</div>
                         </button>
                       ))}

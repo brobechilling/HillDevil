@@ -14,46 +14,46 @@ import com.example.backend.entities.AreaTable;
 
 public interface AreaTableRepository extends JpaRepository<AreaTable, UUID> {
 
-    @Query("""
-        SELECT new com.example.backend.dto.response.TableResponse(
-            t.areaTableId,
-            t.tag,
-            t.capacity,
-            t.status,
-            MAX(r.customerName)
-        )
-        FROM AreaTable t
-            JOIN t.area a
-            JOIN a.branch b
-            LEFT JOIN t.reservations r ON r.status = 'RESERVED'
-        WHERE b.branchId = :branchId
-        GROUP BY t.areaTableId, t.tag, t.capacity, t.status
-        ORDER BY t.tag ASC
-        """)
-    Page<TableResponse> findTablesByBranch(@Param("branchId") UUID branchId, Pageable pageable);
+  @Query("""
+      SELECT new com.example.backend.dto.response.TableResponse(
+        t.areaTableId,
+        t.tag,
+        t.capacity,
+        t.status,
+        a.areaId,
+        a.name
+      )
+      FROM AreaTable t
+        JOIN t.area a
+        JOIN a.branch b
+      WHERE b.branchId = :branchId
+      ORDER BY t.tag ASC
+      """)
+  Page<TableResponse> findTablesByBranch(@Param("branchId") UUID branchId, Pageable pageable);
 
-    @Query("""
-       SELECT t
-       FROM AreaTable t
-         JOIN t.area a
-         JOIN a.branch b
-       WHERE b.branchId = :branchId
-         AND (:areaId IS NULL OR a.areaId = :areaId)
-       ORDER BY a.name ASC, t.tag ASC
-    """)
-    List<AreaTable> findAllByBranchAndArea(@Param("branchId") UUID branchId,
-                                           @Param("areaId") UUID areaId);
+  @Query("""
+         SELECT t
+         FROM AreaTable t
+           JOIN t.area a
+           JOIN a.branch b
+         WHERE b.branchId = :branchId
+           AND (:areaId IS NULL OR a.areaId = :areaId)
+         ORDER BY a.name ASC, t.tag ASC
+      """)
+  List<AreaTable> findAllByBranchAndArea(@Param("branchId") UUID branchId,
+      @Param("areaId") UUID areaId);
 
-    // Lookup by tag (legacy short name). Note: tag may not be unique across branches.
-    Optional<AreaTable> findByTag(String tag);
+  // Lookup by tag (legacy short name). Note: tag may not be unique across
+  // branches.
+  Optional<AreaTable> findByTag(String tag);
 
-    @Query("""
-       SELECT t
-       FROM AreaTable t
-         JOIN t.area a
-       WHERE a.name = :areaName
-         AND t.tag = :tag
-    """)
-    Optional<AreaTable> findByAreaNameAndTag(@Param("areaName") String areaName,
-                                                       @Param("tag") String tag);
+  @Query("""
+         SELECT t
+         FROM AreaTable t
+           JOIN t.area a
+         WHERE a.name = :areaName
+           AND t.tag = :tag
+      """)
+  Optional<AreaTable> findByAreaNameAndTag(@Param("areaName") String areaName,
+      @Param("tag") String tag);
 }

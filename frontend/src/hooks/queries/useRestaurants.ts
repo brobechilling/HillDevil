@@ -29,8 +29,6 @@ export const useRestaurantsByOwner = (userId: string | undefined) => {
   });
 };
 
-// Consolidated `useRestaurant` above. If you need the variant with different options,
-// adjust the single export above to include staleTime/refetchOnWindowFocus as needed.
 
 export const useUpdateRestaurant = () => {
   const qc = useQueryClient();

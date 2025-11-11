@@ -2,7 +2,7 @@ export interface ReservationResponseDto {
   reservationId?: string;
   branchId?: string;
   areaTableId?: string;
-  startTime?: string; // ISO string
+  startTime?: string;
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;

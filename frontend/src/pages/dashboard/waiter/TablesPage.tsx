@@ -18,8 +18,6 @@ const TablesPage = () => {
   // const { getReservationsByTable } = useReservationStore();
   const tablesQuery = useTables(branchId || undefined, 0, 200);
 
-  // Debugging log
-  console.debug('TablesPage: branchId=', branchId, 'status=', tablesQuery.status, 'data=', tablesQuery.data);
 
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -95,9 +93,6 @@ const TablesPage = () => {
     }
   };
 
-  // --------------------------
-  // Table Card Component
-  // --------------------------
   const TableCard = ({ table }: { table: any }) => {
     const { data: tableReservations = [] } = useQuery({
       queryKey: ['reservations', 'table', table.id],
@@ -168,9 +163,6 @@ const TablesPage = () => {
   };
 
 
-  // --------------------------
-  // Page Layout
-  // --------------------------
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">

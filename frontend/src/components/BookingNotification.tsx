@@ -1,5 +1,5 @@
 import { Bell, Check, X } from 'lucide-react';
-import { useBookingStore } from '@/store/bookingStore';
+import { usePendingReservations, useUpdateReservationStatus } from '@/hooks/queries/usePendingReservations';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,13 +25,14 @@ interface BookingNotificationProps {
 }
 
 export const BookingNotification = ({ branchId }: BookingNotificationProps) => {
-  const { getPendingBookings, approveBooking, cancelBooking } = useBookingStore();
   const [selectedBooking, setSelectedBooking] = useState<string | null>(null);
   const [paymentLink, setPaymentLink] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
-  const pendingBookings = getPendingBookings(branchId);
+  const pendingQuery = usePendingReservations(branchId);
+  const pendingBookings = pendingQuery.data || [];
   const unreadCount = pendingBookings.length;
+
+  const updateStatusMutation = useUpdateReservationStatus();
 
   const handleApprove = (bookingId: string) => {
     setSelectedBooking(bookingId);
@@ -39,8 +40,9 @@ export const BookingNotification = ({ branchId }: BookingNotificationProps) => {
     setIsDialogOpen(true);
   };
 
-  const handleConfirmApproval = () => {
-    if (!selectedBooking || !paymentLink) {
+  const handleConfirmApproval = async () => {
+    if (!selectedBooking) return;
+    if (!paymentLink) {
       toast({
         variant: 'destructive',
         title: 'Payment Link Required',
@@ -48,23 +50,29 @@ export const BookingNotification = ({ branchId }: BookingNotificationProps) => {
       });
       return;
     }
-    
-    approveBooking(selectedBooking, paymentLink);
-    toast({
-      title: 'Booking Approved',
-      description: 'Payment link has been sent to the customer.',
-    });
-    setIsDialogOpen(false);
-    setSelectedBooking(null);
-    setPaymentLink('');
+
+    try {
+      // Persist status change to server. Payment link is not persisted server-side in current API.
+      await updateStatusMutation.mutateAsync({ id: selectedBooking, status: 'APPROVED' });
+      toast({ title: 'Booking Approved', description: 'Approval status saved.' });
+    } catch (err: any) {
+      console.error('Failed to approve booking', err);
+      toast({ variant: 'destructive', title: 'Failed', description: 'Failed to approve booking.' });
+    } finally {
+      setIsDialogOpen(false);
+      setSelectedBooking(null);
+      setPaymentLink('');
+    }
   };
 
-  const handleCancel = (bookingId: string) => {
-    cancelBooking(bookingId);
-    toast({
-      title: 'Booking Cancelled',
-      description: 'The customer has been notified.',
-    });
+  const handleCancel = async (bookingId: string) => {
+    try {
+      await updateStatusMutation.mutateAsync({ id: bookingId, status: 'CANCELLED' });
+      toast({ title: 'Booking Cancelled', description: 'The customer has been notified.' });
+    } catch (err: any) {
+      console.error('Failed to cancel booking', err);
+      toast({ variant: 'destructive', title: 'Failed', description: 'Failed to cancel booking.' });
+    }
   };
 
   return (
@@ -94,54 +102,62 @@ export const BookingNotification = ({ branchId }: BookingNotificationProps) => {
                   No pending pre-orders
                 </p>
               ) : (
-                pendingBookings.map((booking) => (
-                  <Card key={booking.id} className="border-border/50">
-                    <CardContent className="p-4 space-y-2">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-medium">{booking.guestName}</p>
-                          <p className="text-sm text-muted-foreground">{booking.guestEmail}</p>
-                          <p className="text-sm text-muted-foreground">{booking.guestPhone}</p>
-                        </div>
-                        <Badge variant="default">Pending</Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <p>📅 {booking.bookingDate} at {booking.bookingTime}</p>
-                        <p>👥 {booking.numberOfGuests} guests</p>
-                        {booking.items.length > 0 && (
-                          <div className="mt-2">
-                            <p className="font-medium text-foreground">Pre-ordered Items:</p>
-                            {booking.items.map((item, idx) => (
-                              <p key={idx}>• {item.name} x{item.quantity} (${item.price})</p>
-                            ))}
-                            <p className="font-medium mt-1">
-                              Total: ${booking.items.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)}
-                            </p>
+                pendingBookings.map((b: any) => {
+                  const booking = {
+                    id: b.reservationId || b.id,
+                    guestName: b.customerName || b.guestName || '',
+                    guestEmail: b.customerEmail || b.guestEmail || '',
+                    guestPhone: b.customerPhone || b.guestPhone || '',
+                    bookingDate: b.startTime ? new Date(b.startTime).toLocaleDateString() : '',
+                    bookingTime: b.startTime ? new Date(b.startTime).toLocaleTimeString() : '',
+                    numberOfGuests: b.guestNumber || b.numberOfGuests || '-',
+                    note: b.note || '',
+                  };
+
+                  return (
+                    <Card key={booking.id} className="border-border/50">
+                      <CardContent className="p-4 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium">{booking.guestName}</p>
+                            <p className="text-sm text-muted-foreground">{booking.guestEmail}</p>
+                            <p className="text-sm text-muted-foreground">{booking.guestPhone}</p>
                           </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          size="sm"
-                          onClick={() => handleApprove(booking.id)}
-                          className="flex-1"
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleCancel(booking.id)}
-                          className="flex-1"
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Cancel
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+                          <Badge variant="default">Pending</Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <p>📅 {booking.bookingDate} at {booking.bookingTime}</p>
+                          <p>👥 {booking.numberOfGuests} guests</p>
+                          {booking.note && (
+                            <div className="mt-2">
+                              <p className="font-medium text-foreground">Note:</p>
+                              <p className="text-sm">{booking.note}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleApprove(booking.id)}
+                            className="flex-1"
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleCancel(booking.id)}
+                            className="flex-1"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Cancel
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
               )}
             </CardContent>
           </Card>

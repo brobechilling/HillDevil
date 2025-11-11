@@ -67,7 +67,8 @@ public class TableService {
                 table.getTag(),
                 table.getCapacity(),
                 table.getStatus(),
-                null);
+                area.getAreaId(),
+                area.getName());
     }
 
     @Transactional(readOnly = true)
@@ -161,65 +162,11 @@ public class TableService {
     }
 
     private TableResponse toTableResponse(AreaTable t) {
-        // Use MapStruct mapper for standard field mapping and then apply small custom logic
+        // Use MapStruct mapper for standard field mapping and then apply small custom
+        // logic
         TableResponse r = tableMapper.toTableResponse(t);
 
-        // Populate reservedBy if there is an active reservation for this table.
-        try {
-            if (t.getReservations() != null && !t.getReservations().isEmpty()) {
-                Reservation chosen = t.getReservations().stream()
-                        .filter(rsv -> rsv.getStatus() == ReservationStatus.CONFIRMED)
-                        .sorted((a, b) -> {
-                            if (a.getStartTime() == null && b.getStartTime() == null)
-                                return 0;
-                            if (a.getStartTime() == null)
-                                return 1;
-                            if (b.getStartTime() == null)
-                                return -1;
-                            return a.getStartTime().compareTo(b.getStartTime());
-                        })
-                        .findFirst()
-                        .orElse(null);
-
-                if (chosen == null) {
-                    chosen = t.getReservations().stream()
-                            .filter(rsv -> rsv.getStatus() == ReservationStatus.APPROVED)
-                            .sorted((a, b) -> {
-                                if (a.getStartTime() == null && b.getStartTime() == null)
-                                    return 0;
-                                if (a.getStartTime() == null)
-                                    return 1;
-                                if (b.getStartTime() == null)
-                                    return -1;
-                                return a.getStartTime().compareTo(b.getStartTime());
-                            })
-                            .findFirst()
-                            .orElse(null);
-                }
-
-                if (chosen == null) {
-                    chosen = t.getReservations().stream()
-                            .filter(rsv -> rsv.getStatus() == ReservationStatus.PENDING)
-                            .sorted((a, b) -> {
-                                if (a.getStartTime() == null && b.getStartTime() == null)
-                                    return 0;
-                                if (a.getStartTime() == null)
-                                    return 1;
-                                if (b.getStartTime() == null)
-                                    return -1;
-                                return a.getStartTime().compareTo(b.getStartTime());
-                            })
-                            .findFirst()
-                            .orElse(null);
-                }
-
-                if (chosen != null && chosen.getCustomerName() != null) {
-                    r.setReservedBy(chosen.getCustomerName());
-                }
-            }
-        } catch (Exception ex) {
-            // defensive: do not break table lookup if reservation relation is problematic
-        }
+        // Note: removed reservedBy population — field is not stored in DB anymore.
 
         return r;
     }
