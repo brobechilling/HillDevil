@@ -79,7 +79,6 @@ const GuestLanding = () => {
   }>();
   // Support multiple formats:
   // - New format: /t/:branchId/:tableId (branchId and tableId from params)
-  // - Old format: /t/:areaName/:tableName (tableName from params)
   // - Legacy format: /t/:tableId or /t/:tableName (tableId from params)
   const actualTableIdentifier = tableName || tableId;
   const actualBranchId = branchId || shortCode; // branchId from new format, or shortCode from /branch/:shortCode
