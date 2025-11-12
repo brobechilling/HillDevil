@@ -1,4 +1,4 @@
-export type CustomizationDTO = {
+export interface CustomizationDTO  {
   customizationId: string;
   name: string;
   price: string;

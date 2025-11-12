@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.ApiResponse;
+import com.example.backend.dto.CustomizationDTO;
 import com.example.backend.dto.MenuItemDTO;
 import com.example.backend.dto.request.MenuItemCreateRequest;
 import com.example.backend.service.MenuItemService;
@@ -94,4 +95,12 @@ public class MenuItemController {
         res.setResult(menuItemService.canCreateMenuItem(restaurantId));
         return res;
     }
+
+    @GetMapping("/customization/{menuItemId}")
+    public ApiResponse<List<CustomizationDTO>> getCustomizationsOfMenuItem(@PathVariable UUID menuItemId) {
+        ApiResponse<List<CustomizationDTO>> response = new ApiResponse<>();
+        response.setResult(menuItemService.getCustomizationOfMenuItem(menuItemId));
+        return response;
+    }
+
 }

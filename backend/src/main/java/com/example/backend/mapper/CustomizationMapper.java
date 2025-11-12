@@ -27,4 +27,6 @@ public interface CustomizationMapper {
         restaurant.setRestaurantId(restaurantId);
         return restaurant;
     }
+
+    CustomizationDTO toCustomizationDTOForBranchMenuItem(Customization customization);
 }

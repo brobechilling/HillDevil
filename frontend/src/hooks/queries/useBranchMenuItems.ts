@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getMenuItemsByBranch, updateAvailability } from "@/api/branchMenuItemApi";
-import { BranchMenuItemDTO } from "@/dto/branchMenuItem.dto";
+import { getGuestBranchMenuItems, getMenuItemsByBranch, updateAvailability } from "@/api/branchMenuItemApi";
+import { BranchMenuItemDTO, GuestBranchMenuItemDTO } from "@/dto/branchMenuItem.dto";
 
 export const useBranchMenuItems = (branchId: string | undefined) => {
   return useQuery<BranchMenuItemDTO[]>({
@@ -48,5 +48,13 @@ export const useUpdateAvailability = (branchId: string | undefined) => {
         queryClient.invalidateQueries({ queryKey: ["branch-menu-items", branchId] });
       }
     },
+  });
+};
+
+
+export const useGuestBranchMenuItems = (branchId: string) => {
+  return useQuery<GuestBranchMenuItemDTO[]>({
+    queryKey: ["guest-branch-menu-items", branchId],
+    queryFn: () => getGuestBranchMenuItems(branchId),
   });
 };

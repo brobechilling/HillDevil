@@ -2,6 +2,7 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.BranchMenuItemDTO;
+import com.example.backend.dto.response.GuestBranchMenuItemDTO;
 import com.example.backend.service.BranchMenuItemService;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,4 +35,12 @@ public class BranchMenuItemController {
         branchMenuItemService.updateAvailabilityByBranchAndMenuItem(branchId, menuItemId, available);
         return new ApiResponse<>();
     }
+    
+    @GetMapping("/guest/branch/{branchId}")
+    public ApiResponse<List<GuestBranchMenuItemDTO>> getGuestMenuItemsByBranch(@PathVariable UUID branchId) {
+        ApiResponse<List<GuestBranchMenuItemDTO>> res = new ApiResponse<>();
+        res.setResult(branchMenuItemService.getListBranchMenuItems(branchId));
+        return res;
+    }
+
 }

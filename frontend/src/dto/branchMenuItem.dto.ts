@@ -11,3 +11,17 @@ export type BranchMenuItemDTO = {
   categoryId: string;
   imageUrl?: string;
 };
+
+
+export interface GuestBranchMenuItemDTO {
+  branchMenuItemId: string;
+  branchId: string;
+  menuItemId: string;
+  available: boolean;
+  name: string;
+  description: string;
+  price: number;
+  categoryId: string;
+  imageUrl: string;
+  bestSeller: boolean;
+};
