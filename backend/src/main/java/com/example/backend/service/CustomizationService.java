@@ -2,7 +2,9 @@ package com.example.backend.service;
 
 import com.example.backend.dto.CustomizationDTO;
 import com.example.backend.dto.request.CustomizationCreateRequest;
+import com.example.backend.entities.Category;
 import com.example.backend.entities.Customization;
+import com.example.backend.entities.FeatureCode;
 import com.example.backend.entities.Restaurant;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
@@ -12,12 +14,11 @@ import com.example.backend.repository.RestaurantRepository;
 import com.example.backend.repository.MenuItemRepository;
 import com.example.backend.repository.CategoryRepository;
 import jakarta.transaction.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Supplier;
 
 @Service
 public class CustomizationService {
@@ -27,23 +28,24 @@ public class CustomizationService {
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
     private final CategoryRepository categoryRepository;
-    private final Logger logger = LoggerFactory.getLogger(CustomizationService.class);
+    private final FeatureLimitCheckerService featureLimitCheckerService;
 
 
     public CustomizationService(CustomizationRepository customizationRepository,
                                 CustomizationMapper customizationMapper,
                                 RestaurantRepository restaurantRepository,
                                 MenuItemRepository menuItemRepository,
-                                CategoryRepository categoryRepository) {
+                                CategoryRepository categoryRepository,
+                                FeatureLimitCheckerService featureLimitCheckerService) {
         this.customizationRepository = customizationRepository;
         this.customizationMapper = customizationMapper;
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
         this.categoryRepository = categoryRepository;
+        this.featureLimitCheckerService = featureLimitCheckerService;
     }
 
     public List<CustomizationDTO> getAllByRestaurant(UUID restaurantId) {
-        logger.info("customization service - getAllByRestaurant called for {}", restaurantId);
         List<Customization> list = customizationRepository
                 .findAllByRestaurant_RestaurantIdAndStatusTrue(restaurantId);
 
@@ -82,9 +84,6 @@ public class CustomizationService {
             customization.getMenuItems().add(menuItem);
         }
 
-        logger.info("customization created for type: {}",
-                request.getMenuItemId() != null ? "MenuItem" : "Category");
-
         return customizationMapper.toCustomizationDTO(customizationRepository.save(customization));
     }
 
@@ -95,7 +94,6 @@ public class CustomizationService {
                     exist.setName(dto.getName());
                     exist.setPrice(dto.getPrice());
                     exist.setUpdatedAt(Instant.now());
-                    logger.info("customization updated");
                     return customizationMapper.toCustomizationDTO(customizationRepository.save(exist));
                 })
                 .orElseThrow(() -> new AppException(ErrorCode.CUSTOMIZATION_NOT_FOUND));
@@ -106,7 +104,21 @@ public class CustomizationService {
         customizationRepository.findById(id).ifPresent(customization -> {
             customization.setStatus(false);
             customizationRepository.save(customization);
-            logger.info("customization deleted safely");
         });
+    }
+
+    @Transactional
+    public boolean canCreateCustomizationForCategory(UUID restaurantId, UUID categoryId) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        Supplier<Long> currentCountSupplier = () ->
+                customizationRepository.countByCategories_CategoryIdAndStatusTrue(category.getCategoryId());
+
+        return featureLimitCheckerService.isUnderLimit(
+                restaurantId,
+                FeatureCode.LIMIT_CUSTOMIZATION_PER_CATEGORY,
+                currentCountSupplier
+        );
     }
 }

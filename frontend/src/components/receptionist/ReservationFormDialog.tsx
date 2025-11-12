@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar, Clock, Users } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useBookingStore } from '@/store/bookingStore';
+import { useCreateReservationReceptionist } from '@/hooks/queries/useReservations';
 
 const bookingSchema = z.object({
   guestName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -22,6 +22,14 @@ const bookingSchema = z.object({
   bookingDate: z.string().min(1, 'Date is required'),
   bookingTime: z.string().min(1, 'Time is required'),
   numberOfGuests: z.coerce.number().min(1, 'At least 1 guest required').max(20, 'Maximum 20 guests'),
+});
+
+const bookingSchemaValidated = bookingSchema.superRefine((data, ctx) => {
+  if (!data.bookingDate || !data.bookingTime) return;
+  const dt = new Date(`${data.bookingDate}T${data.bookingTime}:00`);
+  if (isNaN(dt.getTime()) || dt.getTime() <= Date.now()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['bookingDate'], message: 'Reservation date/time must be in the future' });
+  }
 });
 
 type BookingFormData = z.infer<typeof bookingSchema>;
@@ -34,7 +42,7 @@ interface ReservationFormDialogProps {
 }
 
 export function ReservationFormDialog({ open, onOpenChange, branchId, branchName }: ReservationFormDialogProps) {
-  const addBooking = useBookingStore((state) => state.addBooking);
+  const createMutation = useCreateReservationReceptionist();
 
   const {
     register,
@@ -42,29 +50,36 @@ export function ReservationFormDialog({ open, onOpenChange, branchId, branchName
     formState: { errors },
     reset,
   } = useForm<BookingFormData>({
-    resolver: zodResolver(bookingSchema),
+    resolver: zodResolver(bookingSchemaValidated),
   });
 
   const onSubmit = (data: BookingFormData) => {
-    addBooking({
+    const startTime = `${data.bookingDate}T${data.bookingTime}:00`;
+    const payload = {
       branchId,
-      branchName,
-      guestName: data.guestName,
-      guestEmail: data.guestEmail,
-      guestPhone: data.guestPhone,
-      bookingDate: data.bookingDate,
-      bookingTime: data.bookingTime,
-      numberOfGuests: data.numberOfGuests,
-      items: [],
-    });
+      areaTableId: null,
+      startTime,
+      customerName: data.guestName,
+      customerPhone: data.guestPhone,
+      customerEmail: data.guestEmail,
+      guestNumber: data.numberOfGuests,
+      note: undefined,
+    } as any;
 
-    toast({
-      title: 'Reservation Created',
-      description: 'The reservation has been created and is pending approval.',
-    });
-
-    onOpenChange(false);
-    reset();
+    (async () => {
+      try {
+        await createMutation.mutateAsync(payload);
+        toast({
+          title: 'Reservation Created',
+          description: 'The reservation has been created and is pending approval.',
+        });
+        onOpenChange(false);
+        reset();
+      } catch (err: any) {
+        console.error('Create reservation failed', err);
+        toast({ title: 'Reservation Failed', description: err?.response?.data?.message || 'Please try again later.' });
+      }
+    })();
   };
 
   return (

@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,11 +27,13 @@ public class MenuItemService {
     private final CustomizationRepository customizationRepository;
     private final BranchMenuItemRepository branchMenuItemRepository;
     private final MediaService mediaService;
+    private final FeatureLimitCheckerService featureLimitCheckerService;
 
     public MenuItemService(MenuItemRepository menuItemRepository, MenuItemMapper menuItemMapper,
                            RestaurantRepository restaurantRepository, CategoryRepository categoryRepository,
                            CustomizationRepository customizationRepository, BranchMenuItemRepository branchMenuItemRepository,
-                           MediaService mediaService) {
+                           MediaService mediaService,
+                           FeatureLimitCheckerService featureLimitCheckerService) {
         this.menuItemRepository = menuItemRepository;
         this.menuItemMapper = menuItemMapper;
         this.restaurantRepository = restaurantRepository;
@@ -38,6 +41,7 @@ public class MenuItemService {
         this.customizationRepository = customizationRepository;
         this.branchMenuItemRepository = branchMenuItemRepository;
         this.mediaService = mediaService;
+        this.featureLimitCheckerService = featureLimitCheckerService;
     }
 
     public List<MenuItemDTO> getAllByRestaurant(UUID restaurantId) {
@@ -197,5 +201,17 @@ public class MenuItemService {
         MenuItemDTO dto = menuItemMapper.toMenuItemDTO(updated);
         dto.setImageUrl(mediaService.getImageUrlByTarget(updated.getMenuItemId(), "MENU_ITEM_IMAGE"));
         return dto;
+    }
+
+    @Transactional
+    public boolean canCreateMenuItem(UUID restaurantId) {
+        Supplier<Long> currentCountSupplier = () ->
+                menuItemRepository.countByRestaurant_RestaurantIdAndStatusNot(restaurantId, MenuItemStatus.DELETED);
+
+        return featureLimitCheckerService.isUnderLimit(
+                restaurantId,
+                FeatureCode.LIMIT_MENU_ITEMS,
+                currentCountSupplier
+        );
     }
 }

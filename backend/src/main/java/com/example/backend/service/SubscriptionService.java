@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import com.example.backend.dto.ActivePackageStatsDTO;
 import com.example.backend.dto.RestaurantSubscriptionOverviewDTO;
 import com.example.backend.dto.response.SubscriptionPaymentResponse;
 import com.example.backend.dto.response.SubscriptionResponse;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,14 +35,14 @@ public class SubscriptionService {
     private final RestaurantRepository restaurantRepository;
     private final SecurityUtil securityUtil;
     private final Logger logger = LoggerFactory.getLogger(SubscriptionService.class);
+    final long PAYMENT_TIMEOUT_MINUTES = 30;
 
     public SubscriptionService(
             SubscriptionRepository subscriptionRepository,
             PackageRepository packageRepository,
             SubscriptionPaymentRepository subscriptionPaymentRepository,
             RestaurantRepository restaurantRepository,
-            SecurityUtil securityUtil
-    ) {
+            SecurityUtil securityUtil) {
         this.subscriptionRepository = subscriptionRepository;
         this.packageRepository = packageRepository;
         this.subscriptionPaymentRepository = subscriptionPaymentRepository;
@@ -86,27 +88,6 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public SubscriptionResponse renewSubscription(UUID subscriptionId, int additionalMonths) {
-        Subscription subscription = subscriptionRepository.findById(subscriptionId)
-                .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
-
-        if (subscription.getStatus() != SubscriptionStatus.ACTIVE) {
-            throw new AppException(ErrorCode.SUBSCRIPTION_NOT_ACTIVE);
-        }
-
-        LocalDate now = LocalDate.now();
-        LocalDate newEnd = (subscription.getEndDate() != null && subscription.getEndDate().isAfter(now))
-                ? subscription.getEndDate().plusMonths(additionalMonths)
-                : now.plusMonths(additionalMonths);
-
-        subscription.setEndDate(newEnd);
-        subscription.setUpdatedAt(Instant.now());
-
-        Subscription updated = subscriptionRepository.save(subscription);
-        return mapToResponse(updated);
-    }
-
-    @Transactional
     public SubscriptionResponse cancelSubscription(UUID subscriptionId) {
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
@@ -127,22 +108,6 @@ public class SubscriptionService {
         return mapToResponse(saved);
     }
 
-    @Transactional
-    public SubscriptionResponse changePackage(UUID restaurantId, UUID newPackageId) {
-        Subscription current = subscriptionRepository
-                .findTopByRestaurant_RestaurantIdOrderByCreatedAtDesc(restaurantId)
-                .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
-
-        if (current.getStatus() == SubscriptionStatus.ACTIVE) {
-            current.setStatus(SubscriptionStatus.CANCELED);
-            subscriptionRepository.save(current);
-        }
-
-        Restaurant restaurant = current.getRestaurant();
-        Subscription created = createEntitySubscription(restaurant, newPackageId);
-        return mapToResponse(created);
-    }
-
     // -------------------------
     // Admin queries
     // -------------------------
@@ -160,17 +125,6 @@ public class SubscriptionService {
                 .findTopByRestaurant_RestaurantIdAndStatusOrderByCreatedAtDesc(restaurantId, SubscriptionStatus.ACTIVE)
                 .map(this::mapToResponse)
                 .orElse(null);
-    }
-
-    @Transactional(readOnly = true)
-    public Map<String, Long> getPackagePurchaseStats() {
-        List<Subscription> allSubs = subscriptionRepository.findAll();
-        return allSubs.stream()
-                .filter(s -> s.getaPackage() != null)
-                .collect(Collectors.groupingBy(
-                        s -> s.getaPackage().getName(),
-                        Collectors.counting()
-                ));
     }
 
     // -------------------------
@@ -201,36 +155,71 @@ public class SubscriptionService {
     // -------------------------
     @Transactional(readOnly = true)
     public List<RestaurantSubscriptionOverviewDTO> getSubscriptionsOverviewForOwner() {
-        User currentUser = securityUtil.getCurrentUser(); // implement this according to your security
-
+        User currentUser = securityUtil.getCurrentUser();
         List<Restaurant> restaurants = restaurantRepository.findAllByUser_UserId(currentUser.getUserId());
-        List<RestaurantSubscriptionOverviewDTO> overviewList = new ArrayList<>();
 
-        for (Restaurant restaurant : restaurants) {
+        return restaurants.stream().map(restaurant -> {
             RestaurantSubscriptionOverviewDTO overview = new RestaurantSubscriptionOverviewDTO();
             overview.setRestaurantId(restaurant.getRestaurantId());
             overview.setRestaurantName(restaurant.getName());
 
-            // current active subscription for this restaurant
-            SubscriptionResponse currentSub = subscriptionRepository
-                    .findTopByRestaurant_RestaurantIdAndStatusOrderByCreatedAtDesc(
-                            restaurant.getRestaurantId(), SubscriptionStatus.ACTIVE)
-                    .map(this::mapToResponse)
+            // Lấy subscription active nhất (đã load sẵn trong entity graph)
+            Subscription currentSub = restaurant.getSubscriptions().stream()
+                    .filter(sub -> sub.getStatus() == SubscriptionStatus.ACTIVE)
+                    .max(Comparator.comparing(Subscription::getCreatedAt))
                     .orElse(null);
-            overview.setCurrentSubscription(currentSub);
 
-            // payment history for this restaurant
-            List<SubscriptionPaymentResponse> paymentHistory = subscriptionPaymentRepository
-                    .findAllBySubscription_Restaurant_RestaurantIdOrderByDateDesc(restaurant.getRestaurantId())
-                    .stream()
+            if (currentSub != null) {
+                overview.setCurrentSubscription(mapToResponse(currentSub));
+            }
+
+            // Lấy paymentHistory từ tất cả subscriptions (đã load sẵn)
+            List<SubscriptionPaymentResponse> payments = restaurant.getSubscriptions().stream()
+                    .flatMap(sub -> sub.getSubscriptionPayments().stream())
+                    .sorted(Comparator.comparing(SubscriptionPayment::getDate).reversed())
                     .map(this::subscriptionPaymentToResponse)
                     .collect(Collectors.toList());
-            overview.setPaymentHistory(paymentHistory);
 
-            overviewList.add(overview);
-        }
+            overview.setPaymentHistory(payments);
+            return overview;
+        }).toList();
+    }
 
-        return overviewList;
+    @Transactional(readOnly = true)
+    public List<ActivePackageStatsDTO> getActivePackageStats() {
+        // Lấy tất cả subscriptions (không chỉ active)
+        List<Subscription> subs = subscriptionRepository.findAllWithPayments();
+
+        Map<String, List<Subscription>> groupedByPackage = subs.stream()
+                .collect(Collectors.groupingBy(s -> s.getaPackage().getName()));
+
+        return groupedByPackage.entrySet().stream().map(entry -> {
+            String packageName = entry.getKey();
+            List<Subscription> packageSubs = entry.getValue();
+
+            long activeCount = packageSubs.stream()
+                    .filter(s -> s.getStatus() == SubscriptionStatus.ACTIVE)
+                    .count();
+
+            // calculate payment count and total revenue (all payments with SUCCESS status from all subscriptions, even canceled subscriptions)
+            List<SubscriptionPayment> payments = packageSubs.stream()
+                    .flatMap(s -> s.getSubscriptionPayments().stream())
+                    .filter(p -> p.getSubscriptionPaymentStatus() == SubscriptionPaymentStatus.SUCCESS)
+                    .toList();
+
+            long paymentCount = payments.size();
+            BigDecimal totalRevenue = payments.stream()
+                    .map(p -> BigDecimal.valueOf(p.getAmount()))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            ActivePackageStatsDTO dto = new ActivePackageStatsDTO();
+            dto.setPackageName(packageName);
+            dto.setActiveCount(activeCount);
+            dto.setPaymentCount(paymentCount);
+            dto.setTotalRevenue(totalRevenue);
+
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     // -------------------------
@@ -250,14 +239,38 @@ public class SubscriptionService {
         }
     }
 
+    @Scheduled(cron = "0 */5 * * * *") // every 5 minutes
+    @Transactional
+    public void cleanupUnpaidSubscriptions() {
+        Instant cutoff = Instant.now().minus(PAYMENT_TIMEOUT_MINUTES, ChronoUnit.MINUTES);
+        List<Subscription> pendingSubs = subscriptionRepository.findAllByStatus(SubscriptionStatus.PENDING_PAYMENT);
+
+        logger.info("Cleaning up {} unpaid subscriptions older than {} minutes", pendingSubs.size(),
+                PAYMENT_TIMEOUT_MINUTES);
+
+        for (Subscription s : pendingSubs) {
+            SubscriptionPayment payment = s.getLatestPayment();
+            if (payment != null && payment.getDate() != null && payment.getDate().isBefore(cutoff)) {
+                Restaurant r = s.getRestaurant();
+                if (r != null && subscriptionRepository.countByRestaurant_RestaurantId(r.getRestaurantId()) <= 1) {
+                    r.setStatus(false);
+                    restaurantRepository.delete(r);
+                }
+                subscriptionRepository.delete(s);
+            }
+        }
+    }
+
     // -------------------------
     // Helpers / mapping
     // -------------------------
     private SubscriptionResponse mapToResponse(Subscription subscription) {
-        if (subscription == null) return null;
+        if (subscription == null)
+            return null;
         SubscriptionResponse response = new SubscriptionResponse();
         response.setSubscriptionId(subscription.getSubscriptionId());
-        response.setRestaurantId(subscription.getRestaurant() != null ? subscription.getRestaurant().getRestaurantId() : null);
+        response.setRestaurantId(
+                subscription.getRestaurant() != null ? subscription.getRestaurant().getRestaurantId() : null);
         response.setPackageId(subscription.getaPackage() != null ? subscription.getaPackage().getPackageId() : null);
         response.setStatus(subscription.getStatus());
         response.setStartDate(subscription.getStartDate());
@@ -266,14 +279,17 @@ public class SubscriptionService {
         SubscriptionPayment latestPayment = subscription.getLatestPayment();
         if (latestPayment != null) {
             response.setPaymentInfo(subscriptionPaymentToResponse(latestPayment));
-            response.setPaymentStatus(latestPayment.getSubscriptionPaymentStatus() != null ? latestPayment.getSubscriptionPaymentStatus().name() : null);
+            response.setPaymentStatus(latestPayment.getSubscriptionPaymentStatus() != null
+                    ? latestPayment.getSubscriptionPaymentStatus().name()
+                    : null);
             response.setAmount(BigDecimal.valueOf(latestPayment.getAmount()));
         }
         return response;
     }
 
     private SubscriptionPaymentResponse subscriptionPaymentToResponse(SubscriptionPayment payment) {
-        if (payment == null) return null;
+        if (payment == null)
+            return null;
         SubscriptionPaymentResponse dto = new SubscriptionPaymentResponse();
         dto.setSubscriptionPaymentId(payment.getSubscriptionPaymentId());
         dto.setAmount(BigDecimal.valueOf(payment.getAmount()));
@@ -284,7 +300,8 @@ public class SubscriptionService {
         dto.setAccountName(payment.getAccountName());
         dto.setExpiredAt(payment.getExpiredAt());
         dto.setDescription(payment.getDescription());
-        dto.setSubscriptionPaymentStatus(payment.getSubscriptionPaymentStatus() != null ? payment.getSubscriptionPaymentStatus().name() : null);
+        dto.setSubscriptionPaymentStatus(
+                payment.getSubscriptionPaymentStatus() != null ? payment.getSubscriptionPaymentStatus().name() : null);
         dto.setDate(payment.getDate());
         return dto;
     }

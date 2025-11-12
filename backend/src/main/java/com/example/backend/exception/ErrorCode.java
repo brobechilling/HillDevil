@@ -47,6 +47,7 @@ public enum ErrorCode {
     PAYMENT_WEBHOOK_FAILED(1019, "Payment Webhook Failed", HttpStatus.INTERNAL_SERVER_ERROR),
     FEATURE_NAME_EMPTY(1020, "Feature name is empty", HttpStatus.BAD_REQUEST),
     PAYMENT_CANNOT_CANCEL(1021, "Payment cannot cancel", HttpStatus.BAD_REQUEST),
+    SUBSCRIPTION_ALREADY_EXPIRED(1022, "Subscription already expired", HttpStatus.BAD_REQUEST),
     // Restaurant error
     RESTAURANT_NOTEXISTED(3000, "Restaurant not existed", HttpStatus.NOT_FOUND),
     STAFFACCOUNT_NOTEXISTED(4001, "StaffAccount not existed", HttpStatus.NOT_FOUND),
@@ -75,6 +76,8 @@ public enum ErrorCode {
     TABLE_ALREADY_HAS_PENDING_ORDER(5003, "Table already has pending order", HttpStatus.BAD_REQUEST),
     ORDER_ALREADY_COMPLETED(5004, "Order already completed", HttpStatus.BAD_REQUEST),
 
+    // Reservation errors
+    RESERVATION_NOT_FOUND(5001, "Reservation not found", HttpStatus.NOT_FOUND),
     WE_COOKED(9999, "oh shit - we get unexpected exception", HttpStatus.INTERNAL_SERVER_ERROR);
 
 

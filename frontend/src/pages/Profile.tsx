@@ -37,7 +37,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useBranches } from '@/hooks/queries/useBranches';
 import { usePackages } from '@/hooks/queries/usePackages';
-import { useOverviewForOwner, useRenewSubscription, useCancelSubscription, useChangePackage } from '@/hooks/queries/useSubscription';
+import { useOverviewForOwner, useCancelSubscription } from '@/hooks/queries/useSubscription';
+import { useRenewSubscription, useChangePackage } from '@/hooks/queries/useRestaurantSubscription';
 import {
   Mail,
   Calendar,
@@ -101,9 +102,11 @@ const Profile = () => {
 
   // Subscription state
   const [isChangePackageOpen, setIsChangePackageOpen] = useState(false);
+  const [isRenewPackageOpen, setIsRenewPackageOpen] = useState(false);
   const [selectedNewPackage, setSelectedNewPackage] = useState<string>('');
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
   const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
+  const [renewMode, setRenewMode] = useState<'renew' | 'change'>('renew');
 
   // React Query hooks
   const { data: packages = [] } = usePackages();
@@ -226,46 +229,38 @@ const Profile = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await clearSession();
-    navigate('/');
+  const handleRenew = (subscriptionId: string, restaurantId: string) => {
+    setSelectedRestaurantId(restaurantId);
+    setRenewMode('renew');
+    setIsRenewPackageOpen(true);
   };
 
-  const handleRenew = async (subscriptionId: string) => {
-    try {
-      await renewMutation.mutateAsync({ id: subscriptionId, additionalMonths: 1 });
-      toast({ title: 'Success', description: 'Subscription renewed for 1 month.' });
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to renew.' });
-    }
+  const handleChangePackageClick = (restaurantId: string) => {
+    setSelectedRestaurantId(restaurantId);
+    setRenewMode('change');
+    setIsRenewPackageOpen(true);
   };
 
-  const handleCancel = async (subscriptionId: string) => {
-    try {
-      await cancelMutation.mutateAsync(subscriptionId);
-      toast({ title: 'Success', description: 'Subscription cancelled.' });
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to cancel.' });
-    }
-  };
-
-  const handleChangePackage = async () => {
+  const handlePackageConfirm = () => {
     if (!selectedNewPackage || !selectedRestaurantId) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please select package and restaurant.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Please select a package.' });
       return;
     }
-    try {
-      await changePackageMutation.mutateAsync({
-        restaurantId: selectedRestaurantId,
-        newPackageId: selectedNewPackage,
-      });
-      toast({ title: 'Success', description: 'Package change initiated.' });
-      setIsChangePackageOpen(false);
-      setSelectedNewPackage('');
-      setSelectedRestaurantId('');
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to change package.' });
-    }
+
+    const restaurant = overviewData.find(r => r.restaurantId === selectedRestaurantId);
+    if (!restaurant) return;
+
+    // Navigate to RegisterConfirm with restaurant data and action (renew/change)
+    const params = new URLSearchParams();
+    params.append('restaurantId', selectedRestaurantId);
+    params.append('restaurantName', restaurant.restaurantName);
+    params.append('packageId', selectedNewPackage);
+    params.append('action', renewMode); // 'renew' or 'change'
+
+    navigate(`/register/confirm?${params.toString()}`);
+    setIsRenewPackageOpen(false);
+    setSelectedNewPackage('');
+    setSelectedRestaurantId('');
   };
 
   const getDaysUntilExpiry = (endDate?: string): number | null => {
@@ -535,30 +530,15 @@ const Profile = () => {
                                     )}
 
                                     {/* Renew */}
-                                    {isExpiringSoon && (
-                                      <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                          <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                                            <RefreshCw className="w-3.5 h-3.5" />
-                                          </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>Renew Subscription?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                              Renew <strong>{sub.restaurantName}</strong> for 1 more month?
-                                              <br />
-                                              <strong>This action cannot be undone.</strong>
-                                            </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleRenew(current.subscriptionId)}>
-                                              Confirm
-                                            </AlertDialogAction>
-                                          </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
+                                    {isActive && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 w-8 p-0"
+                                        onClick={() => handleRenew(current.subscriptionId, sub.restaurantId)}
+                                      >
+                                        <RefreshCw className="w-3.5 h-3.5" />
+                                      </Button>
                                     )}
 
                                     {/* Cancel */}
@@ -573,14 +553,14 @@ const Profile = () => {
                                           <AlertDialogHeader>
                                             <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                              Cancel subscription for <strong>{sub.restaurantName}</strong>?
+                                              Cancel subscription for <strong>{sub.restaurantName}</strong>
                                               <br />
                                               <strong>This action cannot be undone.</strong>
                                             </AlertDialogDescription>
                                           </AlertDialogHeader>
                                           <AlertDialogFooter>
                                             <AlertDialogCancel>Keep</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleCancel(current.subscriptionId)}>
+                                            <AlertDialogAction onClick={() => cancelMutation.mutate(current.subscriptionId)}>
                                               Yes, Cancel
                                             </AlertDialogAction>
                                           </AlertDialogFooter>
@@ -589,58 +569,15 @@ const Profile = () => {
                                     )}
 
                                     {/* Change Package */}
-                                    <Dialog open={isChangePackageOpen} onOpenChange={setIsChangePackageOpen}>
-                                      <DialogTrigger asChild>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          className="h-8 w-8 p-0"
-                                          onClick={() => {
-                                            setSelectedRestaurantId(sub.restaurantId);
-                                            setSelectedNewPackage(null);
-                                          }}
-                                          disabled={!current}
-                                        >
-                                          <PackageIcon className="w-3.5 h-3.5" />
-                                        </Button>
-                                      </DialogTrigger>
-                                      <DialogContent className="sm:max-w-md">
-                                        <DialogHeader>
-                                          <DialogTitle>Change Package</DialogTitle>
-                                          <DialogDescription>For: <strong>{sub.restaurantName}</strong></DialogDescription>
-                                        </DialogHeader>
-                                        <div className="space-y-4">
-                                          <div className="space-y-2">
-                                            <Label>Select New Package</Label>
-                                            {packages
-                                              .filter((pkg: Package) => pkg.packageId !== current?.packageId)
-                                              .map((pkg: Package) => (
-                                                <div
-                                                  key={pkg.packageId}
-                                                  className={`p-3 border rounded-lg cursor-pointer transition ${selectedNewPackage === pkg.packageId
-                                                      ? 'border-primary bg-primary/5'
-                                                      : 'hover:bg-muted'
-                                                    }`}
-                                                  onClick={() => setSelectedNewPackage(pkg.packageId)}
-                                                >
-                                                  <p className="font-medium">{pkg.name}</p>
-                                                  <p className="text-sm text-muted-foreground">{pkg.description}</p>
-                                                  <p className="text-sm font-semibold">
-                                                    {pkg.price.toLocaleString()} VND/{pkg.billingPeriod}month
-                                                  </p>
-                                                </div>
-                                              ))}
-                                          </div>
-                                          <Button
-                                            onClick={handleChangePackage}
-                                            className="w-full"
-                                            disabled={!selectedNewPackage || changePackageMutation.isPending}
-                                          >
-                                            {changePackageMutation.isPending ? 'Processing...' : 'Confirm Change'}
-                                          </Button>
-                                        </div>
-                                      </DialogContent>
-                                    </Dialog>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0"
+                                      onClick={() => handleChangePackageClick(sub.restaurantId)}
+                                      disabled={!current}
+                                    >
+                                      <PackageIcon className="w-3.5 h-3.5" />
+                                    </Button>
                                   </div>
                                 </TableCell>
                               </TableRow>
@@ -813,6 +750,73 @@ const Profile = () => {
           )}
         </div>
       </main>
+      {/* Package Selection Dialog */}
+      <Dialog open={isRenewPackageOpen} onOpenChange={setIsRenewPackageOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {renewMode === 'renew' ? 'Renew Subscription' : 'Change Package'}
+            </DialogTitle>
+            <DialogDescription>
+              {renewMode === 'renew' 
+                ? 'Select a package to renew your subscription'
+                : 'Select a new package to upgrade/downgrade your subscription'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            {packages.map((pkg: Package) => {
+              const current = overviewData.find(r => r.restaurantId === selectedRestaurantId)?.currentSubscription;
+              const isCurrent = pkg.packageId === current?.packageId;
+              
+              return (
+                <div
+                  key={pkg.packageId}
+                  className={`p-4 border rounded-lg cursor-pointer transition ${
+                    selectedNewPackage === pkg.packageId
+                      ? 'border-primary bg-primary/5'
+                      : 'hover:border-primary/50 hover:bg-muted/50'
+                  } ${isCurrent ? 'opacity-50' : ''}`}
+                  onClick={() => !isCurrent && setSelectedNewPackage(pkg.packageId)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="font-semibold text-lg">{pkg.name}</p>
+                      <p className="text-sm text-muted-foreground">{pkg.description}</p>
+                    </div>
+                    {isCurrent && (
+                      <Badge variant="secondary" className="ml-2">Current</Badge>
+                    )}
+                  </div>
+                  <p className="text-lg font-bold text-primary mt-2">
+                    {pkg.price.toLocaleString()} VND/month
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRenewPackageOpen(false);
+                setSelectedNewPackage('');
+              }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePackageConfirm}
+              className="flex-1"
+              disabled={!selectedNewPackage}
+            >
+              Continue to Payment
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <style>{`
         @keyframes slide-in-left {
           from { opacity: 0; transform: translateX(-20px); }

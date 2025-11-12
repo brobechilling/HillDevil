@@ -37,6 +37,7 @@ public class OrderItemCustomizationService {
         List<OrderItemCustomization> orderItemCustomizations = new ArrayList<>();
         for (CreateOrderItemCustomizationRequest createOrderItemCustomizationRequest : createOrderItemCustomizationRequestList) {
             OrderItemCustomization orderItemCustomization = orderItemCustomizationMapper.createOrderItemCustomization(createOrderItemCustomizationRequest);
+            // orderItem is already saved in db
             orderItemCustomization.setOrderItem(orderItem);
             Customization customization = customizationRepository.findById(createOrderItemCustomizationRequest.getCustomizationId()).orElseThrow(() -> new AppException(ErrorCode.CUSTOMIZATION_NOT_FOUND));
             orderItemCustomization.setCustomization(customization);

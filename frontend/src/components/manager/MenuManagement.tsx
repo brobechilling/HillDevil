@@ -6,9 +6,8 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, AlertTriangle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { MenuItemCard } from '@/components/menu/MenuItemCard';
 
@@ -18,11 +17,21 @@ import { useRestaurantByBranch } from "@/hooks/queries/useBranches";
 import { useBranchMenuItems, useUpdateAvailability } from "@/hooks/queries/useBranchMenuItems";
 import { useCategories } from "@/hooks/queries/useCategories";
 import { BranchMenuItemDTO } from "@/dto/branchMenuItem.dto";
-import { MenuItemViewDialog } from "@/components/owner/MenuItemViewDialog";
+import { MenuItemViewDialog } from "@/components/menu/MenuItemViewDialog";
 
-export const MenuManagement = () => {
+interface MenuManagementProps {
+    branchId?: string;
+}
+
+export const MenuManagement = ({ branchId: branchIdProp }: MenuManagementProps = {}) => {
     const { user } = useSessionStore();
-    const branchId = isStaffAccountDTO(user) ? user.branchId : undefined;
+    // Fallback to user.branchId if branchId prop is not provided (for backward compatibility)
+    const branchIdFromUser = isStaffAccountDTO(user) ? user.branchId : undefined;
+    // Use branchIdProp if provided (even if empty string), otherwise fallback to user.branchId
+    const branchId = branchIdProp !== undefined ? branchIdProp : branchIdFromUser;
+
+    // Check if branchId is missing or empty
+    const isBranchIdMissing = !branchId || (typeof branchId === 'string' && branchId.trim() === "");
 
     // Queries
     const { data: restaurantId, isLoading: loadingRestaurant } = useRestaurantByBranch(branchId);
@@ -89,6 +98,25 @@ export const MenuManagement = () => {
         );
     };
 
+    // === BranchId Missing ===
+    if (isBranchIdMissing) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Menu Management</CardTitle>
+                    <CardDescription>Manage menu item availability</CardDescription>
+                </CardHeader>
+                <CardContent className="text-center py-16">
+                    <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-lg font-medium">Branch ID is missing</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Please navigate from a valid branch context.
+                    </p>
+                </CardContent>
+            </Card>
+        );
+    }
+
     // === Loading ===
     if (isLoading) {
         return (
@@ -139,46 +167,46 @@ export const MenuManagement = () => {
     // === Main Render ===
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>Menu Management</CardTitle>
-                <CardDescription>Manage item availability for this branch</CardDescription>
-                <div className="mt-4 flex justify-between items-center gap-4">
+            <CardHeader className="pb-4">
+                <CardTitle className="text-xl">Menu Management</CardTitle>
+                <CardDescription className="text-sm">Manage item availability for this branch</CardDescription>
+                <div className="mt-3 flex justify-between items-center gap-3">
                     <div className="flex-1 text-center">
-                        <p className="text-2xl font-bold">{menuItems.length}</p>
-                        <p className="text-sm text-muted-foreground">Total Items</p>
+                        <p className="text-xl font-bold">{menuItems.length}</p>
+                        <p className="text-xs text-muted-foreground">Total Items</p>
                     </div>
                     <div className="flex-1 text-center">
-                        <p className="text-2xl font-bold">
+                        <p className="text-xl font-bold">
                             {menuItems.filter(item => item.bestSeller).length}
                         </p>
-                        <p className="text-sm text-muted-foreground">Best Sellers</p>
+                        <p className="text-xs text-muted-foreground">Best Sellers</p>
                     </div>
                     <div className="flex-1 text-center">
-                        <p className="text-2xl font-bold">
+                        <p className="text-xl font-bold">
                             {menuItems.filter(item => item.available).length}/{menuItems.length}
                         </p>
-                        <p className="text-sm text-muted-foreground">Available</p>
+                        <p className="text-xs text-muted-foreground">Available</p>
                     </div>
                 </div>
             </CardHeader>
 
             <CardContent>
-                <div className="space-y-10">
+                <div className="space-y-6">
                     {sortedCategories.map((categoryName) => {
                         const items = groupedItems[categoryName];
                         return (
-                            <section key={categoryName} className="space-y-4">
+                            <section key={categoryName} className="space-y-3">
                                 <div className="flex items-center justify-between pb-2 border-b border-border/50">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-1 h-6 bg-primary rounded-full"></div>
-                                        <h3 className="text-xl font-bold">{categoryName}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1 h-5 bg-primary rounded-full"></div>
+                                        <h3 className="text-lg font-bold">{categoryName}</h3>
                                         <Badge variant="secondary" className="text-xs">
                                             {items.length} {items.length > 1 ? "items" : "item"}
                                         </Badge>
                                     </div>
                                 </div>
 
-                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                                     {items.map((item) => (
                                         <MenuItemCard
                                             key={item.menuItemId}

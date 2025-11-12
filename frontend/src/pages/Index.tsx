@@ -339,7 +339,7 @@ const PackagesSection = ({ packages, isLoading, error, handleRegisterPackage }: 
   // Ánh xạ icon và popular dựa trên tên gói
   const getPackageIcon = (name: string) => {
     if (name.toLowerCase().includes('basic')) return Store;
-    if (name.toLowerCase().includes('professional')) return Building2;
+    if (name.toLowerCase().includes('premium')) return Building2;
     if (name.toLowerCase().includes('enterprise')) return Building2;
     return Store; // Mặc định
   };

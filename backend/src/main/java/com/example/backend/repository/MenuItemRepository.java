@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface MenuItemRepository extends JpaRepository<MenuItem, UUID> {
     List<MenuItem> findAllByRestaurant_RestaurantIdAndStatus(UUID restaurantId, MenuItemStatus status);
     List<MenuItem> findAllByRestaurant_RestaurantIdAndStatusIn(UUID restaurantId, List<MenuItemStatus> statuses);
+    long countByRestaurant_RestaurantIdAndStatusNot(UUID restaurantId, MenuItemStatus status);
 }

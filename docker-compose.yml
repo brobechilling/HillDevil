@@ -21,7 +21,9 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - BREVO_API_KEY=${BREVO_API_KEY}
       - BREVO_MAIL_URL=${BREVO_MAIL_URL}
+      - VITE_SOCKET_URL=${VITE_SOCKET_URL}
     ports:
       - "8080:8080"
+      - "8099:8099"
     container_name: spring-app-container
     restart: unless-stopped
