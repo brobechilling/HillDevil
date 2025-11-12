@@ -4,12 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { OrderDTO } from '@/dto/order.dto';
+// import { OrderDTO } from '@/dto/order.dto';
 import { Receipt, Mail, Phone, Clock, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BillCreationDialog } from './BillCreationDialog';
 import { useReservationsByTable } from '@/hooks/queries/useReservationsByTable';
 import { useTable } from '@/hooks/queries/useTables';
-import { usePendingOrderByTable } from '@/hooks/queries/useOrders';
+// import { usePendingOrderByTable } from '@/hooks/queries/useOrders';
 
 interface TableDetailsDialogProps {
   tableId?: string | null;
@@ -21,7 +21,7 @@ interface TableDetailsDialogProps {
 
 export const TableDetailsDialog = ({ tableId, table, branchId, open, onOpenChange }: TableDetailsDialogProps) => {
   const tableQuery = useTable(tableId);
-  const pendingOrderQuery = usePendingOrderByTable(tableId ?? '');
+  // const pendingOrderQuery = usePendingOrderByTable(tableId ?? '');
 
   const tableFromApi = tableQuery.data;
   const effectiveTable = table || tableFromApi;
@@ -50,20 +50,20 @@ export const TableDetailsDialog = ({ tableId, table, branchId, open, onOpenChang
   if (!effectiveTable) return null;
 
 
-  const allOrders = useMemo(() => {
-    const o = pendingOrderQuery.data;
-    return o ? [o as OrderDTO] : [];
-  }, [pendingOrderQuery.data]);
+  // const allOrders = useMemo(() => {
+  //   const o = pendingOrderQuery.data;
+  //   return o ? [o as OrderDTO] : [];
+  // }, [pendingOrderQuery.data]);
 
-  const isBilled = (order: OrderDTO) =>
-    order.orderLines.every(line => ((line as any).orderLineStatus || (line as any).status || '').toString().toLowerCase() === 'completed');
+  // const isBilled = (order: OrderDTO) =>
+  //   order.orderLines.every(line => ((line as any).orderLineStatus || (line as any).status || '').toString().toLowerCase() === 'completed');
 
-  const currentOrders = useMemo(() =>
-    allOrders.filter(o => !isBilled(o) && ['pending', 'preparing', 'ready', 'completed'].includes(o.status)),
-    [allOrders]
-  );
+  // const currentOrders = useMemo(() =>
+  //   allOrders.filter(o => !isBilled(o) && ['pending', 'preparing', 'ready', 'completed'].includes(o.status)),
+  //   [allOrders]
+  // );
 
-  const pastOrders = useMemo(() => allOrders.filter(isBilled), [allOrders]);
+  // const pastOrders = useMemo(() => allOrders.filter(isBilled), [allOrders]);
 
   const getStatusBadge = (status: any) => {
     const s = (status || '').toString().toLowerCase();
@@ -85,10 +85,10 @@ export const TableDetailsDialog = ({ tableId, table, branchId, open, onOpenChang
     );
   };
 
-  const completedUnbilledOrders = useMemo(
-    () => currentOrders.filter(o => o.status === 'completed'),
-    [currentOrders]
-  );
+  // const completedUnbilledOrders = useMemo(
+  //   () => currentOrders.filter(o => o.status === 'completed'),
+  //   [currentOrders]
+  // );
 
   return (
     <>
@@ -241,7 +241,7 @@ export const TableDetailsDialog = ({ tableId, table, branchId, open, onOpenChang
             </TabsList>
 
             <TabsContent value="current" className="space-y-4">
-              {currentOrders.length === 0 ? (
+              {/* {currentOrders.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No current orders</p>
               ) : (
                 <>
@@ -312,10 +312,10 @@ export const TableDetailsDialog = ({ tableId, table, branchId, open, onOpenChang
                     </div>
                   )}
                 </>
-              )}
+              )} */}
             </TabsContent>
 
-            <TabsContent value="history" className="space-y-4">
+            {/* <TabsContent value="history" className="space-y-4">
               {pastOrders.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No past orders</p>
               ) : (
@@ -358,7 +358,7 @@ export const TableDetailsDialog = ({ tableId, table, branchId, open, onOpenChang
                   </Card>
                 ))
               )}
-            </TabsContent>
+            </TabsContent> */}
           </Tabs>
         </DialogContent>
       </Dialog>

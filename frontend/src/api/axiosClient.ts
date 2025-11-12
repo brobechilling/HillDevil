@@ -20,6 +20,9 @@ const PUBLIC_ENDPOINTS = [
     "/public",
     "/users/mail",
     "/users/forgetpass",
+    "/orderlines",
+    "/branch-menu-items/guest/",
+    "/menu-items/customization/",
 ];
 
 const isPublicEndpoint = (url: string = "") =>

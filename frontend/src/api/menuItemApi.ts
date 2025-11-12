@@ -1,6 +1,7 @@
 import { ApiResponse } from "@/dto/apiResponse";
 import { axiosClient } from "./axiosClient";
 import { MenuItemDTO, MenuItemCreateRequest } from "@/dto/menuItem.dto";
+import { CustomizationDTO } from "@/dto/customization.dto";
 
 export const getAllMenuItems = async (restaurantId: string) => {
   const res = await axiosClient.get<ApiResponse<MenuItemDTO[]>>("/menu-items", {
@@ -84,3 +85,8 @@ export const canCreateMenuItem = async (restaurantId: string) => {
   );
   return res.data.result;
 }
+
+export const getCustomizationOfMenuItem = async (menuItemId: string) => {
+  const res = await axiosClient.get<ApiResponse<CustomizationDTO[]>>(`/menu-items/customization/${menuItemId}`);
+  return res.data.result;
+};

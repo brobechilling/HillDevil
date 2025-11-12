@@ -1,6 +1,6 @@
 import { ApiResponse } from "@/dto/apiResponse";
 import { axiosClient } from "./axiosClient";
-import { BranchMenuItemDTO } from "@/dto/branchMenuItem.dto";
+import { BranchMenuItemDTO, GuestBranchMenuItemDTO } from "@/dto/branchMenuItem.dto";
 
 export const getMenuItemsByBranch = async (branchId: string) => {
   const res = await axiosClient.get<ApiResponse<BranchMenuItemDTO[]>>(
@@ -20,4 +20,10 @@ export const updateAvailability = async (
     { params: { branchId, menuItemId, available } }
   );
   return res.data;
+};
+
+
+export const getGuestBranchMenuItems = async (branchId: string) => {
+  const res = await axiosClient.get<ApiResponse<GuestBranchMenuItemDTO[]>>(`/branch-menu-items/guest/branch/${branchId}`);
+  return res.data.result;
 };

@@ -8,7 +8,7 @@ import { useSessionStore } from '@/store/sessionStore';
 import { UserDTO } from '@/dto/user.dto';
 
 const OwnerMenuPage = () => {
-  const { user, isAuthenticated, isLoading: isSessionLoading, initialize } = useSessionStore();
+  const { user, isAuthenticated, isLoading: isSessionLoading } = useSessionStore();
   const navigate = useNavigate();
   const [activeBranch, setActiveBranch] = useState<BranchDTO | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,9 +19,6 @@ const OwnerMenuPage = () => {
 
   const { data: branches, isLoading: isBranchesLoading } = useBranchesByRestaurant(restaurantId);
 
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
 
   useEffect(() => {
     if (isSessionLoading) return;
@@ -47,6 +44,7 @@ const OwnerMenuPage = () => {
 
     const restaurantBranches = branches || [];
     if (restaurantBranches.length === 0) {
+      // this should display that there is no branch and ask them to create a branch instead of navigating to brand-selection 
       toast({
         variant: 'destructive',
         title: 'No branches found',

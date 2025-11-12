@@ -1,11 +1,13 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.BranchMenuItemDTO;
-import com.example.backend.dto.MenuItemDTO;
+import com.example.backend.dto.response.GuestBranchMenuItemDTO;
 import com.example.backend.entities.BranchMenuItem;
 import com.example.backend.entities.MenuItem;
 import com.example.backend.entities.MenuItemStatus;
-import com.example.backend.mapper.MenuItemMapper;
+import com.example.backend.exception.AppException;
+import com.example.backend.exception.ErrorCode;
+import com.example.backend.mapper.BranchMenuItemMapper;
 import com.example.backend.repository.BranchMenuItemRepository;
 import com.example.backend.repository.BranchRepository;
 import com.example.backend.repository.MenuItemRepository;
@@ -20,23 +22,23 @@ import java.util.stream.Collectors;
 public class BranchMenuItemService {
 
     private final BranchMenuItemRepository branchMenuItemRepository;
-    private final MenuItemMapper menuItemMapper;
     private final MenuItemRepository menuItemRepository;
     private final BranchRepository branchRepository;
     private final MediaService mediaService;
+    private final BranchMenuItemMapper branchMenuItemMapper;
 
     public BranchMenuItemService(
             BranchMenuItemRepository branchMenuItemRepository,
-            MenuItemMapper menuItemMapper,
             MenuItemRepository menuItemRepository,
             BranchRepository branchRepository,
-            MediaService mediaService
+            MediaService mediaService,
+            BranchMenuItemMapper branchMenuItemMapper
     ) {
         this.branchMenuItemRepository = branchMenuItemRepository;
-        this.menuItemMapper = menuItemMapper;
         this.menuItemRepository = menuItemRepository;
         this.branchRepository = branchRepository;
         this.mediaService = mediaService;
+        this.branchMenuItemMapper = branchMenuItemMapper;
     }
 
     public List<BranchMenuItemDTO> getMenuItemsByBranch(UUID branchId) {
@@ -96,4 +98,19 @@ public class BranchMenuItemService {
         entity.setAvailable(available);
         branchMenuItemRepository.save(entity);
     }
+
+    public List<GuestBranchMenuItemDTO> getListBranchMenuItems(UUID branchId) {
+        List<BranchMenuItem> branchMenuItems = branchMenuItemRepository.findAllByBranch_BranchId(branchId);
+        if (branchMenuItems.isEmpty()) {
+            throw new AppException(ErrorCode.BRANCH_NOTEXISTED);
+        }
+        List<GuestBranchMenuItemDTO> guestBranchMenuItemDTOs = branchMenuItems.stream().map(branchMenuItem -> branchMenuItemMapper.toGuestBranchMenuItemDTO(branchMenuItem)).toList();
+        // Image handling
+        Map<UUID, String> imageMap = mediaService.getLatestImageUrlsForTargets(guestBranchMenuItemDTOs.stream().map(branchMenuItem -> branchMenuItem.getMenuItemId()).toList(), "MENU_ITEM_IMAGE"); 
+        for (GuestBranchMenuItemDTO guestBranchMenuItemDTO : guestBranchMenuItemDTOs) {
+            guestBranchMenuItemDTO.setImageUrl(imageMap.get(guestBranchMenuItemDTO.getMenuItemId()));
+        }
+        return guestBranchMenuItemDTOs;
+    }
+
 }
