@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getBranchById } from '@/api/branchApi';
+import { axiosClient } from '@/api/axiosClient';
+import { ApiResponse } from '@/dto/apiResponse';
+import { TableDTO } from '@/dto/table.dto';
+import { getMenuItemsByBranch } from '@/api/branchMenuItemApi';
+import { BranchMenuItemDTO } from '@/dto/branchMenuItem.dto';
+import { getRestaurantByBranchId } from '@/api/branchApi';
 // Note: GuestLanding now supports both shortCode (from mock) and UUID branchId (from QR codes)
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +21,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrderItem } from '@/store/orderStore';
+import { getAllCategories } from '@/api/categoryApi';
+import { CategoryDTO } from '@/dto/category.dto';
 
 type MenuItemLite = {
   id: string;
@@ -90,118 +98,108 @@ const GuestLanding = () => {
   const [tableNumber, setTableNumber] = useState<string>('');
   const [flowState, setFlowState] = useState<'selection' | 'menu' | 'reservation' | 'post-reservation'>('selection');
   const [showMenuAfterReservation, setShowMenuAfterReservation] = useState(false);
+  const [categories, setCategories] = useState<CategoryDTO[]>([]);
 
   useEffect(() => {
     const loadBranchData = async () => {
       try {
         setLoading(true);
 
-        // If we have tableName/tableId but no shortCode (from /t/:areaName/:tableName, /t/:branchId/:tableId, or /t/:tableName route), fetch table first to get branchId
+        // If we have tableId but no shortCode (from /t/:branchId/:tableId route), fetch table first to get branchId
         if (actualTableIdentifier && !shortCode) {
           try {
-            let tableApiUrl = '';
+            let tableData: TableDTO;
 
-            // NEW FORMAT: /t/:branchId/:tableId - most reliable, unique, prevents conflicts
+            // STANDARD FORMAT: /t/:branchId/:tableId - most reliable, unique, prevents conflicts
             if (branchId && tableId) {
-              tableApiUrl = `http://localhost:8080/api/public/tables/${encodeURIComponent(branchId)}/${encodeURIComponent(tableId)}`;
+              const response = await axiosClient.get<ApiResponse<TableDTO>>(
+                `/public/tables/${encodeURIComponent(branchId)}/${encodeURIComponent(tableId)}`
+              );
+              tableData = response.data.result!;
             }
-            // OLD FORMAT: /t/:areaName/:tableName - for backward compatibility
-            else if (areaName && tableName) {
-              tableApiUrl = `http://localhost:8080/api/public/tables/${encodeURIComponent(areaName)}/${encodeURIComponent(tableName)}`;
-            }
-            // LEGACY FORMAT: /t/:tableId or /t/:tableName - for backward compatibility
+            // LEGACY FORMAT: /t/:tableId - for backward compatibility
             else {
-              // Legacy single-identifier lookup moved to /id/{identifier}
-              tableApiUrl = `http://localhost:8080/api/public/tables/id/${encodeURIComponent(actualTableIdentifier)}`;
+              const response = await axiosClient.get<ApiResponse<TableDTO>>(
+                `/public/tables/id/${encodeURIComponent(actualTableIdentifier)}`
+              );
+              tableData = response.data.result!;
             }
 
-            // Fetch table from public endpoint - supports both UUID and table name
-            const tableResponse = await fetch(tableApiUrl);
-
-            if (!tableResponse.ok) {
-              // Handle error response from backend
-              let errorMessage = `Failed to load table: ${tableResponse.status} ${tableResponse.statusText}`;
-              try {
-                const errorData = await tableResponse.json();
-                errorMessage = errorData.message || errorData.result || errorMessage;
-              } catch (e) {
-                // Ignore parse errors
-              }
-
-              // For new format with branchId, we can still try to load branch directly
-              if (branchId && tableId) {
-                try {
-                  const apiBranch = await getBranchById(branchId);
-                  if (apiBranch) {
-                    const branchData = {
-                      id: apiBranch.branchId,
-                      branchId: apiBranch.branchId,
-                      brandName: apiBranch.address,
-                      name: apiBranch.address,
-                      address: apiBranch.address,
-                      phone: apiBranch.branchPhone,
-                      email: apiBranch.mail,
-                      shortCode: branchId,
-                    };
-                    setBranch(branchData);
-
-                    // Load menu
-                    // const menuResponse = await menuApi.getAll(branchData.id);
-                    // setMenuItems(menuResponse.data);
-
-                    setFlowState('menu');
-                    setOrderType('now');
-                    setLoading(false);
-                    return; // Early return after successful load
-                  }
-                } catch (branchError) {
-                  throw new Error(errorMessage);
-                }
-              } else {
-                throw new Error(errorMessage);
-              }
-            }
-
-            // Parse successful response
-            const tableApiResponse = await tableResponse.json();
-            if (tableApiResponse.result?.branchId) {
-              // Use branchId from response (or from URL params if using new format)
-              const resolvedBranchId = branchId || tableApiResponse.result.branchId;
-              const apiBranch = await getBranchById(resolvedBranchId);
-              if (apiBranch) {
-                const branchData = {
-                  id: apiBranch.branchId,
-                  branchId: apiBranch.branchId,
-                  brandName: apiBranch.address,
-                  name: apiBranch.address,
-                  address: apiBranch.address,
-                  phone: apiBranch.branchPhone,
-                  email: apiBranch.mail,
-                  shortCode: resolvedBranchId,
-                };
-                setBranch(branchData);
-
-                // Load table number
-                setTableNumber(tableApiResponse.result.tag || '');
-
-                // Load menu
-                // const menuResponse = await menuApi.getAll(branchData.id);
-                // setMenuItems(menuResponse.data);
-
-                setFlowState('menu');
-                setOrderType('now');
-                setLoading(false);
-                return; // Early return after successful load
-              }
-            } else {
+            // Get branchId from table response
+            const resolvedBranchId = branchId || tableData.branchId;
+            if (!resolvedBranchId) {
               throw new Error('Table response does not contain branchId');
             }
-          } catch (error) {
-            // Error handling
-          }
-          // If we can't get branchId, show error
-          if (!branch) {
-            throw new Error('Could not determine branch from table identifier. Please use full URL format.');
+
+            // Load branch data
+            const apiBranch = await getBranchById(resolvedBranchId);
+            if (apiBranch) {
+              const branchData = {
+                id: apiBranch.branchId,
+                branchId: apiBranch.branchId,
+                brandName: apiBranch.address,
+                name: apiBranch.address,
+                address: apiBranch.address,
+                phone: apiBranch.branchPhone,
+                email: apiBranch.mail,
+                shortCode: resolvedBranchId,
+              };
+              setBranch(branchData);
+
+              // Load table number
+              setTableNumber(tableData.tag || '');
+
+              // Load categories and menu items from API
+              try {
+                // Load categories first
+                const restaurantId = await getRestaurantByBranchId(resolvedBranchId);
+                const allCategories = await getAllCategories(restaurantId || '');
+                setCategories(allCategories || []);
+                
+                // Create category map: categoryId -> category name
+                const categoryMap = new Map<string, string>();
+                allCategories?.forEach(cat => {
+                  categoryMap.set(cat.categoryId, cat.name);
+                });
+
+                // Load menu items
+                const branchMenuItems = await getMenuItemsByBranch(resolvedBranchId);
+                // Map BranchMenuItemDTO to MenuItemLite format
+                const mappedMenuItems: MenuItemLite[] = branchMenuItems
+                  ?.filter(item => item.available !== false) // Only show available items
+                  .map(item => ({
+                    id: item.menuItemId,
+                    name: item.name,
+                    price: item.price,
+                    category: categoryMap.get(item.categoryId) || item.categoryId || 'Uncategorized',
+                    description: item.description,
+                    imageUrl: item.imageUrl,
+                    available: item.available,
+                    bestSeller: item.bestSeller,
+                  })) || [];
+                setMenuItems(mappedMenuItems);
+              } catch (menuError) {
+                console.error('Error loading menu items:', menuError);
+                // Continue without menu items - user can still see branch info
+              }
+
+              setFlowState('menu');
+              setOrderType('now');
+              setLoading(false);
+              return; // Early return after successful load
+            } else {
+              throw new Error('Branch not found');
+            }
+          } catch (error: any) {
+            console.error('Error loading table:', error);
+            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to load table';
+            toast({
+              variant: 'destructive',
+              title: 'Error loading table',
+              description: errorMessage,
+            });
+            setLoading(false);
+            return;
           }
         }
 
@@ -259,8 +257,39 @@ const GuestLanding = () => {
           }
         }
 
-        // const menuResponse = await menuApi.getAll(branchData.id);
-        // setMenuItems(menuResponse.data);
+        // Load categories and menu items from API
+        try {
+          // Load categories first
+          const restaurantId = await getRestaurantByBranchId(branchData.branchId || branchData.id);
+          const allCategories = await getAllCategories(restaurantId || '');
+          setCategories(allCategories || []);
+          
+          // Create category map: categoryId -> category name
+          const categoryMap = new Map<string, string>();
+          allCategories?.forEach(cat => {
+            categoryMap.set(cat.categoryId, cat.name);
+          });
+
+          // Load menu items
+          const branchMenuItems = await getMenuItemsByBranch(branchData.branchId || branchData.id);
+          // Map BranchMenuItemDTO to MenuItemLite format
+          const mappedMenuItems: MenuItemLite[] = branchMenuItems
+            ?.filter(item => item.available !== false) // Only show available items
+            .map(item => ({
+              id: item.menuItemId,
+              name: item.name,
+              price: item.price,
+              category: categoryMap.get(item.categoryId) || item.categoryId || 'Uncategorized',
+              description: item.description,
+              imageUrl: item.imageUrl,
+              available: item.available,
+              bestSeller: item.bestSeller,
+            })) || [];
+          setMenuItems(mappedMenuItems);
+        } catch (menuError) {
+          console.error('Error loading menu items:', menuError);
+          // Continue without menu items - user can still see branch info
+        }
       } catch (error) {
         toast({
           variant: 'destructive',
@@ -849,7 +878,13 @@ const GuestLanding = () => {
               <ReservationBookingForm
                 branchId={branch.id}
                 branchName={branch.brandName || branch.name}
-                selectedItems={selectedItems as OrderItem[]}
+                selectedItems={selectedItems.map(item => ({
+                  id: item.id,
+                  name: item.name,
+                  price: item.price ?? item.totalPrice,
+                  quantity: item.quantity,
+                  notes: item.note,
+                }))}
                 onBookingComplete={() => {
                   setFlowState('post-reservation');
                   setShowMenuAfterReservation(true);
@@ -966,7 +1001,13 @@ const GuestLanding = () => {
             <BookingDialog
               branchId={branch.id}
               branchName={branch.brandName || branch.name}
-              selectedItems={selectedItems as OrderItem[]}
+              selectedItems={selectedItems.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price ?? item.totalPrice,
+                quantity: item.quantity,
+                notes: item.note,
+              }))}
               onBookingComplete={() => setSelectedItems([])}
             />
           )}

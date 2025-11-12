@@ -7,7 +7,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { MenuItemCard } from '@/components/menu/MenuItemCard';
 

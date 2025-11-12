@@ -443,7 +443,7 @@ export const ManagerTableManagementEnhanced = ({
       // Only fetch when the user hovers the table or opens the details dialog for it
       enabled: !!table?.id && (isHovered || (dialogOpen && selectedTable?.id === table.id)),
       staleTime: 60_000,
-      cacheTime: 5 * 60_000,
+      // cacheTime: 5 * 60_000,
       // Avoid refetch storms from focus/reconnect/mount
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
@@ -493,12 +493,11 @@ export const ManagerTableManagementEnhanced = ({
                 <Badge className={cn(getStatusColor(table.status), "transition-all duration-300 text-white font-semibold")}>
                   {getStatusLabel(table.status)}
                 </Badge>
-                {reservations.length > 0 && (
+                {Array.isArray(reservations) && reservations.length > 0 && (
                   <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100 animate-pulse font-semibold">
                     {reservations.length} {reservations.length === 1 ? 'Booking' : 'Bookings'}
                   </Badge>
                 )}
-              </div>
 
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <svg
@@ -518,6 +517,7 @@ export const ManagerTableManagementEnhanced = ({
                   {table.capacity} {table.capacity === 1 ? 'seat' : 'seats'}
                 </span>
               </div>
+            </div>
             </div>
 
             <div
@@ -874,57 +874,59 @@ export const ManagerTableManagementEnhanced = ({
         }
       }}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <div>
+          <DialogHeader className="space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1.5">
                 <DialogTitle>Table Details</DialogTitle>
                 <DialogDescription>
                   {isEditMode ? 'Edit table information' : 'View complete table information and reservations'}
                 </DialogDescription>
               </div>
-              {!isEditMode && !disableStatusChange && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleEditClick}
-                  className="gap-2"
-                >
-                  <Edit2 className="w-4 h-4" />
-                  Edit
-                </Button>
-              )}
-              {isEditMode && (
-                <div className="flex gap-2">
+              <div className="flex-shrink-0">
+                {!isEditMode && !disableStatusChange && (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleCancelEdit}
-                    disabled={isStatusUpdating === selectedTable?.id}
+                    onClick={handleEditClick}
                     className="gap-2"
                   >
-                    <X className="w-4 h-4" />
-                    Cancel
+                    <Edit2 className="w-4 h-4" />
+                    Edit
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleSaveChanges}
-                    disabled={isStatusUpdating === selectedTable?.id || !editFormData}
-                    className="gap-2"
-                  >
-                    {isStatusUpdating === selectedTable?.id ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        Save
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
+                )}
+                {isEditMode && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelEdit}
+                      disabled={isStatusUpdating === selectedTable?.id}
+                      className="gap-2"
+                    >
+                      <X className="w-4 h-4" />
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveChanges}
+                      disabled={isStatusUpdating === selectedTable?.id || !editFormData}
+                      className="gap-2"
+                    >
+                      {isStatusUpdating === selectedTable?.id ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Save
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </DialogHeader>
 
@@ -1275,18 +1277,18 @@ export const ManagerTableManagementEnhanced = ({
       </Dialog>
 
       <Dialog open={isQRDialogOpen && !qrTable} onOpenChange={(open) => setIsQRDialogOpen(open)}>
-        <DialogContent>
+      <DialogContent className="sm:max-w-md"> 
           <DialogHeader>
             <DialogTitle>Branch QR Code</DialogTitle>
             <DialogDescription>Scan to open the branch page</DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col items-center gap-4 py-4">
+          <div className="flex flex-col items-center justify-center gap-4 py-4">
             {validBranchId ? (
               <>
-                <div className="bg-white p-6 rounded-lg border-2 border-border">
+                <div className="bg-white p-6 rounded-lg border-2 border-border mx-auto">
                   <QRCodeSVG value={`${window.location.origin}/branch/${validBranchId}`} size={200} />
                 </div>
-                <div className="text-sm font-mono select-all break-all">
+                <div className="text-sm font-mono select-all break-all text-center w-full px-4">
                   {`${window.location.origin}/branch/${validBranchId}`}
                 </div>
               </>
