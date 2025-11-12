@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Check, Building2, Store, Warehouse } from 'lucide-react';
 import { usePackages } from '@/hooks/queries/usePackages';
-import { useSessionStore } from '@/store/sessionStore';
 
 const packageSchema = z.object({
   packageType: z.string(),
@@ -20,7 +19,6 @@ const RegisterPackage = () => {
   const { data: packages, isLoading, error } = usePackages();
 
   const {
-    register,
     handleSubmit,
     watch,
     setValue,

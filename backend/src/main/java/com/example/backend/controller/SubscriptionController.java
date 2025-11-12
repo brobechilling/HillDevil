@@ -1,5 +1,6 @@
 package com.example.backend.controller;
 
+import com.example.backend.dto.ActivePackageStatsDTO;
 import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.RestaurantSubscriptionOverviewDTO;
 import com.example.backend.dto.response.SubscriptionPaymentResponse;
@@ -8,7 +9,6 @@ import com.example.backend.service.SubscriptionService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -31,20 +31,9 @@ public class SubscriptionController {
     @PutMapping("/{subscriptionId}/activate")
     public ApiResponse<SubscriptionResponse> activateSubscription(
             @PathVariable UUID subscriptionId,
-            @RequestParam(defaultValue = "1") int durationMonths
-    ) {
+            @RequestParam(defaultValue = "1") int durationMonths) {
         ApiResponse<SubscriptionResponse> res = new ApiResponse<>();
         res.setResult(subscriptionService.activateSubscription(subscriptionId, durationMonths));
-        return res;
-    }
-
-    @PutMapping("/{subscriptionId}/renew")
-    public ApiResponse<SubscriptionResponse> renewSubscription(
-            @PathVariable UUID subscriptionId,
-            @RequestParam(defaultValue = "1") int additionalMonths
-    ) {
-        ApiResponse<SubscriptionResponse> res = new ApiResponse<>();
-        res.setResult(subscriptionService.renewSubscription(subscriptionId, additionalMonths));
         return res;
     }
 
@@ -54,16 +43,6 @@ public class SubscriptionController {
         ApiResponse<Void> res = new ApiResponse<>();
         res.setCode(1000);
         res.setMessage("Subscription cancelled successfully");
-        return res;
-    }
-
-    @PostMapping("/change")
-    public ApiResponse<SubscriptionResponse> changePackage(
-            @RequestParam UUID restaurantId,
-            @RequestParam UUID newPackageId
-    ) {
-        ApiResponse<SubscriptionResponse> res = new ApiResponse<>();
-        res.setResult(subscriptionService.changePackage(restaurantId, newPackageId));
         return res;
     }
 
@@ -89,17 +68,9 @@ public class SubscriptionController {
         return res;
     }
 
-    @GetMapping("/stats")
-    public ApiResponse<Map<String, Long>> getPackagePurchaseStats() {
-        ApiResponse<Map<String, Long>> res = new ApiResponse<>();
-        res.setResult(subscriptionService.getPackagePurchaseStats());
-        return res;
-    }
-
     @GetMapping("/restaurant/{restaurantId}/latest-payment")
     public ApiResponse<SubscriptionPaymentResponse> getLatestPaymentStatus(
-            @PathVariable UUID restaurantId
-    ) {
+            @PathVariable UUID restaurantId) {
         ApiResponse<SubscriptionPaymentResponse> res = new ApiResponse<>();
         SubscriptionPaymentResponse result = subscriptionService.getLatestPaymentStatusForRestaurant(restaurantId);
         res.setResult(result);
@@ -112,11 +83,17 @@ public class SubscriptionController {
 
     @GetMapping("/restaurant/{restaurantId}/payments")
     public ApiResponse<List<SubscriptionPaymentResponse>> getPaymentHistory(
-            @PathVariable UUID restaurantId
-    ) {
+            @PathVariable UUID restaurantId) {
         ApiResponse<List<SubscriptionPaymentResponse>> res = new ApiResponse<>();
         List<SubscriptionPaymentResponse> result = subscriptionService.getPaymentHistoryByRestaurant(restaurantId);
         res.setResult(result);
+        return res;
+    }
+
+    @GetMapping("/active-packages")
+    public ApiResponse<List<ActivePackageStatsDTO>> getActivePackageStats() {
+        ApiResponse<List<ActivePackageStatsDTO>> res = new ApiResponse<>();
+        res.setResult(subscriptionService.getActivePackageStats());
         return res;
     }
 }

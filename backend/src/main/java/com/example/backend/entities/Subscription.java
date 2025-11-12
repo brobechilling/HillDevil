@@ -7,6 +7,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import jakarta.persistence.*;
+
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -46,6 +48,7 @@ public class Subscription {
     private LocalDate endDate;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "subscription")
+    @BatchSize(size = 20)
     private Set<SubscriptionPayment> subscriptionPayments = new LinkedHashSet<>();
 
     public UUID getSubscriptionId() {

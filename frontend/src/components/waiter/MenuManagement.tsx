@@ -17,7 +17,7 @@ import { ManualOrderDialog } from "./ManualOrderDialog";
 import { BranchMenuItemDTO } from "@/dto/branchMenuItem.dto";
 import { useSessionStore } from "@/store/sessionStore";
 import { isStaffAccountDTO } from "@/utils/typeCast";
-import { MenuItemViewDialog } from "@/components/owner/MenuItemViewDialog";
+import { MenuItemViewDialog } from "@/components/menu/MenuItemViewDialog";
 import { MenuItemCard } from "@/components/menu/MenuItemCard";
 
 export const MenuManagement= () => {

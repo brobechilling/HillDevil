@@ -8,6 +8,7 @@ import {
   isMenuItemActiveInBranch,
   setActiveStatus,
   updateBestSeller,
+  canCreateMenuItem
 } from "@/api/menuItemApi";
 import { MenuItemDTO, MenuItemCreateRequest } from "@/dto/menuItem.dto";
 import { toast } from "@/components/ui/use-toast";
@@ -155,5 +156,14 @@ export const useUpdateBestSeller = (restaurantId?: string) => {
         description: `Menu item "${data.name}" is now ${data.bestSeller ? "a Best Seller" : "no longer a Best Seller"}.`,
       });
     },
+  });
+};
+
+export const useCanCreateMenuItem = (restaurantId: string | undefined) => {
+  return useQuery<boolean>({
+    queryKey: ['menu-items', 'can-create', restaurantId],
+    queryFn: () => canCreateMenuItem(restaurantId!),
+    enabled: !!restaurantId,
+    refetchOnWindowFocus: false,
   });
 };
