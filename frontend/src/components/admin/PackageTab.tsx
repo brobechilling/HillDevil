@@ -4,6 +4,7 @@ import {
   useDeletePackage,
   useTogglePackageAvailability,
 } from "@/hooks/queries/usePackages";
+import { useActivePackageStats } from "@/hooks/queries/useSubscription";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,11 +27,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PackageDialog } from "./PackageDialog";
-import { Edit, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Edit, Plus, Trash2, ChevronDown, ChevronRight, TrendingUp, DollarSign, CheckCircle2, CreditCard } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 export const PackageTab = () => {
   const { data: packages = [], isLoading } = usePackages();
+  const { data: activePackageStats = [], isLoading: statsLoading } = useActivePackageStats();
   const deleteMutation = useDeletePackage();
   const toggleMutation = useTogglePackageAvailability();
   const { toast } = useToast();
@@ -98,7 +100,11 @@ export const PackageTab = () => {
   const togglePackageExpansion = (packageId: string) => {
     setExpandedPackages((prev) => {
       const newSet = new Set(prev);
-      newSet.has(packageId) ? newSet.delete(packageId) : newSet.add(packageId);
+      if (newSet.has(packageId)) {
+        newSet.delete(packageId);
+      } else {
+        newSet.add(packageId);
+      }
       return newSet;
     });
   };
@@ -109,6 +115,113 @@ export const PackageTab = () => {
 
   return (
     <div className="space-y-4">
+      {/* Active Packages Stats */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-blue-500" />
+          <h3 className="text-lg font-semibold">Active Subscriptions by Package</h3>
+        </div>
+        
+        {statsLoading ? (
+          <Card>
+            <CardContent className="p-0">
+              <div className="h-24 bg-muted rounded-lg animate-pulse" />
+            </CardContent>
+          </Card>
+        ) : activePackageStats && activePackageStats.length > 0 ? (
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50 dark:bg-muted/30">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Package Name</th>
+                    <th className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="p-2 bg-green-500/10 dark:bg-green-500/15 rounded-lg">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        </div>
+                        <span className="text-sm font-semibold text-foreground">Active Subs</span>
+                      </div>
+                    </th>
+                    <th className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="p-2 bg-blue-500/10 dark:bg-blue-500/15 rounded-lg">
+                          <CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <span className="text-sm font-semibold text-foreground">Payments</span>
+                      </div>
+                    </th>
+                    <th className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="p-2 bg-amber-500/10 dark:bg-amber-500/15 rounded-lg">
+                          <DollarSign className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <span className="text-sm font-semibold text-foreground">Revenue</span>
+                      </div>
+                    </th>
+                    <th className="px-6 py-4 text-center">
+                      <span className="text-sm font-semibold text-foreground">Status</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y dark:divide-border/50">
+                  {activePackageStats.map((stat, index) => (
+                    <tr 
+                      key={stat.packageName}
+                      className="hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors animate-in fade-in"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 dark:from-blue-500/30 dark:to-purple-500/30 flex items-center justify-center">
+                            <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <span className="font-semibold text-foreground">{stat.packageName}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col items-center">
+                          <p className="text-xl font-bold text-green-600 dark:text-green-400">{stat.activeCount}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">subscriptions</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col items-center">
+                          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{stat.paymentCount}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">orders</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col items-center">
+                          <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                            {(stat.totalRevenue / 1000).toFixed(2)}k
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">VND</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <Badge 
+                          variant={stat.activeCount > 0 ? "default" : "secondary"}
+                          className="animate-pulse dark:bg-opacity-90"
+                        >
+                          {stat.activeCount > 0 ? '🚀 Active' : '💀 Inactive'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        ) : (
+          <Card className="bg-muted/30 dark:bg-muted/20 border-dashed">
+            <CardContent className="p-6 text-center">
+              <p className="text-sm text-muted-foreground">No subscription data available</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Package Management</h2>
@@ -187,7 +300,7 @@ export const PackageTab = () => {
                                 available: pkg.available,
                               })
                             }
-                            disabled={toggleMutation.isPending} // ✅ thay dòng này
+                            disabled={toggleMutation.isPending}
                           >
                             {pkg.available ? "Deactivate" : "Activate"}
                           </Button>

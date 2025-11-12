@@ -25,3 +25,10 @@ export interface RestaurantSubscriptionOverviewDTO {
   currentSubscription?: SubscriptionResponse | null;
   paymentHistory: SubscriptionPaymentResponse[];
 }
+
+export interface ActivePackageStatsDTO {
+  packageName: string;
+  activeCount: number;
+  paymentCount: number;
+  totalRevenue: number;
+}

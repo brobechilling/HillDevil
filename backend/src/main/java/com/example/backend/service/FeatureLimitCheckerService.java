@@ -21,7 +21,7 @@ public class FeatureLimitCheckerService {
     private final PackageFeatureRepository packageFeatureRepository;
 
     public FeatureLimitCheckerService(SubscriptionLookupService subscriptionLookupService,
-                               PackageFeatureRepository packageFeatureRepository) {
+            PackageFeatureRepository packageFeatureRepository) {
         this.subscriptionLookupService = subscriptionLookupService;
         this.packageFeatureRepository = packageFeatureRepository;
     }
@@ -35,8 +35,7 @@ public class FeatureLimitCheckerService {
                 .filter(pf -> pf.getFeature().getCode() != null)
                 .collect(Collectors.toMap(
                         pf -> pf.getFeature().getCode(),
-                        PackageFeature::getValue
-                ));
+                        PackageFeature::getValue));
 
         Integer limit = featureLimitMap.get(featureCode);
         if (limit == null || limit == 0) {
@@ -58,8 +57,7 @@ public class FeatureLimitCheckerService {
                 .filter(pf -> pf.getFeature().getCode() != null)
                 .collect(Collectors.toMap(
                         pf -> pf.getFeature().getCode(),
-                        PackageFeature::getValue
-                ));
+                        PackageFeature::getValue));
 
         Integer limit = featureLimitMap.get(featureCode);
 
@@ -69,5 +67,18 @@ public class FeatureLimitCheckerService {
 
         long currentCount = currentCountSupplier.get();
         return currentCount < limit;
+    }
+
+    @Transactional(readOnly = true)
+    public int getLimitValue(UUID restaurantId, FeatureCode featureCode) {
+        Package pack = subscriptionLookupService.getActivePackageByRestaurant(restaurantId);
+        Map<FeatureCode, Integer> featureLimitMap = packageFeatureRepository.findByPackageId(pack.getPackageId())
+                .stream()
+                .filter(pf -> pf.getFeature().getCode() != null)
+                .collect(Collectors.toMap(
+                        pf -> pf.getFeature().getCode(),
+                        PackageFeature::getValue));
+
+        return featureLimitMap.getOrDefault(featureCode, 0);
     }
 }

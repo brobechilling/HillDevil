@@ -1,6 +1,7 @@
 import { axiosClient } from "./axiosClient";
 import { ApiResponse } from "@/dto/apiResponse";
-import { SubscriptionPaymentResponse } from "@/dto/subscriptionPayment.dto";
+import { SubscriptionPaymentResponse, TopSpenderDTO } from "@/dto/subscriptionPayment.dto";
+
 
 export const subscriptionPaymentApi = {
   async create(subscriptionId: string): Promise<SubscriptionPaymentResponse> {
@@ -29,4 +30,11 @@ export const subscriptionPaymentApi = {
     );
     return res.data.result;
   },
+
+    getTop5SpendingUsers: async (): Promise<TopSpenderDTO[]> => {
+      const res = await axiosClient.get<ApiResponse<TopSpenderDTO[]>>(
+        "/payments/top-spenders"
+      );
+      return res.data.result || [];
+    },
 };

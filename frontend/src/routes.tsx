@@ -11,7 +11,8 @@ import ManagerDashboard from './pages/dashboard/ManagerDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import WaiterDashboard from './pages/dashboard/WaiterDashboard';
 import ReceptionistDashboard from './pages/dashboard/ReceptionistDashboard';
-import GuestLanding from './pages/ReservationGuestLanding';
+import ReservationGuestLanding from './pages/ReservationGuestLanding';
+import GuestLanding from './pages/GuestLanding';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import RestaurantLoginPage from './pages/auth/RestaurantLoginPage';
@@ -59,6 +60,7 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import { ROLE_NAME } from './dto/user.dto';
 
+import TestWebSocket from './pages/TestWebSocket';
 
 export const routes: RouteObject[] = [
   {
@@ -104,7 +106,7 @@ export const routes: RouteObject[] = [
   {
     
     path: '/:restaurantSlug',
-    element: <GuestLanding />,
+    element: <ReservationGuestLanding />,
   },
   // {
   //   path: '/:restaurantSlug/branch/:branchId',
@@ -354,5 +356,9 @@ export const routes: RouteObject[] = [
   {
     path: '*',
     element: <NotFound />,
+  },
+  {
+    path: '/test/websocket',
+    element: <TestWebSocket />,
   },
 ];

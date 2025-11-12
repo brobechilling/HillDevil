@@ -52,15 +52,6 @@ public class BranchService {
         Restaurant restaurant = restaurantRepository.findById(dto.getRestaurantId())
                 .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
 
-        Supplier<Long> currentCountSupplier = () ->
-                branchRepository.countByRestaurant_RestaurantId(restaurant.getRestaurantId());
-
-        featureLimitCheckerService.checkLimit(
-                restaurant.getRestaurantId(),
-                FeatureCode.LIMIT_BRANCH_CREATION,
-                currentCountSupplier
-        );
-
         Branch entity = branchMapper.toEntity(dto);
         entity.setRestaurant(restaurant);
         entity.setActive(true);
@@ -100,9 +91,6 @@ public class BranchService {
 
     @Transactional(readOnly = true)
     public boolean canCreateBranch(UUID restaurantId) {
-        Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
-
         Supplier<Long> currentCountSupplier = () ->
                 branchRepository.countByRestaurant_RestaurantId(restaurantId);
 

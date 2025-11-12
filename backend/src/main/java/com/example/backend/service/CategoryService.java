@@ -4,6 +4,7 @@ import com.example.backend.dto.CategoryDTO;
 import com.example.backend.dto.request.CategoryCreateRequest;
 import com.example.backend.entities.Category;
 import com.example.backend.entities.Customization;
+import com.example.backend.entities.FeatureCode;
 import com.example.backend.entities.Restaurant;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
@@ -12,12 +13,11 @@ import com.example.backend.repository.CategoryRepository;
 import com.example.backend.repository.CustomizationRepository;
 import com.example.backend.repository.RestaurantRepository;
 import jakarta.transaction.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,19 +27,19 @@ public class CategoryService {
     private final CategoryMapper categoryMapper;
     private final RestaurantRepository restaurantRepository;
     private final CustomizationRepository customizationRepository;
-    private final Logger logger = LoggerFactory.getLogger(CategoryService.class);
+    private final FeatureLimitCheckerService  featureLimitCheckerService;
 
     public CategoryService(CategoryRepository categoryRepository, CategoryMapper categoryMapper,
-                           RestaurantRepository restaurantRepository, CustomizationRepository customizationRepository) {
+                           RestaurantRepository restaurantRepository, CustomizationRepository customizationRepository,
+                           FeatureLimitCheckerService featureLimitCheckerService) {
         this.categoryRepository = categoryRepository;
         this.categoryMapper = categoryMapper;
         this.restaurantRepository = restaurantRepository;
         this.customizationRepository = customizationRepository;
+        this.featureLimitCheckerService = featureLimitCheckerService;
     }
 
     public List<CategoryDTO> getAllByRestaurant(UUID restaurantId) {
-        logger.info("category service - getAllByRestaurant called for {}", restaurantId);
-
         List<Category> categories = categoryRepository
                 .findAllActiveByRestaurantOrDefault(restaurantId);
 
@@ -74,7 +74,6 @@ public class CategoryService {
         }
 
         Category saved = categoryRepository.save(category);
-        logger.info("category service - created");
         return categoryMapper.toCategoryDTO(saved);
     }
 
@@ -91,10 +90,20 @@ public class CategoryService {
                     .map(cid -> customizationRepository.findById(cid)
                             .orElseThrow(() -> new AppException(ErrorCode.CUSTOMIZATION_NOT_FOUND)))
                     .collect(Collectors.toSet());
+
+            UUID restaurantId = existing.getRestaurant().getRestaurantId();
+
+            Supplier<Long> newCountSupplier = () -> (long) customizations.size();
+
+            featureLimitCheckerService.checkLimit(
+                    restaurantId,
+                    FeatureCode.LIMIT_CUSTOMIZATION_PER_CATEGORY,
+                    newCountSupplier
+            );
+
             existing.setCustomizations(customizations);
         }
 
-        logger.info("category service - updated");
         return categoryMapper.toCategoryDTO(categoryRepository.save(existing));
     }
 
@@ -103,7 +112,6 @@ public class CategoryService {
         categoryRepository.findById(id).ifPresent(category -> {
             category.setStatus(false);
             categoryRepository.save(category);
-            logger.info("category service - deleted safely");
         });
     }
 }
