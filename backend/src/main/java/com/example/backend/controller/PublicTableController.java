@@ -26,9 +26,8 @@ public class PublicTableController {
     }
 
     // Public endpoint for guest access with branchId and tableId:
-    // /t/{branchId}/{tableId}
-    // This is the NEW format - unique and prevents conflicts
-    // This MUST come FIRST to have highest priority
+    // /api/public/tables/{branchId}/{tableId}
+    // This is the standard format for QR code access
     @GetMapping("/{branchId}/{tableId}")
     public ApiResponse<TableResponse> getPublicTableByBranchAndTable(
             @PathVariable String branchId,
@@ -77,14 +76,14 @@ public class PublicTableController {
     // (For backward compatibility - deprecated, use /t/{branchId}/{tableId}
     // instead)
     // This MUST come BEFORE /{identifier} to avoid path variable conflicts
-    @GetMapping("/{areaName}/{tableName}")
-    public ApiResponse<TableResponse> getPublicTableByAreaAndName(
-            @PathVariable String areaName,
-            @PathVariable String tableName) {
-        ApiResponse<TableResponse> res = new ApiResponse<>();
-        res.setResult(tableService.getTableByAreaNameAndTag(areaName, tableName));
-        return res;
-    }
+    // @GetMapping("/{areaName}/{tableName}")
+    // public ApiResponse<TableResponse> getPublicTableByAreaAndName(
+    //         @PathVariable String areaName,
+    //         @PathVariable String tableName) {
+    //     ApiResponse<TableResponse> res = new ApiResponse<>();
+    //     res.setResult(tableService.getTableByAreaNameAndTag(areaName, tableName));
+    //     return res;
+    // }
 
     // Public listing for branch - safer simple implementation
     @GetMapping("/branch/{branchId}")
