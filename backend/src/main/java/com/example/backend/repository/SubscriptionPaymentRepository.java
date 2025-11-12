@@ -32,4 +32,5 @@ public interface SubscriptionPaymentRepository extends JpaRepository<Subscriptio
                 LIMIT :limit
             """, nativeQuery = true)
     List<Object[]> findTopSpenders(@Param("limit") int limit);
+    List<SubscriptionPayment> findAllBySubscription_SubscriptionId(UUID subscriptionId);
 }
