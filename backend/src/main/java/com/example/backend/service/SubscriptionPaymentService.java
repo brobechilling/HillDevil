@@ -51,6 +51,15 @@ public class SubscriptionPaymentService {
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
+        // 🔍 Vô hiệu hóa hoặc bỏ qua các payment cũ (đặc biệt là CANCELED)
+        subscriptionPaymentRepository.findAllBySubscription_SubscriptionId(subscriptionId)
+                .forEach(p -> {
+                    if (p.getSubscriptionPaymentStatus() == SubscriptionPaymentStatus.PENDING) {
+                        p.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.CANCELED);
+                        subscriptionPaymentRepository.save(p);
+                    }
+                });
+
         Package pkg = subscription.getaPackage();
         if (pkg == null)
             throw new AppException(ErrorCode.PACKAGE_NOTEXISTED);
@@ -61,14 +70,14 @@ public class SubscriptionPaymentService {
         if (description.length() > 25)
             description = description.substring(0, 22) + "...";
 
-        long orderCode = Math.abs(UUID.randomUUID().getMostSignificantBits() % 1_000_000_000L);
-        if (subscriptionPaymentRepository.existsByPayOsOrderCode(orderCode)) {
-            throw new AppException(ErrorCode.ORDER_CODE_EXISTS);
+        long orderCode = System.currentTimeMillis() % 1_000_000_000L;
+        while (subscriptionPaymentRepository.existsByPayOsOrderCode(orderCode)) {
+            orderCode = System.currentTimeMillis() % 1_000_000_000L;
         }
 
         String returnUrl = payOSService.buildReturnUrl(orderCode);
-        CheckoutResponseData payResponse = payOSService.createVQRPayment(amount, orderCode, itemName, description,
-                returnUrl);
+        CheckoutResponseData payResponse = payOSService.createVQRPayment(
+                amount, orderCode, itemName, description, returnUrl);
 
         SubscriptionPayment payment = new SubscriptionPayment();
         payment.setSubscription(subscription);
@@ -78,7 +87,8 @@ public class SubscriptionPaymentService {
         payment.setAccountNumber(payResponse.getAccountNumber());
         payment.setAccountName(payResponse.getAccountName());
         payment.setExpiredAt(
-                payResponse.getExpiredAt() != null ? Instant.ofEpochMilli(payResponse.getExpiredAt() * 1000)
+                payResponse.getExpiredAt() != null
+                        ? Instant.ofEpochMilli(payResponse.getExpiredAt() * 1000)
                         : Instant.now().plusSeconds(30 * 60));
         payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.PENDING);
         payment.setDate(Instant.now());
