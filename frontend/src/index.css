@@ -346,4 +346,28 @@ All colors MUST be HSL.
   .animate-pulse-slow {
     animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+
+  /* Fix dialog positioning - ensure transform is applied correctly */
+  /* Target Radix UI dialog content elements */
+  [data-radix-dialog-content],
+  [data-radix-alert-dialog-content],
+  .dialog-content-centered {
+    transform: translate(-50%, -50%) !important;
+    left: 50% !important;
+    top: 50% !important;
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+    position: fixed !important;
+  }
+  
+  /* Additional fix for any nested transforms */
+  [data-radix-dialog-content] *,
+  [data-radix-alert-dialog-content] * {
+    transform: none !important;
+  }
+  
+  /* Ensure dialog is not affected by parent transforms */
+  [data-radix-portal] {
+    transform: none !important;
+  }
 }
