@@ -51,7 +51,6 @@ public class SubscriptionPaymentService {
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
-        // 🔍 Vô hiệu hóa hoặc bỏ qua các payment cũ (đặc biệt là CANCELED)
         subscriptionPaymentRepository.findAllBySubscription_SubscriptionId(subscriptionId)
                 .forEach(p -> {
                     if (p.getSubscriptionPaymentStatus() == SubscriptionPaymentStatus.PENDING) {
