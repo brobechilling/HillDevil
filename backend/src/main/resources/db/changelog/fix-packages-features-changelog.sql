@@ -24,4 +24,11 @@ VALUES
 UPDATE public.feature
 SET code = 'LIMIT_BRANCH_CREATION' WHERE feature_id = '8c485d29-48c9-4330-8873-aba830ca4dbb';
 
+-- changeset khoi:update-limit-menu-items-value-to-5
+UPDATE public.package_feature
+SET value = 5
+WHERE feature_id = (
+    SELECT feature_id FROM public.feature WHERE code = 'LIMIT_MENU_ITEMS'
+);
+
 

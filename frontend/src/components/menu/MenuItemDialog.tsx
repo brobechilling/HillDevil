@@ -14,7 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from '@/hooks/use-toast';
 import { useCategories } from '@/hooks/queries/useCategories';
 import { useCreateMenuItem, useUpdateMenuItem } from '@/hooks/queries/useMenuItems';
 import { Loader2 } from 'lucide-react';
@@ -54,8 +53,8 @@ export const MenuItemDialog = ({
   item,
 }: Props) => {
   const { data: categories = [] } = useCategories(restaurantId);
-  const createMutation = useCreateMenuItem();
-  const updateMutation = useUpdateMenuItem();
+  const createMutation = useCreateMenuItem(restaurantId);
+  const updateMutation = useUpdateMenuItem(restaurantId);
 
   // ✅ Dùng imageUrl từ item (BE đã có)
   const existingImageUrl = item?.imageUrl || null;
@@ -128,7 +127,6 @@ export const MenuItemDialog = ({
     }
   };
 
-  // ✅ Submit
   const onSubmit = async (data: FormData) => {
     try {
       setIsUploading(true);
@@ -153,23 +151,10 @@ export const MenuItemDialog = ({
         });
       }
 
-      toast({
-        title: item ? 'Updated' : 'Created',
-        description: 'Menu item saved successfully.',
-      });
-
       onOpenChange(false);
       reset();
     } catch (error: any) {
-      console.error('Error saving menu item:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description:
-          error?.response?.data?.message ||
-          error.message ||
-          'Failed to save menu item.',
-      });
+      // Toast handled in mutations
     } finally {
       setIsUploading(false);
     }
@@ -344,8 +329,8 @@ export const MenuItemDialog = ({
               {(createMutation.isPending ||
                 updateMutation.isPending ||
                 isUploading) && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
               {item ? 'Update' : 'Create'}
             </Button>
           </div>
