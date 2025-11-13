@@ -114,30 +114,30 @@ const RegisterConfirm = () => {
       return;
     }
 
-    const commonData = {
-      restaurantId,
-      packageId: selectedPackage.packageId,
-      restaurantName,
-    };
-
-
     if (action === "renew") {
-      renewMutation.mutate(commonData as any, {
-        onSuccess: (payment: any) => {
-          toast({ title: "Renewal initiated!", description: "Redirecting to payment..." });
-          navigate(`/payment/${payment.payOsOrderCode}`, { state: { ...payment, restaurantName } });
-        },
-        onError: (error: any) => {
-          toast({ variant: "destructive", title: "Renew failed", description: error.message || "Try again." });
-        },
-      });
+      renewMutation.mutate(
+        { restaurantId },
+        {
+          onSuccess: (payment: any) => {
+            toast({ title: "Renewal initiated!", description: "Redirecting to payment..." });
+            navigate(`/payment/${payment.payOsOrderCode}`, { 
+              state: { ...payment, restaurantName, restaurantId } 
+            });
+          },
+          onError: (error: any) => {
+            toast({ variant: "destructive", title: "Renew failed", description: error.message || "Try again." });
+          },
+        }
+      );
     } else if (action === "change") {
       changeMutation.mutate(
-        { ...commonData, newPackageId: selectedPackage.packageId } as any,
+        { restaurantId, newPackageId: selectedPackage.packageId },
         {
           onSuccess: (payment: any) => {
             toast({ title: "Package changed!", description: "Redirecting to payment..." });
-            navigate(`/payment/${payment.payOsOrderCode}`, { state: { ...payment, restaurantName } });
+            navigate(`/payment/${payment.payOsOrderCode}`, { 
+              state: { ...payment, restaurantName, restaurantId } 
+            });
           },
           onError: (error: any) => {
             toast({ variant: "destructive", title: "Change failed", description: error.message || "Try again." });

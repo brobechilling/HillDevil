@@ -8,6 +8,7 @@ import com.example.backend.entities.*;
 import com.example.backend.entities.Package;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
+import com.example.backend.mapper.SubscriptionMailMapper;
 import com.example.backend.repository.PackageRepository;
 import com.example.backend.repository.RestaurantRepository;
 import com.example.backend.repository.SubscriptionPaymentRepository;
@@ -34,6 +35,8 @@ public class SubscriptionService {
     private final SubscriptionPaymentRepository subscriptionPaymentRepository;
     private final RestaurantRepository restaurantRepository;
     private final SecurityUtil securityUtil;
+    private final MailService mailService;
+    private final SubscriptionMailMapper subscriptionMailMapper;
     private final Logger logger = LoggerFactory.getLogger(SubscriptionService.class);
     final long PAYMENT_TIMEOUT_MINUTES = 30;
 
@@ -42,12 +45,16 @@ public class SubscriptionService {
             PackageRepository packageRepository,
             SubscriptionPaymentRepository subscriptionPaymentRepository,
             RestaurantRepository restaurantRepository,
-            SecurityUtil securityUtil) {
+            SecurityUtil securityUtil,
+            MailService mailService,
+            SubscriptionMailMapper subscriptionMailMapper) {
         this.subscriptionRepository = subscriptionRepository;
         this.packageRepository = packageRepository;
         this.subscriptionPaymentRepository = subscriptionPaymentRepository;
         this.restaurantRepository = restaurantRepository;
         this.securityUtil = securityUtil;
+        this.mailService = mailService;
+        this.subscriptionMailMapper = subscriptionMailMapper;
     }
 
     @Transactional
@@ -163,7 +170,6 @@ public class SubscriptionService {
             overview.setRestaurantId(restaurant.getRestaurantId());
             overview.setRestaurantName(restaurant.getName());
 
-            // Lấy subscription active nhất (đã load sẵn trong entity graph)
             Subscription currentSub = restaurant.getSubscriptions().stream()
                     .filter(sub -> sub.getStatus() == SubscriptionStatus.ACTIVE)
                     .max(Comparator.comparing(Subscription::getCreatedAt))
@@ -173,7 +179,6 @@ public class SubscriptionService {
                 overview.setCurrentSubscription(mapToResponse(currentSub));
             }
 
-            // Lấy paymentHistory từ tất cả subscriptions (đã load sẵn)
             List<SubscriptionPaymentResponse> payments = restaurant.getSubscriptions().stream()
                     .flatMap(sub -> sub.getSubscriptionPayments().stream())
                     .sorted(Comparator.comparing(SubscriptionPayment::getDate).reversed())
@@ -187,7 +192,6 @@ public class SubscriptionService {
 
     @Transactional(readOnly = true)
     public List<ActivePackageStatsDTO> getActivePackageStats() {
-        // Lấy tất cả subscriptions (không chỉ active)
         List<Subscription> subs = subscriptionRepository.findAllWithPayments();
 
         Map<String, List<Subscription>> groupedByPackage = subs.stream()
@@ -201,7 +205,8 @@ public class SubscriptionService {
                     .filter(s -> s.getStatus() == SubscriptionStatus.ACTIVE)
                     .count();
 
-            // calculate payment count and total revenue (all payments with SUCCESS status from all subscriptions, even canceled subscriptions)
+            // calculate payment count and total revenue (all payments with SUCCESS status
+            // from all subscriptions, even canceled subscriptions)
             List<SubscriptionPayment> payments = packageSubs.stream()
                     .flatMap(s -> s.getSubscriptionPayments().stream())
                     .filter(p -> p.getSubscriptionPaymentStatus() == SubscriptionPaymentStatus.SUCCESS)
@@ -259,6 +264,17 @@ public class SubscriptionService {
                 subscriptionRepository.delete(s);
             }
         }
+    }
+
+    @Scheduled(cron = "0 0 8 * * ?")
+    public void sendSubscriptionReminders() {
+        LocalDate today = LocalDate.now();
+        LocalDate reminderDate = today.plusDays(3);
+        List<Subscription> subscriptions = subscriptionRepository.findSubscriptionsExpiringBetween(today, reminderDate);
+
+        subscriptions.stream()
+                .map(subscriptionMailMapper::toReminderMailRequest)
+                .forEach(mailService::sendSubscriptionReminderMail);
     }
 
     // -------------------------

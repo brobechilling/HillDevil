@@ -21,18 +21,18 @@ public class SubscriptionPaymentController {
         this.subscriptionPaymentService = subscriptionPaymentService;
     }
 
-    @PostMapping("/create")
-    public ResponseEntity<ApiResponse<SubscriptionPaymentResponse>> createPayment(
-            @RequestParam UUID subscriptionId
-    ) {
-        SubscriptionPaymentResponse result = subscriptionPaymentService.createPayment(subscriptionId);
-
-        ApiResponse<SubscriptionPaymentResponse> response = new ApiResponse<>();
-        response.setMessage("Created payment successfully");
-        response.setResult(result);
-
-        return ResponseEntity.ok(response);
-    }
+//    @PostMapping("/create")
+//    public ResponseEntity<ApiResponse<SubscriptionPaymentResponse>> createPayment(
+//            @RequestParam UUID subscriptionId
+//    ) {
+//        SubscriptionPaymentResponse result = subscriptionPaymentService.createPayment(subscriptionId);
+//
+//        ApiResponse<SubscriptionPaymentResponse> response = new ApiResponse<>();
+//        response.setMessage("Created payment successfully");
+//        response.setResult(result);
+//
+//        return ResponseEntity.ok(response);
+//    }
 
     @PostMapping("/webhook")
     public ResponseEntity<ApiResponse<String>> handleWebhook(@RequestBody Webhook webhookBody) {

@@ -33,17 +33,14 @@ export const useRenewSubscription = () => {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ restaurantId, packageId }: { restaurantId: string; packageId: string }) => {
-      console.log("🔄 useRenewSubscription mutationFn called with:", {restaurantId, packageId});
-      return restaurantSubscriptionApi.renewSubscription(restaurantId, packageId);
+    mutationFn: ({ restaurantId }: { restaurantId: string }) => {
+      return restaurantSubscriptionApi.renewSubscription(restaurantId);
     },
     onSuccess: (data) => {
-      console.log("🔄 useRenewSubscription onSuccess with data:", data);
       qc.invalidateQueries({ queryKey: ["subscriptions"] });
       // Component handles navigation and toast
     },
     onError: (err: any) => {
-      console.error("🔄 useRenewSubscription onError:", err);
       toast({
         variant: "destructive",
         title: "Error renewing subscription",
@@ -58,16 +55,13 @@ export const useChangePackage = () => {
 
   return useMutation({
     mutationFn: ({ restaurantId, newPackageId }: { restaurantId: string; newPackageId: string }) => {
-      console.log("📦 useChangePackage mutationFn called with:", {restaurantId, newPackageId});
-      return restaurantSubscriptionApi.changePackage(restaurantId, newPackageId);
+      return restaurantSubscriptionApi.upgradeRestaurantPackage(restaurantId, newPackageId);
     },
     onSuccess: (data) => {
-      console.log("📦 useChangePackage onSuccess with data:", data);
       qc.invalidateQueries({ queryKey: ["subscriptions"] });
       // Component handles navigation and toast
     },
     onError: (err: any) => {
-      console.error("📦 useChangePackage onError:", err);
       toast({
         variant: "destructive",
         title: "Error changing package",

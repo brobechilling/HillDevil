@@ -62,6 +62,17 @@ public class SubscriptionPayment {
     @Column(name = "description")
     private String description;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "purpose", nullable = false)
+    private SubscriptionPaymentPurpose purpose;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_package_id")
+    private Package targetPackage;
+
+    @Column(name = "prorated_amount")
+    private Integer proratedAmount;
+
     public SubscriptionPaymentStatus getSubscriptionPaymentStatus() {
         return subscriptionPaymentStatus;
     }
@@ -188,5 +199,29 @@ public class SubscriptionPayment {
 
     public void setDate(Instant date) {
         this.date = date;
+    }
+
+    public SubscriptionPaymentPurpose getPurpose() {
+        return purpose;
+    }
+
+    public void setPurpose(SubscriptionPaymentPurpose purpose) {
+        this.purpose = purpose;
+    }
+
+    public Package getTargetPackage() {
+        return targetPackage;
+    }
+
+    public void setTargetPackage(Package targetPackage) {
+        this.targetPackage = targetPackage;
+    }
+
+    public Integer getProratedAmount() {
+        return proratedAmount;
+    }
+
+    public void setProratedAmount(Integer proratedAmount) {
+        this.proratedAmount = proratedAmount;
     }
 }

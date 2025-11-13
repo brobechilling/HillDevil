@@ -343,8 +343,9 @@ export default function RestaurantInfoPage() {
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead>Amount</TableHead>
+                      <TableHead>Purpose</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Period</TableHead>
+                      <TableHead>Description</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -353,14 +354,17 @@ export default function RestaurantInfoPage() {
                         <TableCell>
                           {payment.date ? format(new Date(payment.date), 'PPP') : 'N/A'}
                         </TableCell>
-                        <TableCell>${(payment.amount ?? 0)}</TableCell>
+                        <TableCell className="font-medium">{(payment.amount ?? 0).toLocaleString('en-US')} VND</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {payment.purpose ? payment.purpose.toUpperCase() : 'N/A'}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           {getPaymentBadge(payment.subscriptionPaymentStatus)}
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {payment.expiredAt ? (
-                            format(new Date(payment.expiredAt), 'PP')
-                          ) : (payment.description || 'N/A')}
+                        <TableCell className="text-sm max-w-[200px] truncate">
+                          {payment.description || 'N/A'}
                         </TableCell>
                       </TableRow>
                     ))}
