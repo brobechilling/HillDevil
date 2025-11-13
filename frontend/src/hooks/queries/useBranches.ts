@@ -47,19 +47,30 @@ export const useUpdateBranch = () => {
     });
 };
 
-export const useCreateBranch = () => {
+export const useCreateBranch = (restaurantId?: string) => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (data: any) => createBranch(data),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['branches'] }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['branches'] });
+            if (restaurantId) {
+                qc.invalidateQueries({ queryKey: ['branches', 'canCreate', restaurantId] });
+                qc.invalidateQueries({ queryKey: ['branches', 'restaurant', restaurantId] });
+            }
+        },
     });
 };
 
-export const useDeleteBranch = () => {
+export const useDeleteBranch = (restaurantId?: string) => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (id: string) => deleteBranch(id),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['branches'] }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['branches'] });
+            if (restaurantId) {
+                qc.invalidateQueries({ queryKey: ['branches', 'canCreate', restaurantId] });
+            }
+        }
     });
 };
 
