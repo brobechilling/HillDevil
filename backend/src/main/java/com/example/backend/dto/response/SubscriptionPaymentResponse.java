@@ -18,7 +18,7 @@ public class SubscriptionPaymentResponse {
     private String description;
     private String subscriptionPaymentStatus;
     private Instant date;
-    private BigDecimal proratedAmount;
+    private Integer proratedAmount;
     private SubscriptionPaymentPurpose purpose;
 
     public UUID getSubscriptionPaymentId() {
@@ -109,11 +109,11 @@ public class SubscriptionPaymentResponse {
         this.date = date;
     }
 
-    public BigDecimal getProratedAmount() {
+    public Integer getProratedAmount() {
         return proratedAmount;
     }
 
-    public void setProratedAmount(BigDecimal proratedAmount) {
+    public void setProratedAmount(Integer proratedAmount) {
         this.proratedAmount = proratedAmount;
     }
 

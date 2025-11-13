@@ -316,6 +316,8 @@ public class SubscriptionService {
         dto.setAccountName(payment.getAccountName());
         dto.setExpiredAt(payment.getExpiredAt());
         dto.setDescription(payment.getDescription());
+        dto.setPurpose(payment.getPurpose());
+        dto.setProratedAmount(payment.getProratedAmount());
         dto.setSubscriptionPaymentStatus(
                 payment.getSubscriptionPaymentStatus() != null ? payment.getSubscriptionPaymentStatus().name() : null);
         dto.setDate(payment.getDate());

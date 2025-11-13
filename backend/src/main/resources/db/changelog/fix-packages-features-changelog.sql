@@ -55,5 +55,10 @@ UPDATE packages
 SET price = 4000
 WHERE package_id = 'a940d829-5a1d-4ac6-844a-49a8131232fd'
 
+-- changeset hoahtm:tired of this
+UPDATE packages
+SET price = 10000
+WHERE package_id = 'a940d829-5a1d-4ac6-844a-49a8131232fd'
+
 
 

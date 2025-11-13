@@ -100,4 +100,12 @@ public class BranchService {
                 currentCountSupplier
         );
     }
+
+    @Transactional(readOnly = true)
+    public List<BranchDTO> getBranchesByOwner(UUID ownerId) {
+        return branchRepository.findByOwnerId(ownerId)
+                .stream()
+                .map(branchMapper::toDto)
+                .toList();
+    }
 }

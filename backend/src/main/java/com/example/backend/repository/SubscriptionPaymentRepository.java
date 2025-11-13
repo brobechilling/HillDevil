@@ -1,10 +1,12 @@
 package com.example.backend.repository;
 
 import com.example.backend.entities.SubscriptionPayment;
+import com.example.backend.entities.SubscriptionPaymentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,4 +35,7 @@ public interface SubscriptionPaymentRepository extends JpaRepository<Subscriptio
             """, nativeQuery = true)
     List<Object[]> findTopSpenders(@Param("limit") int limit);
     List<SubscriptionPayment> findAllBySubscription_SubscriptionId(UUID subscriptionId);
+    List<SubscriptionPayment> findAllBySubscriptionPaymentStatusAndExpiredAtBefore(
+            SubscriptionPaymentStatus status, Instant time
+    );
 }

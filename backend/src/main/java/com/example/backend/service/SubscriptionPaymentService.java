@@ -12,6 +12,7 @@ import com.example.backend.repository.RestaurantRepository;
 import com.example.backend.repository.SubscriptionPaymentRepository;
 import com.example.backend.repository.SubscriptionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
@@ -58,32 +59,28 @@ public class SubscriptionPaymentService {
     public SubscriptionPaymentResponse createPayment(
             UUID subscriptionId,
             SubscriptionPaymentPurpose purpose,
-            UUID targetPackageId) {  // Thêm targetPackageId
+            UUID targetPackageId) {
 
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
-
-        // Hủy các payment pending cũ
-        subscriptionPaymentRepository.findAllBySubscription_SubscriptionId(subscriptionId)
-                .stream()
-                .filter(p -> p.getSubscriptionPaymentStatus() == SubscriptionPaymentStatus.PENDING)
-                .forEach(p -> {
-                    p.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.CANCELED);
-                    subscriptionPaymentRepository.save(p);
-                });
 
         Package currentPackage = subscription.getaPackage();
         Package targetPackage = packageRepository.findById(targetPackageId)
                 .orElseThrow(() -> new AppException(ErrorCode.PACKAGE_NOTEXISTED));
 
         int amountToPay;
+        Integer proratedAmount = null; // tiền dư gói cũ
         String description;
 
         if (purpose == SubscriptionPaymentPurpose.UPGRADE) {
             if (subscription.getStatus() != SubscriptionStatus.ACTIVE || subscription.getEndDate() == null) {
                 throw new AppException(ErrorCode.SUBSCRIPTION_NOT_ACTIVE);
             }
-            amountToPay = calculateProratedUpgradeAmount(subscription, targetPackage);
+            // Tách riêng amount vs credit
+            ProratedResult result = calculateProratedAmounts(subscription, targetPackage);
+            amountToPay = result.amountToPay();
+            proratedAmount = result.creditAmount();
+
             description = "Upgrade package: " + currentPackage.getName() + " → " + targetPackage.getName();
         } else {
             amountToPay = targetPackage.getPrice();
@@ -103,7 +100,7 @@ public class SubscriptionPaymentService {
         SubscriptionPayment payment = new SubscriptionPayment();
         payment.setSubscription(subscription);
         payment.setAmount(amountToPay);
-        payment.setProratedAmount(purpose == SubscriptionPaymentPurpose.UPGRADE ? amountToPay : null);
+        payment.setProratedAmount(proratedAmount);
         payment.setTargetPackage(targetPackage);
         payment.setPurpose(purpose);
         payment.setPayOsOrderCode(orderCode);
@@ -136,7 +133,7 @@ public class SubscriptionPaymentService {
         return subscriptionPaymentMapper.toSubscriptionPaymentResponse(payment);
     }
 
-    private int calculateProratedUpgradeAmount(Subscription subscription, Package newPackage) {
+    private ProratedResult calculateProratedAmounts(Subscription subscription, Package newPackage) {
         LocalDate today = LocalDate.now();
         LocalDate endDate = subscription.getEndDate();
         if (endDate == null || endDate.isBefore(today)) {
@@ -146,17 +143,16 @@ public class SubscriptionPaymentService {
         long totalDays = ChronoUnit.DAYS.between(subscription.getStartDate(), endDate);
         long remainingDays = ChronoUnit.DAYS.between(today, endDate);
 
-        if (totalDays <= 0) return newPackage.getPrice();
-
-        double usedRatio = (double) (totalDays - remainingDays) / totalDays;
         int oldPackageValue = subscription.getaPackage().getPrice();
-        int credit = (int) Math.round(oldPackageValue * (1 - usedRatio));
+        int credit = (int) Math.round((double) oldPackageValue * remainingDays / totalDays);
 
         int newPrice = newPackage.getPrice();
         int amountToPay = Math.max(0, newPrice - credit);
 
-        return amountToPay;
+        return new ProratedResult(amountToPay, credit);
     }
+
+    private record ProratedResult(int amountToPay, int creditAmount) {}
 
     private long generateUniqueOrderCode() {
         long orderCode = System.currentTimeMillis() % 1_000_000_000L;
@@ -277,5 +273,25 @@ public class SubscriptionPaymentService {
             dto.setTotalSpent(new BigDecimal(row[3].toString()));
             return dto;
         }).collect(Collectors.toList());
+    }
+
+    @Scheduled(fixedRate = 30 * 60 * 1000)
+    public void cancelExpiredPendingPayments() {
+        Instant now = Instant.now();
+        List<SubscriptionPayment> expiredPayments = subscriptionPaymentRepository
+                .findAllBySubscriptionPaymentStatusAndExpiredAtBefore(
+                        SubscriptionPaymentStatus.PENDING, now
+                );
+
+        for (SubscriptionPayment payment : expiredPayments) {
+            payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.CANCELED);
+            subscriptionPaymentRepository.save(payment);
+
+            Subscription subscription = payment.getSubscription();
+            if (payment.getPurpose() != SubscriptionPaymentPurpose.RENEW) {
+                subscription.setStatus(SubscriptionStatus.CANCELED);
+                subscriptionPaymentRepository.save(payment); // Hoặc subscriptionRepository.save(subscription)
+            }
+        }
     }
 }
