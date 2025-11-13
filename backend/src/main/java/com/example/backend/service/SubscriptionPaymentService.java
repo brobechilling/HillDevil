@@ -12,9 +12,9 @@ import com.example.backend.repository.SubscriptionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vn.payos.type.CheckoutResponseData;
-import vn.payos.type.Webhook;
-import vn.payos.type.WebhookData;
+import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
+import vn.payos.model.webhooks.Webhook;
+import vn.payos.model.webhooks.WebhookData;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -75,13 +75,14 @@ public class SubscriptionPaymentService {
         }
 
         String returnUrl = payOSService.buildReturnUrl(orderCode);
-        CheckoutResponseData payResponse = payOSService.createVQRPayment(
-                amount, orderCode, itemName, description, returnUrl);
+        CreatePaymentLinkResponse payResponse = payOSService.createVQRPayment(
+                (long) amount, orderCode, description, returnUrl);
 
         SubscriptionPayment payment = new SubscriptionPayment();
         payment.setSubscription(subscription);
         payment.setAmount(amount);
         payment.setPayOsOrderCode(orderCode);
+
         payment.setQrCodeUrl(payResponse.getQrCode());
         payment.setAccountNumber(payResponse.getAccountNumber());
         payment.setAccountName(payResponse.getAccountName());
@@ -103,7 +104,6 @@ public class SubscriptionPaymentService {
         subscription.setStatus(SubscriptionStatus.PENDING_PAYMENT);
         subscriptionRepository.save(subscription);
 
-        // Lock restaurant until payment succeeds
         Restaurant restaurant = subscription.getRestaurant();
         if (restaurant != null)
             restaurant.setStatus(false);
@@ -186,8 +186,17 @@ public class SubscriptionPaymentService {
             throw new AppException(ErrorCode.PAYMENT_CANNOT_CANCEL);
 
         payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.CANCELED);
-        cancelSubscription(payment.getSubscription());
+
+        Subscription subscription = payment.getSubscription();
+
+        if (subscription.getStartDate() == null) {
+            cancelSubscription(subscription);
+        } else {
+            subscription.setStatus(SubscriptionStatus.ACTIVE);
+        }
+
         subscriptionPaymentRepository.save(payment);
+        subscriptionRepository.save(subscription);
 
         return subscriptionPaymentMapper.toSubscriptionPaymentResponse(payment);
     }
