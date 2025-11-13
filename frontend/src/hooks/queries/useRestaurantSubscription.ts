@@ -50,7 +50,7 @@ export const useRenewSubscription = () => {
   });
 };
 
-export const useChangePackage = () => {
+export const useUpgradeRestaurantPackage = () => {
   const qc = useQueryClient();
 
   return useMutation({

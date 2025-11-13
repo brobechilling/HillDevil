@@ -26,7 +26,6 @@ export const useOverviewForOwner = () => {
   return useQuery({
     queryKey: ["subscriptions", "overview"],
     queryFn: () => subscriptionApi.getOverviewForOwner(),
-    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
   });
 };

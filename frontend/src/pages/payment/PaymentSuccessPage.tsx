@@ -10,16 +10,15 @@ export default function PaymentSuccessPage() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Get payment data from navigation state
   const state = location.state as { 
     restaurantName?: string; 
+    restaurantId?: string;
     orderCode?: string; 
     amount?: number;
   } | null;
   
   const restaurantName = state?.restaurantName || "";
-  const orderCode = state?.orderCode || "";
-  const amount = state?.amount || 0;
+  const restaurantId = state?.restaurantId || "";
 
   useEffect(() => {
     toast({
@@ -27,6 +26,16 @@ export default function PaymentSuccessPage() {
       description: `Your subscription is now active${restaurantName ? ` for ${restaurantName}` : ""}.`,
     });
   }, [restaurantName]);
+
+  const handleGoToRestaurant = () => {
+    if (restaurantId && restaurantName) {
+      localStorage.setItem('selected_restaurant', JSON.stringify({
+        restaurantId,
+        restaurantName,
+      }));
+    }
+    navigate("/dashboard/owner/overview");
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
@@ -48,43 +57,44 @@ export default function PaymentSuccessPage() {
               </motion.div>
             </div>
             <CardTitle className="text-2xl font-bold text-foreground">
-              Payment Successful 🎉
+              Payment Successful
             </CardTitle>
             <CardDescription className="text-muted-foreground mt-2">
-              {restaurantName && (
+              {restaurantName ? (
                 <p className="text-lg font-semibold text-foreground mb-2">
                   Your subscription for <b>{restaurantName}</b> is now active!
                 </p>
+              ) : (
+                "Thank you for completing your payment."
               )}
-              {!restaurantName && "Thank you for completing your payment."}
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-6 space-y-3">
-            {orderCode && (
+            {state?.orderCode && (
               <div className="p-4 bg-muted/50 rounded-lg mb-4">
                 <p className="text-sm text-muted-foreground">Order Code</p>
-                <p className="font-mono font-semibold">{orderCode}</p>
-                {amount > 0 && (
+                <p className="font-mono font-semibold">{state.orderCode}</p>
+                {state?.amount && (
                   <>
                     <p className="text-sm text-muted-foreground mt-2">Amount</p>
-                    <p className="font-semibold text-lg">{amount.toLocaleString("en-US")} VND</p>
+                    <p className="font-semibold text-lg">{state.amount.toLocaleString()} VND</p>
                   </>
                 )}
               </div>
             )}
             <Button 
               className="w-full" 
-              onClick={() => navigate("/dashboard/owner/overview")}
+              onClick={handleGoToRestaurant}
               size="lg"
             >
-              Go to Dashboard
+              {restaurantName ? `Go to ${restaurantName}'s Dashboard` : "Go to Dashboard"}
             </Button>
             <Button
               variant="outline"
               className="w-full"
               onClick={() => navigate("/dashboard/owner")}
             >
-              View All Dashboards
+              View All Restaurants
             </Button>
           </CardContent>
         </Card>
