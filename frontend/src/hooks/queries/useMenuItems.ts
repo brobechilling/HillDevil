@@ -8,10 +8,12 @@ import {
   isMenuItemActiveInBranch,
   setActiveStatus,
   updateBestSeller,
-  canCreateMenuItem
+  canCreateMenuItem,
+  getCustomizationOfMenuItem
 } from "@/api/menuItemApi";
 import { MenuItemDTO, MenuItemCreateRequest } from "@/dto/menuItem.dto";
 import { toast } from "@/components/ui/use-toast";
+import { CustomizationDTO } from "@/dto/customization.dto";
 
 export const useMenuItems = (restaurantId?: string) => {
   return useQuery<MenuItemDTO[]>({
@@ -139,7 +141,7 @@ export const useUpdateBestSeller = (restaurantId?: string) => {
         queryClient.setQueryData(["menu-items", restaurantId], context.previousData);
       }
       toast({
-        title: "❌ Error",
+        title: "Error",
         description: "Failed to update best seller.",
         variant: "destructive",
       });
@@ -166,4 +168,12 @@ export const useCanCreateMenuItem = (restaurantId: string | undefined) => {
     enabled: !!restaurantId,
     refetchOnWindowFocus: false,
   });
+};
+
+
+const useCustomizationsOfMenuItems = (menuItemId: string) => {
+  return useQuery<CustomizationDTO[]>({
+    queryKey: ["customization", "menu-item", menuItemId],
+    queryFn: () => getCustomizationOfMenuItem(menuItemId),
+  })
 };

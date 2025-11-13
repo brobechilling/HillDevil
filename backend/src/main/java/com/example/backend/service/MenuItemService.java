@@ -1,11 +1,12 @@
 package com.example.backend.service;
 
+import com.example.backend.dto.CustomizationDTO;
 import com.example.backend.dto.MenuItemDTO;
 import com.example.backend.dto.request.MenuItemCreateRequest;
 import com.example.backend.entities.*;
-import com.example.backend.entities.MenuItemStatus;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
+import com.example.backend.mapper.CustomizationMapper;
 import com.example.backend.mapper.MenuItemMapper;
 import com.example.backend.repository.*;
 import jakarta.transaction.Transactional;
@@ -28,12 +29,14 @@ public class MenuItemService {
     private final BranchMenuItemRepository branchMenuItemRepository;
     private final MediaService mediaService;
     private final FeatureLimitCheckerService featureLimitCheckerService;
+    private final CustomizationMapper customizationMapper;
 
     public MenuItemService(MenuItemRepository menuItemRepository, MenuItemMapper menuItemMapper,
                            RestaurantRepository restaurantRepository, CategoryRepository categoryRepository,
                            CustomizationRepository customizationRepository, BranchMenuItemRepository branchMenuItemRepository,
                            MediaService mediaService,
-                           FeatureLimitCheckerService featureLimitCheckerService) {
+                           FeatureLimitCheckerService featureLimitCheckerService,
+                           CustomizationMapper customizationMapper) {
         this.menuItemRepository = menuItemRepository;
         this.menuItemMapper = menuItemMapper;
         this.restaurantRepository = restaurantRepository;
@@ -42,6 +45,7 @@ public class MenuItemService {
         this.branchMenuItemRepository = branchMenuItemRepository;
         this.mediaService = mediaService;
         this.featureLimitCheckerService = featureLimitCheckerService;
+        this.customizationMapper = customizationMapper;
     }
 
     public List<MenuItemDTO> getAllByRestaurant(UUID restaurantId) {
@@ -214,4 +218,11 @@ public class MenuItemService {
                 currentCountSupplier
         );
     }
+
+    public List<CustomizationDTO> getCustomizationOfMenuItem(UUID menuItemId) {
+        MenuItem menuItem = menuItemRepository.findById(menuItemId).orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
+        List<Customization> customizations = menuItem.getCustomizations().stream().toList();
+        return customizations.stream().map(customization -> customizationMapper.toCustomizationDTOForBranchMenuItem(customization)).toList();
+    }
+    
 }

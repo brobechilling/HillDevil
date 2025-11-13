@@ -7,6 +7,7 @@ export interface TableDTO {
   status: TableStatus;
   areaId?: string;
   areaName?: string;
+  branchId?: string; // For short URL support
 }
 
 export interface CreateTableRequest {

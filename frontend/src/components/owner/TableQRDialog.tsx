@@ -89,7 +89,7 @@ export const TableQRDialog = ({ open, onOpenChange, table, branchId }: TableQRDi
           <DialogHeader>
             <DialogTitle>Table QR Code</DialogTitle>
             <DialogDescription>
-              Scan this QR code to access Table {table.tag || (table as any).number || 'Unknown'}
+              Scan this QR code to access {table.tag || (table as any).number || 'Unknown'}
             </DialogDescription>
           </DialogHeader>
 
@@ -107,7 +107,7 @@ export const TableQRDialog = ({ open, onOpenChange, table, branchId }: TableQRDi
               <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
                 <p className="text-xs text-primary font-medium mb-1">Share this URL</p>
                 <p className="text-xs text-muted-foreground">
-                  Guests can scan the QR code or visit this URL to view the menu and place orders for Table {table.tag || (table as any).number || 'Unknown'}
+                  Guests can scan the QR code or visit this URL to view the menu and place orders for {table.tag || (table as any).number || 'Unknown'}
                 </p>
               </div>
 
