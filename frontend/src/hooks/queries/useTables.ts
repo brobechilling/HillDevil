@@ -32,7 +32,8 @@ export const useTables = (
 
   const isValidBranchId = useMemo(() => {
     if (!branchId || typeof branchId !== 'string') return false;
-    return branchId.trim() !== '';
+    const trimmed = branchId.trim();
+    return trimmed !== '' && isValidUUID(trimmed);
   }, [branchId]);
 
   const { token } = useSessionStore();

@@ -9,8 +9,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,6 +23,7 @@ import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.request.CreateTableRequest;
 import com.example.backend.dto.response.QrCodeJsonResponse;
 import com.example.backend.dto.response.TableResponse;
+import com.example.backend.entities.TableStatus;
 import com.example.backend.service.TableService;
 
 import jakarta.validation.Valid;
@@ -64,6 +67,26 @@ public class TableController {
         ApiResponse<TableResponse> res = new ApiResponse<>();
         res.setResult(tableService.createTable(req));
         res.setMessage("Table created successfully");
+        return res;
+    }
+
+    @PutMapping("/owner/tables/{tableId}")
+    public ApiResponse<TableResponse> updateTable(
+            @PathVariable UUID tableId,
+            @Valid @RequestBody CreateTableRequest req) {
+        ApiResponse<TableResponse> res = new ApiResponse<>();
+        res.setResult(tableService.updateTable(tableId, req));
+        res.setMessage("Table updated successfully");
+        return res;
+    }
+
+    @PatchMapping("/owner/tables/{tableId}/status")
+    public ApiResponse<TableResponse> updateTableStatus(
+            @PathVariable UUID tableId,
+            @RequestParam TableStatus status) {
+        ApiResponse<TableResponse> res = new ApiResponse<>();
+        res.setResult(tableService.updateTableStatus(tableId, status));
+        res.setMessage("Table status updated successfully");
         return res;
     }
 
