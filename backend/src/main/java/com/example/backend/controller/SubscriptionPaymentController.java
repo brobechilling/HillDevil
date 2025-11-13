@@ -6,7 +6,7 @@ import com.example.backend.dto.response.SubscriptionPaymentResponse;
 import com.example.backend.service.SubscriptionPaymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import vn.payos.type.Webhook;
+import vn.payos.model.webhooks.Webhook;
 import java.util.List;
 
 import java.util.UUID;
