@@ -1,11 +1,6 @@
 import { useSessionStore } from '@/store/sessionStore';
-import { useBranches, useBranchesByRestaurant } from '@/hooks/queries/useBranches';
 import { ManagerTableManagementEnhanced } from '@/components/manager/ManagerTableManagementEnhanced';
-import { getLocalStorageObject } from '@/utils/typeCast';
-import { RestaurantDTO } from '@/dto/restaurant.dto';
-import { useMemo } from 'react';
-import { useEffect, useState } from 'react';
-import { StaffAccountDTO } from '@/dto/staff.dto';
+import { isStaffAccountDTO } from '@/utils/typeCast';
 
 // Helper function to validate UUID format
 const isValidUUID = (str: string): boolean => {
@@ -16,41 +11,13 @@ const isValidUUID = (str: string): boolean => {
 export default function TablesPage() {
   const { user } = useSessionStore();
   
-  // Get restaurant ID from localStorage to filter branches by restaurant (same as Owner)
-  const selectedRestaurant: RestaurantDTO | null = useMemo(() => {
-    return getLocalStorageObject<RestaurantDTO>("selected_restaurant");
-  }, []);
+  // Get branchId from multiple sources (same as OverviewPage)
+  const branchIdFromStore = isStaffAccountDTO(user) ? user.branchId : "";
+  const branchIdFromSession = sessionStorage.getItem('owner_selected_branch_id') || "";
+  const rawBranchId = branchIdFromStore || branchIdFromSession;
   
-  // Use branchesByRestaurant if restaurantId is available, otherwise useBranches
-  const branchesByRestaurantQuery = useBranchesByRestaurant(selectedRestaurant?.restaurantId);
-  const allBranchesQuery = useBranches();
-  
-  // Use branchesByRestaurant if restaurantId is available, otherwise use all branches
-  const { data: branches = [] } = selectedRestaurant?.restaurantId
-    ? branchesByRestaurantQuery
-    : allBranchesQuery;
-  
-  const [branchId, setBranchId] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    // Try to get branchId from user (StaffAccountDTO has branchId)
-    if (user && 'branchId' in user && user.branchId) {
-      const userBranchId = String(user.branchId);
-      // Only use if it's a valid UUID
-      if (isValidUUID(userBranchId)) {
-        setBranchId(userBranchId);
-        return;
-      }
-    }
-    
-    // Fallback to first branch if user doesn't have valid branchId
-    if (branches.length > 0 && branches[0].branchId) {
-      const firstBranchId = String(branches[0].branchId);
-      if (isValidUUID(firstBranchId)) {
-        setBranchId(firstBranchId);
-      }
-    }
-  }, [user, branches]);
+  // Validate branchId is a valid UUID
+  const branchId = rawBranchId && isValidUUID(rawBranchId) ? rawBranchId : undefined;
 
   if (!branchId) {
     return (

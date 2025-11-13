@@ -1,40 +1,62 @@
-import { useMemo, useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Table2, Tag, DollarSign } from 'lucide-react';
-import { mockTables, mockPromotions } from '@/data/mockData';
+import { Users, Table2, Tag, DollarSign, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useBranch, useBranches } from '@/hooks/queries/useBranches';
+import { useBranch } from '@/hooks/queries/useBranches';
+import { useManagerOverview } from '@/hooks/queries/useManagerOverview';
+import { useAreas } from '@/hooks/queries/useAreas';
+import { useTables } from '@/hooks/queries/useTables';
 import { useSessionStore } from '@/store/sessionStore';
 import { isStaffAccountDTO } from '@/utils/typeCast';
+import { TableDTO } from '@/dto/table.dto';
 
 export default function OverviewPage() {
   const { user } = useSessionStore(); 
-  const branchId = isStaffAccountDTO(user) ? user.branchId : "";
-  const { data: branch, isLoading } = useBranch(branchId);
+  // Get branchId from multiple sources (same as StaffPage)
+  const branchIdFromStore = isStaffAccountDTO(user) ? user.branchId : "";
+  const branchIdFromSession = sessionStorage.getItem('owner_selected_branch_id') || "";
+  const branchId = branchIdFromStore || branchIdFromSession;
+  
+  const { data: branch, isLoading: isLoadingBranch } = useBranch(branchId);
+  const { data: stats, isLoading: isLoadingStats } = useManagerOverview(branchId);
+  const { data: areas, isLoading: isLoadingAreas } = useAreas(branchId);
+  const { data: tablesData, isLoading: isLoadingTables } = useTables(branchId, 0, 1000);
 
-  // const { getStaffByBranch } = useStaffStore();
-  // const { getAreasByBranch } = useAreaStore();
-  // const branchStaff = getStaffByBranch(branchId);
-  // const branchAreas = getAreasByBranch(branchId);
-  const [selectedFloor, setSelectedFloor] = useState<string>('all');
   const [selectedAreaId, setSelectedAreaId] = useState<string>('all');
 
-  // Filter tables by selected floor
-  // const filteredTables = useMemo(() => {
-  //   let tables = mockTables;
-  //   if (selectedFloor !== 'all') {
-  //     tables = tables.filter(t => t.floor === parseInt(selectedFloor));
-  //   }
-  //   if (selectedAreaId !== 'all') {
-  //     const area = branchAreas.find(a => a.id === selectedAreaId);
-  //     if (area) tables = tables.filter(t => t.floor === area.floor);
-  //   }
-  //   return tables;
-  // }, [selectedFloor, selectedAreaId, branchAreas]);
+  const isLoading = isLoadingBranch || isLoadingStats || isLoadingAreas || isLoadingTables;
 
-  // Get unique floors
-  const floors = Array.from(new Set(mockTables.map(t => t.floor))).sort((a, b) => a - b);
+  // Filter tables by selected area
+  const filteredTables = useMemo(() => {
+    if (!tablesData?.content) return [];
+    if (selectedAreaId === 'all') return tablesData.content;
+    return tablesData.content.filter((table) => table.areaId === selectedAreaId);
+  }, [tablesData, selectedAreaId]);
+
+  // Group tables by area
+  const tablesByArea = useMemo(() => {
+    const grouped = new Map<string, TableDTO[]>();
+    if (!tablesData?.content) return grouped;
+    
+    tablesData.content.forEach((table) => {
+      const areaId = table.areaId || 'unknown';
+      if (!grouped.has(areaId)) {
+        grouped.set(areaId, []);
+      }
+      grouped.get(areaId)!.push(table);
+    });
+    
+    return grouped;
+  }, [tablesData]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -52,9 +74,21 @@ export default function OverviewPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$2,847</div>
+            <div className="text-2xl font-bold">
+              ${stats?.todayRevenue.toFixed(2) || '0.00'}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-green-500">+12.5%</span> vs yesterday
+              {stats && stats.revenueChangePercent !== 0 && (
+                <span className={stats.revenueChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
+                  {stats.revenueChangePercent >= 0 ? '+' : ''}
+                  {stats.revenueChangePercent.toFixed(1)}%
+                </span>
+              )}
+              {stats && stats.revenueChangePercent === 0 && (
+                <span className="text-muted-foreground">No change</span>
+              )}
+              {!stats && <span className="text-muted-foreground">Loading...</span>}
+              {' vs yesterday'}
             </p>
           </CardContent>
         </Card>
@@ -66,10 +100,10 @@ export default function OverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {/* {branchStaff.filter(s => s.status === 'active').length} */}
+              {stats?.activeStaff || 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {/* Out of {branchStaff.length} total staff */}
+              Out of {stats?.totalStaff || 0} total staff
             </p>
           </CardContent>
         </Card>
@@ -81,7 +115,7 @@ export default function OverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {mockTables.filter(t => t.status === 'occupied').length}/{mockTables.length}
+              {stats?.occupiedTables || 0}/{stats?.totalTables || 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Tables occupied</p>
           </CardContent>
@@ -94,7 +128,7 @@ export default function OverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {mockPromotions.filter(p => p.status === 'active').length}
+              {stats?.activePromos || 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Running promotions</p>
           </CardContent>
@@ -110,98 +144,92 @@ export default function OverviewPage() {
                 <CardDescription>Current table availability by floor</CardDescription>
               </div>
               <div className="flex items-center gap-3">
-                {/* <Select value={selectedAreaId} onValueChange={setSelectedAreaId}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select area" />
-                </SelectTrigger>
-                <SelectContent className="bg-background">
-                  <SelectItem value="all">All Areas</SelectItem>
-                  {branchAreas.map((area) => (
-                    <SelectItem key={area.id} value={area.id}>
-                      Area {area.name || area.floor}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select> */}
-
                 <Select value={selectedAreaId} onValueChange={setSelectedAreaId}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select area" />
                   </SelectTrigger>
                   <SelectContent className="bg-background">
                     <SelectItem value="all">All Areas</SelectItem>
-                    {/* {branchAreas.map((area) => (
-                      <SelectItem key={area.id} value={area.id}>
-                        {area.name || `Area ${area.floor}`}
+                    {areas?.map((area) => (
+                      <SelectItem key={area.areaId} value={area.areaId}>
+                        {area.name}
                       </SelectItem>
-                    ))} */}
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            {/* {filteredTables.length === 0 ? (
+            {filteredTables.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 No tables found
               </div>
             ) : (
               <div className="space-y-4">
-                {branchAreas.length > 0 && (
+                {selectedAreaId === 'all' && areas && areas.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="font-semibold text-sm">Area Status</h4>
-                    {branchAreas.map((area) => (
-                      <div key={area.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <div className="font-medium">Area {area.name || area.floor}</div>
-                          <div className="text-xs text-muted-foreground">Floor {area.floor}</div>
+                    {areas.map((area) => {
+                      const areaTables = tablesByArea.get(area.areaId) || [];
+                      const availableAreaTables = areaTables.filter((t) => t.status !== 'INACTIVE');
+                      const occupiedCount = availableAreaTables.filter((t) => t.status === 'OCCUPIED').length;
+                      const totalCount = availableAreaTables.length;
+                      
+                      return (
+                        <div key={area.areaId} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <div className="font-medium">{area.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {occupiedCount}/{totalCount} tables occupied
+                            </div>
+                          </div>
+                          <Badge variant={area.status ? 'default' : 'secondary'}>
+                            {area.status ? 'Active' : 'Inactive'}
+                          </Badge>
                         </div>
-                        <Select
-                          value={area.status}
-                          onValueChange={(value) => {
-                            const { updateArea } = useAreaStore.getState();
-                            updateArea(area.id, { status: value as 'active' | 'inactive' | 'unavailable' });
-                          }}
-                        >
-                          <SelectTrigger className="w-[140px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-background">
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                            <SelectItem value="unavailable">Unavailable</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 
                 <div className="grid grid-cols-3 gap-3">
-                  {filteredTables.map((table) => (
-                    <Card
-                      key={table.id}
-                      className={`border-2 ${table.status === 'available'
-                          ? 'border-green-500 bg-green-500/10'
-                          : table.status === 'occupied'
-                            ? 'border-red-500 bg-red-500/10'
-                            : 'border-yellow-500 bg-yellow-500/10'
-                        }`}
-                    >
-                      <CardContent className="p-4 text-center">
-                        <div className="font-bold text-lg">#{table.number}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Area {table.floor} • {table.capacity} seats
-                        </div>
-                        <Badge variant="outline" className="mt-2 text-xs">
-                          {table.status}
-                        </Badge>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {filteredTables.map((table) => {
+                    const getStatusColor = (status: string) => {
+                      switch (status?.toUpperCase()) {
+                        case 'FREE':
+                          return 'border-green-500 bg-green-500/10';
+                        case 'OCCUPIED':
+                          return 'border-red-500 bg-red-500/10';
+                        case 'ACTIVE':
+                          return 'border-blue-500 bg-blue-500/10';
+                        case 'INACTIVE':
+                          return 'border-gray-500 bg-gray-500/10';
+                        default:
+                          return 'border-gray-500 bg-gray-500/10';
+                      }
+                    };
+
+                    return (
+                      <Card
+                        key={table.id}
+                        className={`border-2 ${getStatusColor(table.status)}`}
+                      >
+                        <CardContent className="p-4 text-center">
+                          <div className="font-bold text-lg">#{table.tag}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {table.areaName || 'Unassigned'} • {table.capacity} seats
+                          </div>
+                          <Badge variant="outline" className="mt-2 text-xs">
+                            {table.status}
+                          </Badge>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
-            )} */}
+            )}
           </CardContent>
         </Card>
 
@@ -213,15 +241,17 @@ export default function OverviewPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <span className="text-sm font-medium">Total Orders</span>
-              <span className="text-lg font-bold">42</span>
+              <span className="text-lg font-bold">{stats?.totalOrders || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <span className="text-sm font-medium">Average Order Value</span>
-              <span className="text-lg font-bold">$67.88</span>
+              <span className="text-lg font-bold">
+                ${stats?.averageOrderValue.toFixed(2) || '0.00'}
+              </span>
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <span className="text-sm font-medium">Total Menu Items Sold</span>
-              <span className="text-lg font-bold">342</span>
+              <span className="text-lg font-bold">{stats?.totalMenuItemsSold || 0}</span>
             </div>
           </CardContent>
         </Card>
