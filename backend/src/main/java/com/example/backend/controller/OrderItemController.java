@@ -28,4 +28,11 @@ public class OrderItemController {
         return apiResponse;
     }
     
+    @DeleteMapping("/{orderItemId}")
+    public ApiResponse<Boolean> deleteOrderItem(@PathVariable UUID orderItemId) {
+        ApiResponse<Boolean> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(orderItemService.deleteOrderItem(orderItemId));
+        return apiResponse;
+    }
+
 }

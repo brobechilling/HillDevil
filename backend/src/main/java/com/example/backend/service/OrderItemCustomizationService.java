@@ -64,14 +64,14 @@ public class OrderItemCustomizationService {
         return orderItemCustomizationRepository.save(orderItemCustomization);
     }
 
-    // may not need
-    public OrderItemCustomization deleteOrderItemCustomization(OrderItemCustomizationDTO orderItemCustomizationDTO) {
+    // used by OrderItemService
+    public void deleteOrderItemCustomization(OrderItemCustomizationDTO orderItemCustomizationDTO) {
         OrderItemCustomization orderItemCustomization = orderItemCustomizationRepository.findById(orderItemCustomizationDTO.getOrderItemCustomizationId()).orElseThrow(() -> new AppException(ErrorCode.ORDERITEM_CUSTOMIZATION_NOT_EXISTS));
-        // subtract orderItem totalPrice
-        OrderItem orderItem = orderItemCustomization.getOrderItem();
-        orderItem.setTotalPrice(orderItem.getTotalPrice().subtract(orderItemCustomization.getTotalPrice()));
-        orderItemRepository.save(orderItem);
         orderItemCustomizationRepository.delete(orderItemCustomization);
-        return orderItemCustomization;
+    }
+
+    // used by OrderItemService
+    public void deleteOrderItemCustomization(OrderItemCustomization orderItemCustomization) {
+        orderItemCustomizationRepository.delete(orderItemCustomization);
     }
 }
