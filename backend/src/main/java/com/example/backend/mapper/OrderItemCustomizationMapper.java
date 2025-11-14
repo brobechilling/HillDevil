@@ -17,5 +17,4 @@ public interface OrderItemCustomizationMapper {
     @Mapping(target = "customization", ignore = true)
     @Mapping(target = "orderItem", ignore = true)
     OrderItemCustomization createOrderItemCustomization(CreateOrderItemCustomizationRequest createOrderItemCustomizationRequest);
-
 }

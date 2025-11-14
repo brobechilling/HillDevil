@@ -10,6 +10,8 @@ import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.OrderItemCustomizationMapper;
 import com.example.backend.repository.CustomizationRepository;
 import com.example.backend.repository.OrderItemCustomizationRepository;
+import com.example.backend.repository.OrderItemRepository;
+
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -24,13 +26,16 @@ public class OrderItemCustomizationService {
     private final OrderItemCustomizationRepository orderItemCustomizationRepository;
     private final CustomizationRepository customizationRepository;
     private final OrderItemCustomizationMapper orderItemCustomizationMapper;
+    private final OrderItemRepository orderItemRepository;
 
     public OrderItemCustomizationService(OrderItemCustomizationRepository orderItemCustomizationRepository,
                                          CustomizationRepository customizationRepository,
-                                         OrderItemCustomizationMapper orderItemCustomizationMapper) {
+                                         OrderItemCustomizationMapper orderItemCustomizationMapper,
+                                         OrderItemRepository orderItemRepository) {
         this.orderItemCustomizationRepository = orderItemCustomizationRepository;
         this.customizationRepository = customizationRepository;
         this.orderItemCustomizationMapper = orderItemCustomizationMapper;
+        this.orderItemRepository = orderItemRepository;
     }
 
     public Set<OrderItemCustomization> createOrderItemCustomization(OrderItem orderItem, List<CreateOrderItemCustomizationRequest> createOrderItemCustomizationRequestList) {
@@ -48,4 +53,24 @@ public class OrderItemCustomizationService {
         return orderItemCustomizationRepository.saveAll(orderItemCustomizations).stream().collect(Collectors.toSet());
     }
 
+    // used by OrderItemService
+    // update quantity and totalPrice
+    public OrderItemCustomization udpateOrderItemCustomization(OrderItemCustomizationDTO orderItemCustomizationDTO) {
+        OrderItemCustomization orderItemCustomization = orderItemCustomizationRepository.findById(orderItemCustomizationDTO.getOrderItemCustomizationId()).orElseThrow(() -> new AppException(ErrorCode.ORDERITEM_CUSTOMIZATION_NOT_EXISTS));
+        BigDecimal oldQuantity = BigDecimal.valueOf(orderItemCustomization.getQuantity());
+        orderItemCustomization.setTotalPrice(orderItemCustomization.getTotalPrice().divide(oldQuantity).multiply(BigDecimal.valueOf(orderItemCustomizationDTO.getQuantity())));
+        orderItemCustomization.setQuantity(orderItemCustomizationDTO.getQuantity());
+        return orderItemCustomizationRepository.save(orderItemCustomization);
+    }
+
+    // may not need
+    public OrderItemCustomization deleteOrderItemCustomization(OrderItemCustomizationDTO orderItemCustomizationDTO) {
+        OrderItemCustomization orderItemCustomization = orderItemCustomizationRepository.findById(orderItemCustomizationDTO.getOrderItemCustomizationId()).orElseThrow(() -> new AppException(ErrorCode.ORDERITEM_CUSTOMIZATION_NOT_EXISTS));
+        // subtract orderItem totalPrice
+        OrderItem orderItem = orderItemCustomization.getOrderItem();
+        orderItem.setTotalPrice(orderItem.getTotalPrice().subtract(orderItemCustomization.getTotalPrice()));
+        orderItemRepository.save(orderItem);
+        orderItemCustomizationRepository.delete(orderItemCustomization);
+        return orderItemCustomization;
+    }
 }
