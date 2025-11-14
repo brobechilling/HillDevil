@@ -43,7 +43,7 @@ public class FeatureLimitCheckerService {
         }
 
         long currentCount = currentCountSupplier.get();
-        if (currentCount >= limit) {
+        if (currentCount > limit) {
             throw new AppException(ErrorCode.LIMIT_EXCEEDED);
         }
     }

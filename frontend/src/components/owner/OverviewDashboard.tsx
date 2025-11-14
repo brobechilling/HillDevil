@@ -15,6 +15,7 @@ import { toast } from '@/hooks/use-toast';
 import { BranchManagementCard } from './BranchManagementCard';
 import { BranchManagementDialog } from './BranchManagementDialog';
 import { useCanCreateBranch } from '@/hooks/queries/useBranches';
+import { useNavigate} from 'react-router-dom';
 
 interface OverviewDashboardProps {
   userBranches: any[];
@@ -29,6 +30,7 @@ export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDash
   const selectedRestaurantRaw = localStorage.getItem('selected_restaurant');
   const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
   const canCreateBranchQuery = useCanCreateBranch(selectedRestaurant?.restaurantId);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -92,7 +94,8 @@ export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDash
                   Please upgrade to Premium to create more branches and unlock additional features.
                 </p>
               </div>
-              <Button variant="outline" className="border-amber-500 text-amber-500 hover:bg-amber-500/10">
+              <Button variant="outline" className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
+              onClick={() => navigate('/profile/subscription')}>
                 Upgrade to Premium
               </Button>
             </CardContent>

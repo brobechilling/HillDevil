@@ -35,10 +35,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from '@/hooks/use-toast';
-import { useBranches } from '@/hooks/queries/useBranches';
+import { useBranchesByOwner } from '@/hooks/queries/useBranches';
 import { usePackages } from '@/hooks/queries/usePackages';
 import { useOverviewForOwner, useCancelSubscription } from '@/hooks/queries/useSubscription';
-import { useRenewSubscription, useChangePackage } from '@/hooks/queries/useRestaurantSubscription';
 import {
   Mail,
   Calendar,
@@ -66,7 +65,7 @@ import { useLocation } from 'react-router-dom';
 import ProfileSidebar from '@/components/layout/ProfileSidebar';
 import { isUserDTO } from '@/utils/typeCast';
 import { useChangePasswordd, useUpdateUserProfile } from '@/hooks/queries/useUsers';
-import { ROLE_NAME } from '@/dto/user.dto';
+import { ROLE_NAME, UserDTO } from '@/dto/user.dto';
 
 interface ProfileFormData {
   username: string;
@@ -74,21 +73,17 @@ interface ProfileFormData {
   phone?: string;
 }
 
-const sidebarItems = [
-  { key: 'overview', label: 'Overview', icon: User },
-  { key: 'subscription', label: 'Subscription', icon: PackageIcon },
-  { key: 'branches', label: 'Branches', icon: Building },
-];
-
 const Profile = () => {
-  const { user, clearSession } = useSessionStore();
+  const { user } = useSessionStore();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const { data: branches = [] } = useBranches();
+  const { data: branches = [] } = useBranchesByOwner(
+  (user as UserDTO)?.userId
+);
   const [formData, setFormData] = useState<ProfileFormData>({
     username: isUserDTO(user) ? user.username : "",
     email: isUserDTO(user) ? user.email : "",
@@ -101,19 +96,16 @@ const Profile = () => {
   });
 
   // Subscription state
-  const [isChangePackageOpen, setIsChangePackageOpen] = useState(false);
   const [isRenewPackageOpen, setIsRenewPackageOpen] = useState(false);
   const [selectedNewPackage, setSelectedNewPackage] = useState<string>('');
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
   const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
-  const [renewMode, setRenewMode] = useState<'renew' | 'change'>('renew');
+  const [renewMode, setRenewMode] = useState<'renew' | 'upgrade'>('renew');
 
   // React Query hooks
   const { data: packages = [] } = usePackages();
   const { data: overviewData = [] } = useOverviewForOwner();
-  const renewMutation = useRenewSubscription();
   const cancelMutation = useCancelSubscription();
-  const changePackageMutation = useChangePackage();
   const updateUserProfileMutation = useUpdateUserProfile();
   const updatePasswordMutatation = useChangePasswordd();
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -174,7 +166,7 @@ const Profile = () => {
       setIsEditDialogOpen(false);
     }
     catch (error) {
-        toast({
+      toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Failed to update profile, please check your inputs',
@@ -229,16 +221,35 @@ const Profile = () => {
     }
   };
 
-  const handleRenew = (subscriptionId: string, restaurantId: string) => {
-    setSelectedRestaurantId(restaurantId);
-    setRenewMode('renew');
-    setIsRenewPackageOpen(true);
+  const handleRenew = (restaurantId: string, currentPackageId: string) => {
+    const restaurant = overviewData.find(r => r.restaurantId === restaurantId);
+    if (!restaurant) return;
+
+    const params = new URLSearchParams();
+    params.append('restaurantId', restaurantId);
+    params.append('restaurantName', restaurant.restaurantName);
+    params.append('packageId', currentPackageId);
+    params.append('action', 'renew');
+
+    navigate(`/register/confirm?${params.toString()}`);
   };
 
-  const handleChangePackageClick = (restaurantId: string) => {
+  const handleUpgradePackageClick = (restaurantId: string, currentPackageId: string) => {
+    const currentPkg = packages.find(p => p.packageId === currentPackageId);
+    if (!currentPkg) return;
+
+    if (currentPkg.name.toLowerCase().includes('premium')) {
+      toast({
+        title: "Highest Package Reached",
+        description: "You are using Premium package - highest package at current.",
+        variant: "default",
+      });
+      return;
+    }
+
     setSelectedRestaurantId(restaurantId);
-    setRenewMode('change');
-    setIsRenewPackageOpen(true);
+    setRenewMode('upgrade');
+    setIsRenewPackageOpen(true); // Mở dialog chọn gói mới
   };
 
   const handlePackageConfirm = () => {
@@ -255,7 +266,7 @@ const Profile = () => {
     params.append('restaurantId', selectedRestaurantId);
     params.append('restaurantName', restaurant.restaurantName);
     params.append('packageId', selectedNewPackage);
-    params.append('action', renewMode); // 'renew' or 'change'
+    params.append('action', renewMode); // 'renew' or 'uprade'
 
     navigate(`/register/confirm?${params.toString()}`);
     setIsRenewPackageOpen(false);
@@ -535,7 +546,8 @@ const Profile = () => {
                                         size="sm"
                                         variant="outline"
                                         className="h-8 w-8 p-0"
-                                        onClick={() => handleRenew(current.subscriptionId, sub.restaurantId)}
+                                        onClick={() => handleRenew(sub.restaurantId, current?.packageId)}
+                                        title="Renew Subscription"
                                       >
                                         <RefreshCw className="w-3.5 h-3.5" />
                                       </Button>
@@ -573,8 +585,9 @@ const Profile = () => {
                                       size="sm"
                                       variant="ghost"
                                       className="h-8 w-8 p-0"
-                                      onClick={() => handleChangePackageClick(sub.restaurantId)}
-                                      disabled={!current}
+                                      onClick={() => handleUpgradePackageClick(sub.restaurantId, current?.packageId)}
+                                      disabled={!isActive}
+                                      title="Upgrade Package"
                                     >
                                       <PackageIcon className="w-3.5 h-3.5" />
                                     </Button>
@@ -673,6 +686,15 @@ const Profile = () => {
                               {payment.date ? new Date(payment.date).toLocaleDateString('vi-VN') : 'N/A'}
                             </div>
                             <div>
+                              <span className="font-medium">Purpose:</span>{' '}
+                              <Badge variant="outline" className="text-xs">
+                                {payment.purpose === 'RENEW' ? 'Renew' :
+                                  payment.purpose === 'UPGRADE' ? 'Upgrade' :
+                                    payment.purpose === 'NEW_SUBSCRIPTION' ? 'New Subscription' :
+                                      'N/A'}
+                              </Badge>
+                            </div>
+                            <div>
                               <span className="font-medium">Order:</span>{' '}
                               <code className="text-xs bg-muted px-1 rounded">{payment.payOsOrderCode || 'N/A'}</code>
                             </div>
@@ -722,28 +744,109 @@ const Profile = () => {
           {activeSection === 'branches' && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Building className="w-5 h-5" /> Your Branches</CardTitle>
-              </CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building className="w-5 h-5" />
+                  Your Branches
+                </CardTitle>
+                <CardDescription>
+                  Manage all branches across your restaurants
+                </CardDescription>
+              </CardHeader>s
               <CardContent>
                 {branches.length > 0 ? (
-                  <div className="space-y-3">
-                    {branches.map((branch: any) => (
-                      <div key={branch.branchId} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{branch.address}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><MapPin className="w-4 h-4" /> {branch.branchPhone || branch.mail || '—'}</p>
-                          <div className="flex gap-2 mt-2">
-                            <Badge variant={branch.isActive ? 'default' : 'secondary'} className="text-xs">{branch.isActive ? 'Active' : 'Inactive'}</Badge>
-                            <Badge variant="outline" className="text-xs">Opening: {branch.openingTime || '—'}</Badge>
-                            <Badge variant="outline" className="text-xs">Closing: {branch.closingTime || '—'}</Badge>
+                  <div className="space-y-8">
+                    {/* Group branches by restaurant */}
+                    {Object.entries(
+                      branches.reduce((acc, branch: any) => {
+                        const restaurantName = branch.restaurantName || 'Unnamed Restaurant';
+                        if (!acc[restaurantName]) {
+                          acc[restaurantName] = {
+                            restaurantId: branch.restaurantId,
+                            branches: [],
+                          };
+                        }
+                        acc[restaurantName].branches.push(branch);
+                        return acc;
+                      }, {} as Record<string, { restaurantId: string; branches: any[] }>)
+                    )
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([restaurantName, { branches: restaurantBranches }]) => (
+                        <div key={restaurantName} className="space-y-4">
+                          {/* Restaurant Header */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-primary/10 rounded-lg">
+                                <Building className="w-6 h-6 text-primary" />
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-bold">{restaurantName}</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {restaurantBranches.length} branch{restaurantBranches.length > 1 ? 'es' : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="text-sm">
+                              {restaurantBranches.filter(b => b.isActive).length} active
+                            </Badge>
+                          </div>
+
+                          {/* Branch List */}
+                          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {restaurantBranches.map((branch: any) => (
+                              <div
+                                key={branch.branchId}
+                                className="relative p-5 border rounded-xl bg-card hover:shadow-lg transition-all duration-200 hover:border-primary/50"
+                              >
+                                {/* Active Indicator */}
+                                {branch.isActive && (
+                                  <div className="absolute top-3 right-3 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                                )}
+
+                                <div className="space-y-3">
+                                  <div>
+                                    <p className="font-semibold text-lg leading-tight">{branch.address}</p>
+                                    {branch.branchName && (
+                                      <p className="text-sm text-muted-foreground mt-1">{branch.branchName}</p>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <MapPin className="w-4 h-4" />
+                                    <span className="truncate">{branch.branchPhone || branch.mail || 'No contact'}</span>
+                                  </div>
+
+                                  <div className="flex items-center gap-3 text-xs">
+                                    <Badge variant={branch.isActive ? 'default' : 'secondary'}>
+                                      {branch.isActive ? 'Active' : 'Inactive'}
+                                    </Badge>
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <Clock className="w-3.5 h-3.5" />
+                                      <span>
+                                        {branch.openingTime || '?'} - {branch.closingTime || '?'}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="pt-2">
+                                    <Button variant="outline" size="sm" className="w-full">
+                                      Manage Branch
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                        <Button variant="outline" size="sm">Manage</Button>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">No branches found</p>
+                  <div className="text-center py-16">
+                    <Building className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
+                    <p className="text-xl font-medium text-muted-foreground">No branches yet</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Create your first restaurant to start adding branches
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -755,45 +858,55 @@ const Profile = () => {
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {renewMode === 'renew' ? 'Renew Subscription' : 'Change Package'}
+              {renewMode === 'renew' ? 'Renew Subscription' : 'Upgrade Package'}
             </DialogTitle>
             <DialogDescription>
-              {renewMode === 'renew' 
+              {renewMode === 'renew'
                 ? 'Select a package to renew your subscription'
-                : 'Select a new package to upgrade/downgrade your subscription'
+                : 'Select a new package to upgrade your subscription'
               }
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-            {packages.map((pkg: Package) => {
-              const current = overviewData.find(r => r.restaurantId === selectedRestaurantId)?.currentSubscription;
-              const isCurrent = pkg.packageId === current?.packageId;
-              
-              return (
+            {(() => {
+              const upgradablePackages = packages.filter((pkg: Package) => {
+                const currentSub = overviewData.find(r => r.restaurantId === selectedRestaurantId)?.currentSubscription;
+                if (!currentSub?.packageId) return false;
+                const currentPkg = packages.find(p => p.packageId === currentSub.packageId);
+                return currentPkg && pkg.price > currentPkg.price;
+              });
+
+              if (upgradablePackages.length === 0) {
+                return (
+                  <div className="text-center py-16 text-muted-foreground">
+                    <PackageIcon className="w-16 h-16 mx-auto mb-4 opacity-40" />
+                    <p className="text-lg font-semibold">You are using the highest package</p>
+                    <p className="text-sm mt-1">No higher packages for upgrade.</p>
+                  </div>
+                );
+              }
+
+              return upgradablePackages.map((pkg: Package) => (
                 <div
                   key={pkg.packageId}
-                  className={`p-4 border rounded-lg cursor-pointer transition ${
-                    selectedNewPackage === pkg.packageId
-                      ? 'border-primary bg-primary/5'
-                      : 'hover:border-primary/50 hover:bg-muted/50'
-                  } ${isCurrent ? 'opacity-50' : ''}`}
-                  onClick={() => !isCurrent && setSelectedNewPackage(pkg.packageId)}
+                  className={`p-4 border rounded-lg cursor-pointer transition ${selectedNewPackage === pkg.packageId
+                    ? 'border-primary bg-primary/5'
+                    : 'hover:border-primary/50 hover:bg-muted/50'
+                    }`}
+                  onClick={() => setSelectedNewPackage(pkg.packageId)}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <p className="font-semibold text-lg">{pkg.name}</p>
                       <p className="text-sm text-muted-foreground">{pkg.description}</p>
                     </div>
-                    {isCurrent && (
-                      <Badge variant="secondary" className="ml-2">Current</Badge>
-                    )}
                   </div>
                   <p className="text-lg font-bold text-primary mt-2">
                     {pkg.price.toLocaleString()} VND/month
                   </p>
                 </div>
-              );
-            })}
+              ));
+            })()}
           </div>
           <div className="flex gap-2 pt-4">
             <Button
@@ -811,7 +924,7 @@ const Profile = () => {
               className="flex-1"
               disabled={!selectedNewPackage}
             >
-              Continue to Payment
+              {renewMode === 'renew' ? 'Continue to renew' : 'Continue to upgrade'}
             </Button>
           </div>
         </DialogContent>

@@ -1,5 +1,7 @@
 package com.example.backend.dto.response;
 
+import com.example.backend.entities.SubscriptionPaymentPurpose;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -16,6 +18,8 @@ public class SubscriptionPaymentResponse {
     private String description;
     private String subscriptionPaymentStatus;
     private Instant date;
+    private Integer proratedAmount;
+    private SubscriptionPaymentPurpose purpose;
 
     public UUID getSubscriptionPaymentId() {
         return subscriptionPaymentId;
@@ -103,5 +107,21 @@ public class SubscriptionPaymentResponse {
 
     public void setDate(Instant date) {
         this.date = date;
+    }
+
+    public Integer getProratedAmount() {
+        return proratedAmount;
+    }
+
+    public void setProratedAmount(Integer proratedAmount) {
+        this.proratedAmount = proratedAmount;
+    }
+
+    public SubscriptionPaymentPurpose getPurpose() {
+        return purpose;
+    }
+
+    public void setPurpose(SubscriptionPaymentPurpose purpose) {
+        this.purpose = purpose;
     }
 }

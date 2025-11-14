@@ -50,3 +50,10 @@ export const canCreateBranch = async (restaurantId: string) => {
     );
     return res.data.result;
 };
+
+export const getBranchesByOwner = async (ownerId: string) => {
+    const res = await axiosClient.get<ApiResponse<BranchDTO[]>>(
+        `/branches/owner/${ownerId}`
+    );
+    return res.data.result;
+};

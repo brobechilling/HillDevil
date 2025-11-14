@@ -6,7 +6,7 @@ import com.example.backend.dto.response.SubscriptionPaymentResponse;
 import com.example.backend.service.SubscriptionPaymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import vn.payos.type.Webhook;
+import vn.payos.model.webhooks.Webhook;
 import java.util.List;
 
 import java.util.UUID;
@@ -21,18 +21,18 @@ public class SubscriptionPaymentController {
         this.subscriptionPaymentService = subscriptionPaymentService;
     }
 
-    @PostMapping("/create")
-    public ResponseEntity<ApiResponse<SubscriptionPaymentResponse>> createPayment(
-            @RequestParam UUID subscriptionId
-    ) {
-        SubscriptionPaymentResponse result = subscriptionPaymentService.createPayment(subscriptionId);
-
-        ApiResponse<SubscriptionPaymentResponse> response = new ApiResponse<>();
-        response.setMessage("Created payment successfully");
-        response.setResult(result);
-
-        return ResponseEntity.ok(response);
-    }
+//    @PostMapping("/create")
+//    public ResponseEntity<ApiResponse<SubscriptionPaymentResponse>> createPayment(
+//            @RequestParam UUID subscriptionId
+//    ) {
+//        SubscriptionPaymentResponse result = subscriptionPaymentService.createPayment(subscriptionId);
+//
+//        ApiResponse<SubscriptionPaymentResponse> response = new ApiResponse<>();
+//        response.setMessage("Created payment successfully");
+//        response.setResult(result);
+//
+//        return ResponseEntity.ok(response);
+//    }
 
     @PostMapping("/webhook")
     public ResponseEntity<ApiResponse<String>> handleWebhook(@RequestBody Webhook webhookBody) {

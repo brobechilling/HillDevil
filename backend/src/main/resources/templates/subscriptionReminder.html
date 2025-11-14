@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Subscription Renewal Reminder</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-light: #3b82f6;
+      --destructive: #ef4444;
+      --muted: #6b7280;
+      --background: #f9fafb;
+      --card-bg: #ffffff;
+      --radius: 12px;
+      --shadow: 0 4px 10px rgba(0,0,0,0.08);
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--background);
+      font-family: var(--font);
+      color: #111827;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: white;
+      text-align: center;
+      padding: 28px 20px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .content {
+      padding: 28px;
+    }
+
+    .content h2 {
+      margin-top: 0;
+      font-size: 1.25rem;
+      color: var(--primary);
+    }
+
+    .highlight {
+      font-weight: 600;
+      color: var(--destructive);
+    }
+
+    .button {
+      display: inline-block;
+      background-color: var(--primary);
+      color: white !important;
+      text-decoration: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      margin-top: 16px;
+    }
+
+    .button:hover {
+      background-color: var(--primary-light);
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      padding: 16px;
+      background-color: #f3f4f6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Subscription Reminder</h1>
+    </div>
+
+    <div class="content">
+      <h2 th:text="'Hello, ' + ${name} + '!'">Hello, User!</h2>
+      <p>
+        We noticed your subscription for
+        <strong th:text="${packageName}">Premium Plan</strong> 
+        will expire on 
+        <strong th:text="${endDate}">November 25, 2025</strong>.
+      </p>
+
+      <p>
+        To continue enjoying all features — including analytics, unlimited branches,
+        and premium support — please renew your subscription before the expiration date.
+      </p>
+
+      <p>
+        You can renew anytime by clicking the button below. Don’t worry —
+        if you renew early, your new period will automatically start after the current one ends.
+      </p>
+
+      <a class="button" th:href="${renewLink}">Renew Subscription</a>
+
+      <p style="margin-top: 20px;">
+        If you have already renewed, you can safely ignore this email.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>&copy; <span th:text="${year}">2025</span> HillDevil Platform</p>
+      <p>Thank you for choosing us ❤️</p>
+    </div>
+  </div>
+</body>
+</html>

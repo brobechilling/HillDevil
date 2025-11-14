@@ -25,6 +25,9 @@ export const useCategory = (id: string | undefined) => {
     queryKey: ["categories", id],
     queryFn: () => getCategoryById(id!),
     enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 };
 

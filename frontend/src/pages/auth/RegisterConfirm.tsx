@@ -18,7 +18,7 @@ import { usePackages } from "@/hooks/queries/usePackages";
 import {
   useRegisterRestaurant,
   useRenewSubscription,
-  useChangePackage,
+  useUpgradeRestaurantPackage,
 } from "@/hooks/queries/useRestaurantSubscription";
 import { Building2, Store, Warehouse, Loader2 } from "lucide-react";
 import { RestaurantCreateRequest } from "@/dto/restaurant.dto";
@@ -50,12 +50,12 @@ const RegisterConfirm = () => {
   const { data: packages, isLoading: isPackagesLoading } = usePackages();
   const registerMutation = useRegisterRestaurant();
   const renewMutation = useRenewSubscription();
-  const changeMutation = useChangePackage();
+  const upgradeMutation = useUpgradeRestaurantPackage();
 
   const packageId = searchParams.get("packageId") || "";
   const restaurantId = searchParams.get("restaurantId") || "";
   const restaurantName = searchParams.get("restaurantName") || "";
-  const action = (searchParams.get("action") || "register") as "register" | "renew" | "change";
+  const action = (searchParams.get("action") || "register") as "register" | "renew" | "upgrade";
 
   const {
     register,
@@ -114,30 +114,30 @@ const RegisterConfirm = () => {
       return;
     }
 
-    const commonData = {
-      restaurantId,
-      packageId: selectedPackage.packageId,
-      restaurantName,
-    };
-
-
     if (action === "renew") {
-      renewMutation.mutate(commonData as any, {
-        onSuccess: (payment: any) => {
-          toast({ title: "Renewal initiated!", description: "Redirecting to payment..." });
-          navigate(`/payment/${payment.payOsOrderCode}`, { state: { ...payment, restaurantName } });
-        },
-        onError: (error: any) => {
-          toast({ variant: "destructive", title: "Renew failed", description: error.message || "Try again." });
-        },
-      });
-    } else if (action === "change") {
-      changeMutation.mutate(
-        { ...commonData, newPackageId: selectedPackage.packageId } as any,
+      renewMutation.mutate(
+        { restaurantId },
         {
           onSuccess: (payment: any) => {
-            toast({ title: "Package changed!", description: "Redirecting to payment..." });
-            navigate(`/payment/${payment.payOsOrderCode}`, { state: { ...payment, restaurantName } });
+            toast({ title: "Renewal initiated!", description: "Redirecting to payment..." });
+            navigate(`/payment/${payment.payOsOrderCode}`, { 
+              state: { ...payment, restaurantName, restaurantId } 
+            });
+          },
+          onError: (error: any) => {
+            toast({ variant: "destructive", title: "Renew failed", description: error.message || "Try again." });
+          },
+        }
+      );
+    } else if (action === "upgrade") {
+      upgradeMutation.mutate(
+        { restaurantId, newPackageId: selectedPackage.packageId },
+        {
+          onSuccess: (payment: any) => {
+            toast({ title: "Package upgraded!", description: "Redirecting to payment..." });
+            navigate(`/payment/${payment.payOsOrderCode}`, { 
+              state: { ...payment, restaurantName, restaurantId } 
+            });
           },
           onError: (error: any) => {
             toast({ variant: "destructive", title: "Change failed", description: error.message || "Try again." });
@@ -153,7 +153,7 @@ const RegisterConfirm = () => {
     return <div className="flex justify-center p-10 text-destructive">No package selected.</div>;
 
   const isRegisterMode = action === "register";
-  const isPending = registerMutation.isPending || renewMutation.isPending || changeMutation.isPending;
+  const isPending = registerMutation.isPending || renewMutation.isPending || upgradeMutation.isPending;
   const title = isRegisterMode
     ? "Confirm & Create Restaurant"
     : action === "renew"
