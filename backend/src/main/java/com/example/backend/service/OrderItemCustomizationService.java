@@ -55,6 +55,7 @@ public class OrderItemCustomizationService {
 
     // used by OrderItemService
     // update quantity and totalPrice
+    // be careful that this will update the field of orderItemCustomizations passed in
     public OrderItemCustomization udpateOrderItemCustomization(OrderItemCustomizationDTO orderItemCustomizationDTO) {
         OrderItemCustomization orderItemCustomization = orderItemCustomizationRepository.findById(orderItemCustomizationDTO.getOrderItemCustomizationId()).orElseThrow(() -> new AppException(ErrorCode.ORDERITEM_CUSTOMIZATION_NOT_EXISTS));
         BigDecimal oldQuantity = BigDecimal.valueOf(orderItemCustomization.getQuantity());

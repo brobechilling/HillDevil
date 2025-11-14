@@ -15,6 +15,8 @@ import com.example.backend.repository.MenuItemRepository;
 import com.example.backend.repository.OrderItemRepository;
 import com.example.backend.repository.OrderLineRepository;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -32,6 +34,7 @@ public class OrderItemService {
     private final OrderItemMapper orderItemMapper;
     private final OrderLineMapper orderLineMapper;
     private final OrderLineRepository orderLineRepository;
+    private Logger logger = LoggerFactory.getLogger(getClass());
 
     public OrderItemService(OrderItemRepository orderItemRepository,
                             MenuItemRepository menuItemRepository,
@@ -68,6 +71,7 @@ public class OrderItemService {
     private BigDecimal getCustomizationPrice(Set<OrderItemCustomization> orderItemCustomizations) {
         BigDecimal customizationTotal = BigDecimal.ZERO;
         for (OrderItemCustomization orderItemCustomization : orderItemCustomizations) {
+            logger.info("orderItemCustomization price: "+orderItemCustomization.getTotalPrice()); 
             customizationTotal = customizationTotal.add(orderItemCustomization.getTotalPrice());
         }
         return customizationTotal;
@@ -78,19 +82,32 @@ public class OrderItemService {
     public OrderItemDTO updateOrderItem(OrderItemDTO orderItemDTO) {
         OrderItem orderItem = orderItemRepository.findById(orderItemDTO.getOrderItemId()).orElseThrow(() -> new AppException(ErrorCode.ORDERITEM_NOT_EXISTS));
         orderItem.setNote(orderItemDTO.getNote());
-        orderItem.setQuantity(orderItem.getQuantity());
-        orderItem.setStatus(orderItem.isStatus());
+        orderItem.setStatus(orderItemDTO.isStatus());
+        
+        // old customization handling
         Set<OrderItemCustomization> oldCustomization = orderItem.getOrderItemCustomizations();
+        BigDecimal oldCustomizationPrice = getCustomizationPrice(oldCustomization);
+        
+        // new customization handling
+        // this will update orderItemCustomization in db, not just create shallow copy of orderItemCustomization
         Set<OrderItemCustomization> newCustomization = orderItemDTO.getCustomizations().stream().map(orderItemCustomizationDTO -> orderItemCustomizationService.udpateOrderItemCustomization(orderItemCustomizationDTO)).collect(Collectors.toSet());
+        BigDecimal newCustomizationPrice = getCustomizationPrice(newCustomization);
+        
+        // orderItem price handling
         orderItem.setOrderItemCustomizations(newCustomization);
-        BigDecimal basePrice = orderItem.getTotalPrice().subtract(getCustomizationPrice(oldCustomization));
-        // re-calculate orderItem's totalPrice
-        orderItem.setTotalPrice(basePrice.add(getCustomizationPrice(newCustomization)));
+        int oldQuantity = orderItem.getQuantity();
+        orderItem.setQuantity(orderItemDTO.getQuantity());
+        BigDecimal basePrice = orderItem.getTotalPrice().subtract(oldCustomizationPrice).divide(BigDecimal.valueOf(oldQuantity));
+        orderItem.setTotalPrice(basePrice.multiply(BigDecimal.valueOf(orderItem.getQuantity())).add(newCustomizationPrice));
         orderItem = orderItemRepository.save(orderItem);
-        // re-calculate totalPrice after update orderItem
+        
+        // re-calculate totalPrice of orderLine after update orderItem
         OrderLine orderLine = orderItem.getOrderLine();
         orderLine.setTotalPrice(getOrderLinePrice(orderLine.getOrderItems()));
         orderLineRepository.save(orderLine);
+
+        // may need to re-calculate totalPrice of order
+
         return orderItemMapper.toOrderItemDTO(orderItem);
     }
 
