@@ -19,10 +19,19 @@ export interface SubscriptionResponse {
   amount?: number;
 }
 
+export interface CurrentSubscriptionOverviewDTO {
+  subscriptionId: string;
+  packageId: string;
+  status: "PENDING_PAYMENT" | "ACTIVE" | "CANCELED" | "EXPIRED";
+  startDate?: string;
+  endDate?: string;
+  amount: number;
+}
+
 export interface RestaurantSubscriptionOverviewDTO {
   restaurantId: string;
   restaurantName: string;
-  currentSubscription?: SubscriptionResponse | null;
+  currentSubscription?: CurrentSubscriptionOverviewDTO  | null;
   paymentHistory: SubscriptionPaymentResponse[];
 }
 

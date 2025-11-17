@@ -31,4 +31,34 @@ WHERE feature_id = (
     SELECT feature_id FROM public.feature WHERE code = 'LIMIT_MENU_ITEMS'
 );
 
+-- changeset hoahtm:add-purpose-to-subscription-payment
+
+ALTER TABLE subscription_payment
+    ADD COLUMN purpose VARCHAR(50);
+
+UPDATE subscription_payment
+SET purpose = 'NEW_SUBSCRIPTION'
+WHERE purpose IS NULL;
+
+-- changeset hoahtm:add-targetPackage-and-proratedAmount-to-subscriptionPayment
+ALTER TABLE subscription_payment
+    ADD COLUMN target_package_id UUID;
+
+ALTER TABLE subscription_payment
+    ADD COLUMN prorated_amount INTEGER;
+
+ALTER TABLE subscription_payment
+    ADD CONSTRAINT fk_subscriptionPayment_targetPackage
+        FOREIGN KEY (target_package_id) REFERENCES packages(package_id);
+
+UPDATE packages
+SET price = 4000
+WHERE package_id = 'a940d829-5a1d-4ac6-844a-49a8131232fd'
+
+-- changeset hoahtm:tired of this
+UPDATE packages
+SET price = 10000
+WHERE package_id = 'a940d829-5a1d-4ac6-844a-49a8131232fd'
+
+
 

@@ -1,4 +1,5 @@
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -18,23 +19,19 @@ import { usePackages } from "@/hooks/queries/usePackages";
 import {
   useRegisterRestaurant,
   useRenewSubscription,
-  useChangePackage,
+  useUpgradeRestaurantPackage,
 } from "@/hooks/queries/useRestaurantSubscription";
-import { Building2, Store, Warehouse, Loader2 } from "lucide-react";
+import { Building2, Store, Warehouse, Loader2, ArrowRight, Check } from "lucide-react";
 import { RestaurantCreateRequest } from "@/dto/restaurant.dto";
 import { UserDTO } from "@/dto/user.dto";
 import { useToast } from "@/hooks/use-toast";
+import { SubscriptionPaymentResponse } from "@/dto/subscriptionPayment.dto";
+import { motion, AnimatePresence } from "framer-motion";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const brandSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Restaurant name is required")
-    .max(100, "Restaurant name must be less than 100 characters"),
-  description: z
-    .string()
-    .max(500, "Description must be less than 500 characters")
-    .optional(),
+  name: z.string().trim().min(1, "Restaurant name is required").max(100),
+  description: z.string().max(500).optional(),
   email: z.string().email("Invalid email address").optional(),
   phone: z.string().min(10, "Phone number must be at least 10 digits").optional(),
 });
@@ -42,31 +39,63 @@ const brandSchema = z.object({
 type BrandFormData = z.infer<typeof brandSchema>;
 
 const RegisterConfirm = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useSessionStore();
   const { toast } = useToast();
 
   const { data: packages, isLoading: isPackagesLoading } = usePackages();
   const registerMutation = useRegisterRestaurant();
   const renewMutation = useRenewSubscription();
-  const changeMutation = useChangePackage();
+  const upgradeMutation = useUpgradeRestaurantPackage();
 
-  const packageId = searchParams.get("packageId") || "";
-  const restaurantId = searchParams.get("restaurantId") || "";
-  const restaurantName = searchParams.get("restaurantName") || "";
-  const action = (searchParams.get("action") || "register") as "register" | "renew" | "change";
+  const state = location.state as {
+    action?: "register" | "renew" | "upgrade";
+    packageId?: string;
+    restaurantId?: string;
+    restaurantName?: string;
+    currentPackageId?: string;
+  } | undefined;
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<BrandFormData>({
-    resolver: zodResolver(brandSchema),
-  });
+  const action = state?.action ?? "register";
+  const packageId = state?.packageId ?? "";
+  const isRegisterMode = action === "register";
+
+  const [restaurantInfo] = useState(
+    state?.restaurantId && state?.restaurantName
+      ? {
+        restaurantId: state.restaurantId,
+        restaurantName: state.restaurantName,
+      }
+      : null
+  );
+
+  const [showComparison, setShowComparison] = useState(false);
+
+  const { register, handleSubmit, formState: { errors } } =
+    useForm<BrandFormData>({
+      resolver: zodResolver(brandSchema),
+    });
 
   const selectedPackage =
     packages?.find((p) => p.packageId === packageId) || packages?.[0];
+
+  const currentPackage = 
+    action === "upgrade" && state?.currentPackageId
+      ? packages?.find((p) => p.packageId === state.currentPackageId)
+      : null;
+
+  const isPending =
+    registerMutation.isPending ||
+    renewMutation.isPending ||
+    upgradeMutation.isPending;
+
+  useEffect(() => {
+    if (action === "upgrade" && currentPackage && selectedPackage) {
+      const timer = setTimeout(() => setShowComparison(true), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [action, currentPackage, selectedPackage]);
 
   const getPackageIcon = (name: string) => {
     if (name.toLowerCase().includes("basic")) return Store;
@@ -81,202 +110,483 @@ const RegisterConfirm = () => {
       ? `$${price}/${billingPeriod.toLowerCase()}`
       : `${price} VND/month`;
 
-  // === XỬ LÝ ĐĂNG KÝ MỚI ===
   const handleRegister = (data: BrandFormData) => {
     if (!user || !selectedPackage) return;
 
-    const owner = user as UserDTO;
     const restaurantDto: RestaurantCreateRequest = {
       name: data.name,
       description: data.description,
       email: data.email,
       restaurantPhone: data.phone,
-      userId: owner.userId,
+      userId: (user as UserDTO).userId,
     };
 
     registerMutation.mutate(
       { data: restaurantDto, packageId: selectedPackage.packageId },
       {
-        onSuccess: (payment: any) => {
+        onSuccess: (payment: SubscriptionPaymentResponse) => {
           toast({ title: "Restaurant created!", description: "Redirecting to payment..." });
-          navigate(`/payment/${payment.payOsOrderCode}`, { state: { ...payment, restaurantName: data.name } });
+          navigate(`/payment/${payment.payOsOrderCode}`, { 
+            state: {
+              ...payment,
+              restaurantId: payment.restaurantId,
+              restaurantName: payment.restaurantName,
+            }
+          });
         },
         onError: (error: any) => {
-          toast({ variant: "destructive", title: "Failed", description: error.message || "Try again." });
+          toast({
+            variant: "destructive",
+            title: "Failed",
+            description: error.message || "Try again.",
+          });
         },
       }
     );
   };
 
   const handleProceedPayment = () => {
-    if (!selectedPackage || !restaurantId) {
-      toast({ variant: "destructive", title: "Error", description: "Missing data. Try again." });
+    if (!selectedPackage || !restaurantInfo?.restaurantId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Missing restaurant info.",
+      });
       return;
     }
 
-    const commonData = {
-      restaurantId,
-      packageId: selectedPackage.packageId,
-      restaurantName,
-    };
-
+    const rid = restaurantInfo.restaurantId;
 
     if (action === "renew") {
-      renewMutation.mutate(commonData as any, {
-        onSuccess: (payment: any) => {
-          toast({ title: "Renewal initiated!", description: "Redirecting to payment..." });
-          navigate(`/payment/${payment.payOsOrderCode}`, { state: { ...payment, restaurantName } });
-        },
-        onError: (error: any) => {
-          toast({ variant: "destructive", title: "Renew failed", description: error.message || "Try again." });
-        },
-      });
-    } else if (action === "change") {
-      changeMutation.mutate(
-        { ...commonData, newPackageId: selectedPackage.packageId } as any,
+      renewMutation.mutate(
+        { restaurantId: rid },
         {
-          onSuccess: (payment: any) => {
-            toast({ title: "Package changed!", description: "Redirecting to payment..." });
-            navigate(`/payment/${payment.payOsOrderCode}`, { state: { ...payment, restaurantName } });
+          onSuccess: (payment) => {
+            // Pass complete restaurant context in navigation state
+            navigate(`/payment/${payment.payOsOrderCode}`, { 
+              state: {
+                ...payment,
+                restaurantId: payment.restaurantId || rid,
+                restaurantName: payment.restaurantName || restaurantInfo.restaurantName,
+              }
+            });
           },
-          onError: (error: any) => {
-            toast({ variant: "destructive", title: "Change failed", description: error.message || "Try again." });
+          onError: (error: any) =>
+            toast({
+              variant: "destructive",
+              title: "Renew failed",
+              description: error.message || "Try again.",
+            }),
+        }
+      );
+    } else if (action === "upgrade") {
+      upgradeMutation.mutate(
+        { restaurantId: rid, newPackageId: selectedPackage.packageId },
+        {
+          onSuccess: (payment) => {
+            // Pass complete restaurant context in navigation state
+            navigate(`/payment/${payment.payOsOrderCode}`, { 
+              state: {
+                ...payment,
+                restaurantId: payment.restaurantId || rid,
+                restaurantName: payment.restaurantName || restaurantInfo.restaurantName,
+              }
+            });
           },
+          onError: (error: any) =>
+            toast({
+              variant: "destructive",
+              title: "Upgrade failed",
+              description: error.message || "Try again.",
+            }),
         }
       );
     }
   };
 
-  if (isPackagesLoading)
-    return <div className="flex justify-center p-10">Loading packages...</div>;
-  if (!selectedPackage)
-    return <div className="flex justify-center p-10 text-destructive">No package selected.</div>;
+  const title =
+    isRegisterMode
+      ? "Confirm & Create Restaurant"
+      : action === "renew"
+        ? "Renew Subscription"
+        : "Change Package";
 
-  const isRegisterMode = action === "register";
-  const isPending = registerMutation.isPending || renewMutation.isPending || changeMutation.isPending;
-  const title = isRegisterMode
-    ? "Confirm & Create Restaurant"
-    : action === "renew"
-      ? "Renew Subscription"
-      : "Change Package";
+  if (isPackagesLoading) {
+    return (
+      <div className="min-h-screen bg-muted/30 py-12 px-4">
+        <div className="container max-w-4xl space-y-6">
+          <Skeleton className="h-10 w-64 mx-auto" />
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-24 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedPackage)
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex justify-center p-10 text-destructive"
+      >
+        No package selected.
+      </motion.div>
+    );
 
   return (
-    <div className="min-h-screen bg-muted/30 py-12 px-4">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+      className="min-h-screen bg-muted/30 py-12 px-4"
+    >
       <div className="container max-w-4xl space-y-6">
-        <h1 className="text-3xl font-bold text-center">{title}</h1>
+        <motion.h1
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="text-3xl font-bold text-center"
+        >
+          {title}
+        </motion.h1>
 
         {/* Owner Info - Register */}
         {isRegisterMode && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Owner Profile</CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarFallback>
-                  {(user as UserDTO)?.username?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium">{(user as UserDTO)?.username}</p>
-                <p className="text-muted-foreground">{(user as UserDTO)?.email}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Owner Profile</CardTitle>
+              </CardHeader>
+              <CardContent className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarFallback>
+                    {(user as UserDTO)?.username?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{(user as UserDTO)?.username}</p>
+                  <p className="text-muted-foreground">
+                    {(user as UserDTO)?.email}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
 
         {/* Restaurant Info - Renew/Change */}
-        {!isRegisterMode && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Restaurant Info</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="font-medium text-lg">{restaurantName || "Unknown Restaurant"}</p>
-            </CardContent>
-          </Card>
+        {!isRegisterMode && restaurantInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Restaurant Info</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="font-medium text-lg">
+                  {restaurantInfo.restaurantName}
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
 
-        {/* Package Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Selected Package</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-start gap-4">
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <Icon className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold">{selectedPackage.name}</h3>
-              <p className="text-lg text-primary font-semibold">
-                {formatPrice(selectedPackage.price, selectedPackage.billingPeriod)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Package Info - with comparison for upgrades */}
+        {selectedPackage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {action === "upgrade" ? "Package Upgrade" : "Selected Package"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Package Comparison for Upgrades */}
+                {action === "upgrade" && currentPackage && (
+                  <AnimatePresence>
+                    {showComparison && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="mb-6"
+                      >
+                        <div className="grid grid-cols-3 gap-4 items-center">
+                          {/* Current Package */}
+                          <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.4, delay: 0.2 }}
+                            className="flex flex-col items-center p-4 border rounded-lg bg-muted/50"
+                          >
+                            <div className="p-2 bg-muted rounded-lg mb-2">
+                              {(() => {
+                                const CurrentIcon = getPackageIcon(currentPackage.name);
+                                return <CurrentIcon className="h-6 w-6 text-muted-foreground" />;
+                              })()}
+                            </div>
+                            <p className="text-sm font-medium text-muted-foreground">Current</p>
+                            <p className="font-semibold text-center">{currentPackage.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatPrice(currentPackage.price, currentPackage.billingPeriod)}
+                            </p>
+                          </motion.div>
 
-        {/* Form - Chỉ cho Register */}
+                          {/* Arrow */}
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.4, delay: 0.4 }}
+                            className="flex justify-center"
+                          >
+                            <ArrowRight className="h-8 w-8 text-primary" />
+                          </motion.div>
+
+                          {/* New Package */}
+                          <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.4, delay: 0.6 }}
+                            className="flex flex-col items-center p-4 border-2 border-primary rounded-lg bg-primary/5"
+                          >
+                            <div className="p-2 bg-primary/10 rounded-lg mb-2">
+                              <Icon className="h-6 w-6 text-primary" />
+                            </div>
+                            <p className="text-sm font-medium text-primary">Upgrading to</p>
+                            <p className="font-bold text-center">{selectedPackage.name}</p>
+                            <p className="text-sm text-primary font-semibold">
+                              {formatPrice(selectedPackage.price, selectedPackage.billingPeriod)}
+                            </p>
+                          </motion.div>
+                        </div>
+
+                        {/* Benefits */}
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4, delay: 0.8 }}
+                          className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg"
+                        >
+                          <div className="flex items-start gap-2">
+                            <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-green-800">
+                              You'll only pay the prorated difference for the remaining time in your current billing cycle.
+                            </p>
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                )}
+
+                {/* Standard Package Display */}
+                {action !== "upgrade" && (
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-primary/10 rounded-lg">
+                      <Icon className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">{selectedPackage.name}</h3>
+                      <p className="text-lg text-primary font-semibold">
+                        {formatPrice(
+                          selectedPackage.price,
+                          selectedPackage.billingPeriod
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Form - Register */}
         {isRegisterMode && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Restaurant Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit(handleRegister)} className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Restaurant Name *</Label>
-                  <Input id="name" {...register("name")} placeholder="e.g. Tokyo Sushi Bar" />
-                  {errors.name && <p className="text-destructive text-sm">{errors.name.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" {...register("email")} type="email" />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" {...register("phone")} />
-                </div>
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea id="description" {...register("description")} rows={3} />
-                </div>
-                <Button type="submit" disabled={isPending} className="w-full">
-                  {registerMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {registerMutation.isPending ? "Processing..." : "Finish & Create Restaurant"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.4 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Restaurant Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form
+                  onSubmit={handleSubmit(handleRegister)}
+                  className="space-y-4"
+                >
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.5 }}
+                  >
+                    <Label htmlFor="name">Restaurant Name *</Label>
+                    <Input
+                      id="name"
+                      {...register("name")}
+                      placeholder="e.g. Tokyo Sushi Bar"
+                      disabled={isPending}
+                    />
+                    <AnimatePresence>
+                      {errors.name && (
+                        <motion.p
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="text-destructive text-sm mt-1"
+                        >
+                          {errors.name.message}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.6 }}
+                  >
+                    <Label htmlFor="email">Email</Label>
+                    <Input 
+                      id="email" 
+                      {...register("email")} 
+                      type="email"
+                      disabled={isPending}
+                    />
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.7 }}
+                  >
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input 
+                      id="phone" 
+                      {...register("phone")}
+                      disabled={isPending}
+                    />
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.8 }}
+                  >
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      {...register("description")}
+                      rows={3}
+                      disabled={isPending}
+                    />
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.9 }}
+                  >
+                    <motion.div
+                      whileHover={{ scale: isPending ? 1 : 1.02 }}
+                      whileTap={{ scale: isPending ? 1 : 0.98 }}
+                    >
+                      <Button type="submit" disabled={isPending} className="w-full">
+                        {registerMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        {registerMutation.isPending
+                          ? "Processing..."
+                          : "Finish & Create Restaurant"}
+                      </Button>
+                    </motion.div>
+                  </motion.div>
+                </form>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
 
-        {/* Action Buttons - Renew / Change */}
-        {!isRegisterMode && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Confirm {action === "renew" ? "Renewal" : "Package Change"}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => window.history.back()}
-                disabled={isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleProceedPayment}
-                disabled={isPending || !restaurantId || !selectedPackage}
-                className="flex-1"
-              >
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isPending ? "Processing..." : "Proceed to Payment"}
-              </Button>
-            </CardContent>
-          </Card>
+        {/* Action Buttons - Renew / Upgrade */}
+        {!isRegisterMode && restaurantInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.4 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  Confirm {action === "renew" ? "Renewal" : "Package Change"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex gap-3">
+                <motion.div
+                  whileHover={{ scale: isPending ? 1 : 1.02 }}
+                  whileTap={{ scale: isPending ? 1 : 0.98 }}
+                  className="flex-1"
+                >
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate("/profile/subscription")}
+                    disabled={isPending}
+                  >
+                    Cancel
+                  </Button>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: isPending ? 1 : 1.02 }}
+                  whileTap={{ scale: isPending ? 1 : 0.98 }}
+                  className="flex-1"
+                >
+                  <Button
+                    onClick={handleProceedPayment}
+                    className="w-full"
+                    disabled={isPending}
+                  >
+                    {isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    {isPending ? "Processing..." : "Proceed to Payment"}
+                  </Button>
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 

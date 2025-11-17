@@ -1,6 +1,12 @@
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
@@ -9,86 +15,142 @@ import { toast } from "@/hooks/use-toast";
 export default function PaymentSuccessPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Get payment data from navigation state
-  const state = location.state as { 
-    restaurantName?: string; 
-    orderCode?: string; 
+
+  const state = location.state as {
+    restaurantName?: string;
+    restaurantId?: string;
+    orderCode?: string;
     amount?: number;
   } | null;
-  
+
   const restaurantName = state?.restaurantName || "";
-  const orderCode = state?.orderCode || "";
-  const amount = state?.amount || 0;
+  const restaurantId = state?.restaurantId || "";
 
   useEffect(() => {
     toast({
-      title: "Payment successful!",
+      title: "Payment Successful!",
       description: `Your subscription is now active${restaurantName ? ` for ${restaurantName}` : ""}.`,
     });
   }, [restaurantName]);
 
+  const handleGoToRestaurant = () => {
+    if (restaurantId && restaurantName) {
+      localStorage.setItem(
+        "selected_restaurant",
+        JSON.stringify({ restaurantId, restaurantName })
+      );
+
+      window.dispatchEvent(
+        new CustomEvent("restaurant-selected", {
+          detail: { restaurantId, restaurantName },
+        })
+      );
+    } else {
+      console.warn("Missing restaurant context in payment success");
+      toast({
+        title: "Notice",
+        description: "Please select your restaurant from the dashboard.",
+      });
+    }
+    navigate("/dashboard/owner/overview");
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="w-full max-w-md"
-      >
-        <Card className="text-center shadow-lg border-muted/40">
-          <CardHeader>
-            <div className="flex justify-center mb-4">
+    <div className="min-h-screen bg-muted/30 py-12 px-4">
+      <div className="container max-w-2xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="space-y-6"
+        >
+          {/* Title */}
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+            className="text-4xl font-bold text-center text-foreground"
+          >
+            Payment Successful!
+          </motion.h1>
+
+          <Card className="overflow-hidden border shadow-xl">
+            <CardHeader className="text-center pb-8 pt-10 bg-gradient-to-b from-green-50 to-transparent">
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.5, type: "spring" }}
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{
+                  duration: 0.7,
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 15,
+                  delay: 0.2,
+                }}
+                className="flex justify-center mb-6"
               >
-                <CheckCircle2 className="text-green-500 w-16 h-16" />
+                <CheckCircle2 className="w-24 h-24 text-green-600 drop-shadow-md" />
               </motion.div>
-            </div>
-            <CardTitle className="text-2xl font-bold text-foreground">
-              Payment Successful 🎉
-            </CardTitle>
-            <CardDescription className="text-muted-foreground mt-2">
-              {restaurantName && (
-                <p className="text-lg font-semibold text-foreground mb-2">
-                  Your subscription for <b>{restaurantName}</b> is now active!
-                </p>
-              )}
-              {!restaurantName && "Thank you for completing your payment."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="mt-6 space-y-3">
-            {orderCode && (
-              <div className="p-4 bg-muted/50 rounded-lg mb-4">
-                <p className="text-sm text-muted-foreground">Order Code</p>
-                <p className="font-mono font-semibold">{orderCode}</p>
-                {amount > 0 && (
-                  <>
-                    <p className="text-sm text-muted-foreground mt-2">Amount</p>
-                    <p className="font-semibold text-lg">{amount.toLocaleString("en-US")} VND</p>
-                  </>
+
+              <CardTitle className="text-2xl font-bold">
+                {restaurantName ? (
+                  <>Subscription activated for <span className="text-green-600">{restaurantName}</span></>
+                ) : (
+                  "Your payment has been processed successfully"
                 )}
+              </CardTitle>
+
+              <CardDescription className="mt-3 text-lg text-muted-foreground">
+                You now have full access to all features.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-6 px-8 pb-10">
+              {state?.orderCode && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="p-6 bg-muted/50 rounded-xl border text-center"
+                >
+                  <p className="text-sm text-muted-foreground">Order Code</p>
+                  <p className="font-mono text-xl font-bold text-foreground mt-1">
+                    {state.orderCode}
+                  </p>
+                  {state?.amount && (
+                    <>
+                      <p className="text-sm text-muted-foreground mt-4">Amount Paid</p>
+                      <p className="text-3xl font-bold text-green-600">
+                        {state.amount.toLocaleString()} VND
+                      </p>
+                    </>
+                  )}
+                </motion.div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full font-medium"
+                  onClick={() => navigate("/dashboard/owner")}
+                >
+                  View All Restaurants
+                </Button>
+
+                <Button
+                  size="lg"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-medium shadow-lg"
+                  onClick={handleGoToRestaurant}
+                >
+                  {restaurantName
+                    ? `Go to ${restaurantName}'s Dashboard`
+                    : "Go to Dashboard"}
+                </Button>
               </div>
-            )}
-            <Button 
-              className="w-full" 
-              onClick={() => navigate("/dashboard/owner/overview")}
-              size="lg"
-            >
-              Go to Dashboard
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate("/dashboard/owner")}
-            >
-              View All Dashboards
-            </Button>
-          </CardContent>
-        </Card>
-      </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     </div>
   );
 }

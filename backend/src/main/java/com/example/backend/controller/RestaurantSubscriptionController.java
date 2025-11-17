@@ -29,20 +29,19 @@ public class RestaurantSubscriptionController {
 
     @PostMapping("/subscription/renew")
     public ApiResponse<SubscriptionPaymentResponse> renewRestaurantSubscription(
-            @RequestParam UUID restaurantId,
-            @RequestParam UUID packageId) {
+            @RequestParam UUID restaurantId) {
         ApiResponse<SubscriptionPaymentResponse> res = new ApiResponse<>();
-        res.setResult(restaurantSubscriptionService.renewSubscription(restaurantId, packageId));
+        res.setResult(restaurantSubscriptionService.renewSubscription(restaurantId));
         res.setMessage("Subscription renewed and payment created successfully");
         return res;
     }
 
-    @PostMapping("/subscription/change-package")
-    public ApiResponse<SubscriptionPaymentResponse> changePackage(
+    @PostMapping("/subscription/upgrade-package")
+    public ApiResponse<SubscriptionPaymentResponse> upgradeRestaurantPackage(
             @RequestParam UUID restaurantId,
             @RequestParam UUID newPackageId) {
         ApiResponse<SubscriptionPaymentResponse> res = new ApiResponse<>();
-        res.setResult(restaurantSubscriptionService.changePackage(restaurantId, newPackageId));
+        res.setResult(restaurantSubscriptionService.upgradePackage(restaurantId, newPackageId));
         res.setMessage("Package changed and payment created successfully");
         return res;
     }

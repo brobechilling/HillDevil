@@ -8,13 +8,15 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Loader2, AlertCircle } from "lucide-react";
+import { CreditCard, Loader2, AlertCircle, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { subscriptionPaymentApi } from "@/api/subscriptionPaymentApi";
 import { usePaymentStatus } from "@/hooks/queries/useSubscriptionPayment";
 import { toast } from "@/hooks/use-toast";
 import { SubscriptionPaymentResponse } from "@/dto/subscriptionPayment.dto";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { QRCodeCanvas } from "qrcode.react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 
 const PaymentPage = () => {
   const navigate = useNavigate();
@@ -24,9 +26,14 @@ const PaymentPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [payment, setPayment] = useState<SubscriptionPaymentResponse | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
 
-  const restaurantName = searchParams.get("restaurantName") || "";
+  // Extract restaurant context from location.state and payment response
   const initialPayment = location.state as SubscriptionPaymentResponse | null;
+  const restaurantContext = {
+    restaurantId: payment?.restaurantId || initialPayment?.restaurantId || "",
+    restaurantName: payment?.restaurantName || initialPayment?.restaurantName || searchParams.get("restaurantName") || "",
+  };
 
   const { data: polledPayment } = usePaymentStatus(orderCode || "");
 
@@ -43,11 +50,38 @@ const PaymentPage = () => {
     setLoading(false);
   }, [initialPayment, polledPayment]);
 
+  // Real-time countdown for payment expiration
+  useEffect(() => {
+    if (!payment?.expiredAt) return;
+
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const expiry = new Date(payment.expiredAt).getTime();
+      const distance = expiry - now;
+
+      if (distance < 0) {
+        setTimeRemaining("Expired");
+        return;
+      }
+
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      setTimeRemaining(`${minutes}m ${seconds}s`);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [payment?.expiredAt]);
+
   useEffect(() => {
     if (payment?.subscriptionPaymentStatus === "SUCCESS") {
+      // Pass full restaurant context to success page
       navigate("/payment/success", {
         state: {
-          restaurantName,
+          restaurantName: restaurantContext.restaurantName,
+          restaurantId: restaurantContext.restaurantId,
           orderCode,
           amount: payment.amount,
         },
@@ -61,16 +95,16 @@ const PaymentPage = () => {
         title: `${payment.subscriptionPaymentStatus} Payment`,
         description: "Please try again or contact support.",
       });
-      navigate(-1);
+      setTimeout(() => navigate(-1), 2000);
     } else if (payment && new Date(payment.expiredAt) < new Date()) {
       toast({
         variant: "destructive",
         title: "Payment Expired",
         description: "The payment link has expired. Please start a new payment.",
       });
-      navigate(-1);
+      setTimeout(() => navigate(-1), 2000);
     }
-  }, [payment, navigate, restaurantName, orderCode]);
+  }, [payment, navigate, restaurantContext.restaurantName, restaurantContext.restaurantId, orderCode]);
 
   const handleCancel = async () => {
     if (!payment?.payOsOrderCode) return;
@@ -90,17 +124,62 @@ const PaymentPage = () => {
     }
   };
 
+  // Enhanced status badge with icons and colors
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      SUCCESS: {
+        icon: CheckCircle2,
+        className: "bg-green-50 text-green-600 border-green-200",
+        label: "Success",
+      },
+      PENDING: {
+        icon: Clock,
+        className: "bg-yellow-50 text-yellow-600 border-yellow-200",
+        label: "Pending",
+      },
+      FAILED: {
+        icon: XCircle,
+        className: "bg-red-50 text-red-600 border-red-200",
+        label: "Failed",
+      },
+      CANCELED: {
+        icon: XCircle,
+        className: "bg-gray-50 text-gray-600 border-gray-200",
+        label: "Canceled",
+      },
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING;
+    const Icon = config.icon;
+
+    return (
+      <Badge variant="outline" className={`${config.className} flex items-center gap-1`}>
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    );
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen flex items-center justify-center"
+      >
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
+      </motion.div>
     );
   }
 
   if (!payment) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="min-h-screen bg-muted/30 flex items-center justify-center"
+      >
         <Card className="max-w-md text-center p-6">
           <CardHeader>
             <CardTitle>Payment Error</CardTitle>
@@ -112,25 +191,46 @@ const PaymentPage = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 py-12 px-4">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+      className="min-h-screen bg-muted/30 py-12 px-4"
+    >
       <div className="container max-w-5xl">
-        <Card>
-          <CardHeader className="text-center">
-            <CreditCard className="h-12 w-12 text-primary mx-auto mb-2" />
-            <CardTitle className="text-2xl font-bold">Complete Your Payment</CardTitle>
-            <CardDescription>
-              Complete your subscription payment for <b>{restaurantName}</b>
-            </CardDescription>
-          </CardHeader>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        >
+          <Card>
+            <CardHeader className="text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+              >
+                <CreditCard className="h-12 w-12 text-primary mx-auto mb-2" />
+              </motion.div>
+              <CardTitle className="text-2xl font-bold">Complete Your Payment</CardTitle>
+              <CardDescription>
+                Complete your subscription payment for <b>{restaurantContext.restaurantName}</b>
+              </CardDescription>
+            </CardHeader>
 
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left Column - Payment Details */}
-            <div className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="space-y-6"
+            >
               <div className="border rounded-lg p-4 bg-background/60">
                 <p className="text-sm text-muted-foreground mb-2">Order Code</p>
                 <p className="font-semibold">{payment.payOsOrderCode}</p>
@@ -144,84 +244,123 @@ const PaymentPage = () => {
                 <p>{payment.description}</p>
 
                 <p className="text-sm text-muted-foreground mt-4 mb-2">Status</p>
-                <p
-                  className={`font-medium ${
-                    payment.subscriptionPaymentStatus === "SUCCESS"
-                      ? "text-green-600"
-                      : payment.subscriptionPaymentStatus === "FAILED" ||
-                        payment.subscriptionPaymentStatus === "CANCELED"
-                      ? "text-red-600"
-                      : "text-yellow-600"
-                  }`}
-                >
-                  {payment.subscriptionPaymentStatus || "PENDING"}
-                </p>
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(payment.subscriptionPaymentStatus || "PENDING")}
+                </div>
 
                 <p className="text-sm text-muted-foreground mt-4 mb-2">Expires At</p>
-                <p>{new Date(payment.expiredAt).toLocaleString()}</p>
+                <div className="flex items-center gap-2">
+                  <p>{new Date(payment.expiredAt).toLocaleString()}</p>
+                  {timeRemaining && timeRemaining !== "Expired" && (
+                    <Badge variant="secondary" className="ml-2">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {timeRemaining}
+                    </Badge>
+                  )}
+                </div>
               </div>
 
               {/* Actions */}
               <div className="flex justify-center gap-4">
-                <Button variant="outline" onClick={() => navigate(-1)} disabled={loading}>
-                  Back
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleCancel}
-                  disabled={
-                    loading || payment.subscriptionPaymentStatus !== "PENDING"
-                  }
-                >
-                  Cancel Payment
-                </Button>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button variant="outline" onClick={() => navigate(-1)} disabled={loading}>
+                    Back
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    variant="destructive"
+                    onClick={handleCancel}
+                    disabled={
+                      loading || payment.subscriptionPaymentStatus !== "PENDING"
+                    }
+                  >
+                    Cancel Payment
+                  </Button>
+                </motion.div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Right Column - QR Code and Bank Transfer */}
-            <div className="space-y-6">
-              {/* QR Code Section */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="space-y-6"
+            >
+              {/* QR Code Section with Pulse Animation */}
               <div className="flex flex-col items-center">
                 <p className="text-sm text-muted-foreground mb-2">Scan QR Code to Pay</p>
-                <QRCodeCanvas
-                  value={payment.qrCodeUrl}
-                  size={256}
-                  includeMargin={true}
-                  className="border rounded-lg shadow-sm bg-white p-2"
-                />
+                <motion.div
+                  animate={{
+                    scale: [1, 1.02, 1],
+                    boxShadow: [
+                      "0 0 0 0 rgba(59, 130, 246, 0)",
+                      "0 0 0 10px rgba(59, 130, 246, 0.1)",
+                      "0 0 0 0 rgba(59, 130, 246, 0)",
+                    ],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="rounded-lg"
+                >
+                  <QRCodeCanvas
+                    value={payment.qrCodeUrl}
+                    size={256}
+                    includeMargin={true}
+                    className="border rounded-lg shadow-sm bg-white p-2"
+                  />
+                </motion.div>
                 <p className="mt-2 text-xs text-gray-400">
                   Quét mã bằng ứng dụng ngân hàng để thanh toán
                 </p>
               </div>
 
               {/* Bank Transfer Section */}
-              <div className="border rounded-lg p-4 bg-background/60">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.5 }}
+                className="border rounded-lg p-4 bg-background/60"
+              >
                 <p className="text-sm text-muted-foreground mb-2">Bank Transfer Details</p>
                 <p className="font-medium">Account Name: {payment.accountName}</p>
                 <p className="text-lg font-mono mt-2">Account Number: {payment.accountNumber}</p>
                 <p className="text-sm text-muted-foreground mt-4">
                   Please transfer the exact amount and include the order code in the description.
                 </p>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </CardContent>
 
           {/* Expired Warning */}
-          {new Date(payment.expiredAt) < new Date() &&
-            payment.subscriptionPaymentStatus === "PENDING" && (
-              <div className="col-span-full">
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Payment Expired</AlertTitle>
-                  <AlertDescription>
-                    The payment link has expired. Please start a new payment process.
-                  </AlertDescription>
-                </Alert>
-              </div>
-            )}
+          <AnimatePresence>
+            {new Date(payment.expiredAt) < new Date() &&
+              payment.subscriptionPaymentStatus === "PENDING" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="col-span-full px-6 pb-6"
+                >
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Payment Expired</AlertTitle>
+                    <AlertDescription>
+                      The payment link has expired. Please start a new payment process.
+                    </AlertDescription>
+                  </Alert>
+                </motion.div>
+              )}
+          </AnimatePresence>
         </Card>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
