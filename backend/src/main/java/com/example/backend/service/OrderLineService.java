@@ -3,6 +3,7 @@ package com.example.backend.service;
 import com.example.backend.dto.OrderLineDTO;
 import com.example.backend.dto.request.CreateOrderLineRequest;
 import com.example.backend.dto.request.UpdateOrderLineStatusRequest;
+import com.example.backend.dto.response.UpdateOrderLineStatusResponse;
 import com.example.backend.entities.AreaTable;
 import com.example.backend.entities.Branch;
 import com.example.backend.entities.Order;
@@ -106,10 +107,15 @@ public class OrderLineService {
         return orderLineDTOs;
     }
 
-    public boolean setOrderLineStatus(UpdateOrderLineStatusRequest request) {
+    public UpdateOrderLineStatusResponse setOrderLineStatus(UpdateOrderLineStatusRequest request) {
         OrderLine orderLine = orderLineRepository.findById(request.getOrderLineId()).orElseThrow(() -> new AppException(ErrorCode.ORDERLINE_NOT_EXISTS));
+        UpdateOrderLineStatusResponse result = new UpdateOrderLineStatusResponse();
+        result.setPreviousStatus(orderLine.getOrderLineStatus());
         orderLine.setOrderLineStatus(request.getOrderLineStatus());
-        return orderLineRepository.save(orderLine) != null;
+        orderLine = orderLineRepository.save(orderLine);
+        result.setSuccessful( orderLine != null);
+        result.setNewStatus(orderLine.getOrderLineStatus());
+        return result;
     }
 
     

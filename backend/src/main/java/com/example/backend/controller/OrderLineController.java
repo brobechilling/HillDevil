@@ -4,6 +4,7 @@ import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.OrderLineDTO;
 import com.example.backend.dto.request.CreateOrderLineRequest;
 import com.example.backend.dto.request.UpdateOrderLineStatusRequest;
+import com.example.backend.dto.response.UpdateOrderLineStatusResponse;
 import com.example.backend.entities.OrderLineStatus;
 import com.example.backend.service.OrderLineService;
 
@@ -11,10 +12,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.web.bind.annotation.*;
-
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.GetMapping;
 
 
 @RestController
@@ -63,12 +60,10 @@ public class OrderLineController {
     }
 
     @PostMapping("/status")
-    public ApiResponse<Boolean> udpateOrderLineStatus(@RequestBody UpdateOrderLineStatusRequest request) {
-        ApiResponse<Boolean> apiResponse = new ApiResponse<>();
+    public ApiResponse<UpdateOrderLineStatusResponse> udpateOrderLineStatus(@RequestBody UpdateOrderLineStatusRequest request) {
+        ApiResponse<UpdateOrderLineStatusResponse> apiResponse = new ApiResponse<>();
         apiResponse.setResult(orderLineService.setOrderLineStatus(request));
         return apiResponse;
     }
-
-    
 
 }
