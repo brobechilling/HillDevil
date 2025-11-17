@@ -34,6 +34,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from '@/hooks/use-toast';
 import { useBranchesByOwner } from '@/hooks/queries/useBranches';
 import { usePackages } from '@/hooks/queries/usePackages';
@@ -59,6 +65,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import type { PackageFeatureDTO as Package } from '@/dto/packageFeature.dto';
 import { useLocation } from 'react-router-dom';
@@ -66,6 +73,8 @@ import ProfileSidebar from '@/components/layout/ProfileSidebar';
 import { isUserDTO } from '@/utils/typeCast';
 import { useChangePasswordd, useUpdateUserProfile } from '@/hooks/queries/useUsers';
 import { ROLE_NAME, UserDTO } from '@/dto/user.dto';
+import { useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ProfileFormData {
   username: string;
@@ -82,8 +91,8 @@ const Profile = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const { data: branches = [] } = useBranchesByOwner(
-  (user as UserDTO)?.userId
-);
+    (user as UserDTO)?.userId
+  );
   const [formData, setFormData] = useState<ProfileFormData>({
     username: isUserDTO(user) ? user.username : "",
     email: isUserDTO(user) ? user.email : "",
@@ -94,6 +103,7 @@ const Profile = () => {
     newPassword: '',
     confirmPassword: '',
   });
+  const queryClient = useQueryClient();
 
   // Subscription state
   const [isRenewPackageOpen, setIsRenewPackageOpen] = useState(false);
@@ -122,6 +132,26 @@ const Profile = () => {
     return 'overview';
   };
   const activeSection = getSectionFromPath();
+
+  useEffect(() => {
+  const handler = (e: CustomEventInit) => {
+    const { restaurantId } = e.detail ?? {};
+    if (restaurantId) {
+      setSelectedRestaurantId(restaurantId);
+      queryClient.invalidateQueries({ queryKey: ["overviewForOwner"] });
+    }
+  };
+  window.addEventListener("restaurant-selected", handler as EventListener);
+  return () => window.removeEventListener("restaurant-selected", handler as EventListener);
+}, [queryClient]);
+
+useEffect(() => {
+  const saved = localStorage.getItem("selected_restaurant");
+  if (saved) {
+    const { restaurantId } = JSON.parse(saved);
+    setSelectedRestaurantId(restaurantId);
+  }
+}, []);
 
   useEffect(() => {
     if (selectedRestaurantId && overviewData.length > 0) {
@@ -223,17 +253,17 @@ const Profile = () => {
 
   const handleRenew = (restaurantId: string, currentPackageId: string) => {
     const restaurant = overviewData.find(r => r.restaurantId === restaurantId);
-    if (!restaurant) return;
+    if (!restaurant || !currentPackageId) return;
 
-    const params = new URLSearchParams();
-    params.append('restaurantId', restaurantId);
-    params.append('restaurantName', restaurant.restaurantName);
-    params.append('packageId', currentPackageId);
-    params.append('action', 'renew');
-
-    navigate(`/register/confirm?${params.toString()}`);
+    navigate('/register/confirm', {
+      state: {
+        restaurantId,
+        restaurantName: restaurant.restaurantName,
+        packageId: currentPackageId,
+        action: 'renew'
+      }
+    });
   };
-
   const handleUpgradePackageClick = (restaurantId: string, currentPackageId: string) => {
     const currentPkg = packages.find(p => p.packageId === currentPackageId);
     if (!currentPkg) return;
@@ -261,14 +291,19 @@ const Profile = () => {
     const restaurant = overviewData.find(r => r.restaurantId === selectedRestaurantId);
     if (!restaurant) return;
 
-    // Navigate to RegisterConfirm with restaurant data and action (renew/change)
-    const params = new URLSearchParams();
-    params.append('restaurantId', selectedRestaurantId);
-    params.append('restaurantName', restaurant.restaurantName);
-    params.append('packageId', selectedNewPackage);
-    params.append('action', renewMode); // 'renew' or 'uprade'
+    const currentPackageId = restaurant.currentSubscription?.packageId;
 
-    navigate(`/register/confirm?${params.toString()}`);
+    navigate('/register/confirm', {
+      state: {
+        restaurantId: selectedRestaurantId,
+        restaurantName: restaurant.restaurantName,
+        packageId: selectedNewPackage,
+        currentPackageId: currentPackageId, // Add current package ID for comparison
+        action: renewMode // 'renew' or 'upgrade'
+      }
+    });
+
+    // Reset dialog
     setIsRenewPackageOpen(false);
     setSelectedNewPackage('');
     setSelectedRestaurantId('');
@@ -284,12 +319,51 @@ const Profile = () => {
   };
 
   const getStatusBadge = (status?: string) => {
+    const badgeVariants = {
+      initial: { scale: 0.8, opacity: 0 },
+      animate: { scale: 1, opacity: 1 },
+      transition: { type: "spring", stiffness: 500, damping: 25 }
+    };
+
     switch (status) {
-      case 'ACTIVE': return <Badge variant="default" className="bg-green-500"><CheckCircle2 className="w-3 h-3 mr-1" /> Active</Badge>;
-      case 'PENDING_PAYMENT': return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
-      case 'EXPIRED': return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" /> Expired</Badge>;
-      case 'CANCELED': return <Badge variant="outline"><X className="w-3 h-3 mr-1" /> Canceled</Badge>;
-      default: return <Badge variant="outline">Unknown</Badge>;
+      case 'ACTIVE': 
+        return (
+          <motion.div {...badgeVariants}>
+            <Badge variant="default" className="bg-green-500 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" /> Active
+            </Badge>
+          </motion.div>
+        );
+      case 'PENDING_PAYMENT': 
+        return (
+          <motion.div {...badgeVariants}>
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Clock className="w-3 h-3" /> Pending
+            </Badge>
+          </motion.div>
+        );
+      case 'EXPIRED': 
+        return (
+          <motion.div {...badgeVariants}>
+            <Badge variant="destructive" className="flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" /> Expired
+            </Badge>
+          </motion.div>
+        );
+      case 'CANCELED': 
+        return (
+          <motion.div {...badgeVariants}>
+            <Badge variant="outline" className="flex items-center gap-1">
+              <X className="w-3 h-3" /> Canceled
+            </Badge>
+          </motion.div>
+        );
+      default: 
+        return (
+          <motion.div {...badgeVariants}>
+            <Badge variant="outline">Unknown</Badge>
+          </motion.div>
+        );
     }
   };
 
@@ -464,147 +538,263 @@ const Profile = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {overviewData.length > 0 ? (
-                    <div className="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Restaurant</TableHead>
-                            <TableHead>Package</TableHead>
-                            <TableHead>Price</TableHead>
-                            <TableHead>Period</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-center">Days Left</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {overviewData.map((sub) => {
-                            const current = sub.currentSubscription;
-                            const daysLeft = current ? getDaysUntilExpiry(current.endDate) : null;
-                            const isActive = current?.status === 'ACTIVE';
-                            const isExpiringSoon = isActive && daysLeft !== null && daysLeft <= 3 && daysLeft > 0;
+                  <TooltipProvider>
+                    {overviewData.length > 0 ? (
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Restaurant</TableHead>
+                              <TableHead>Package</TableHead>
+                              <TableHead>Price</TableHead>
+                              <TableHead>Period</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-center">Days Left</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <AnimatePresence mode="popLayout">
+                              {overviewData.map((sub, index) => {
+                                const current = sub.currentSubscription;
+                                const daysLeft = current ? getDaysUntilExpiry(current.endDate) : null;
+                                const isActive = current?.status === 'ACTIVE';
+                                const isExpiringSoon = isActive && daysLeft !== null && daysLeft <= 3 && daysLeft > 0;
 
-                            return (
-                              <TableRow key={sub.restaurantId}>
-                                <TableCell className="font-medium max-w-[220px] truncate">
-                                  {sub.restaurantName}
-                                </TableCell>
-                                <TableCell className="whitespace-nowrap">
-                                  {current ? getPackageName(current.packageId) : '—'}
-                                </TableCell>
-                                <TableCell className="whitespace-nowrap">
-                                  {current ? `${current.amount?.toLocaleString()} VND` : '—'}
-                                </TableCell>
-                                <TableCell className="text-xs">
-                                  {current ? (
-                                    <>
-                                      {new Date(current.startDate).toLocaleDateString()} <br />
-                                      <span className="text-muted-foreground">
-                                        to {new Date(current.endDate).toLocaleDateString()}
-                                      </span>
-                                    </>
-                                  ) : '—'}
-                                </TableCell>
-                                <TableCell>
-                                  {current ? getStatusBadge(current.status) : <Badge variant="outline">None</Badge>}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  {daysLeft !== null ? (
-                                    daysLeft > 0 ? (
-                                      <span className={daysLeft <= 3 ? 'text-orange-600 font-medium' : 'text-green-600'}>
-                                        {daysLeft} day{daysLeft !== 1 ? 's' : ''}
-                                      </span>
-                                    ) : (
-                                      <span className="text-red-600">Expired</span>
-                                    )
-                                  ) : '—'}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex items-center justify-end gap-1">
+                                return (
+                                  <motion.tr
+                                    key={sub.restaurantId}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    transition={{ 
+                                      duration: 0.3, 
+                                      delay: index * 0.05,
+                                      ease: "easeOut"
+                                    }}
+                                    whileHover={{ 
+                                      backgroundColor: "rgba(0, 0, 0, 0.02)",
+                                      transition: { duration: 0.2 }
+                                    }}
+                                    className="border-b"
+                                  >
+                                    <TableCell className="font-medium max-w-[220px] truncate">
+                                      {sub.restaurantName}
+                                    </TableCell>
+                                    <TableCell className="whitespace-nowrap">
+                                      {current ? getPackageName(current.packageId) : '—'}
+                                    </TableCell>
+                                    <TableCell className="whitespace-nowrap">
+                                      {current ? `${current.amount?.toLocaleString()} VND` : '—'}
+                                    </TableCell>
+                                    <TableCell className="text-xs">
+                                      {current ? (
+                                        <>
+                                          {new Date(current.startDate).toLocaleDateString()} <br />
+                                          <span className="text-muted-foreground">
+                                            to {new Date(current.endDate).toLocaleDateString()}
+                                          </span>
+                                        </>
+                                      ) : '—'}
+                                    </TableCell>
+                                    <TableCell>
+                                      {current ? getStatusBadge(current.status) : (
+                                        <motion.div
+                                          initial={{ scale: 0.8, opacity: 0 }}
+                                          animate={{ scale: 1, opacity: 1 }}
+                                        >
+                                          <Badge variant="outline">None</Badge>
+                                        </motion.div>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      {daysLeft !== null ? (
+                                        daysLeft > 0 ? (
+                                          <motion.span 
+                                            className={daysLeft <= 3 ? 'text-orange-600 font-medium' : 'text-green-600'}
+                                            animate={daysLeft <= 3 ? { 
+                                              scale: [1, 1.05, 1],
+                                            } : {}}
+                                            transition={{ 
+                                              duration: 2,
+                                              repeat: daysLeft <= 3 ? Infinity : 0,
+                                              ease: "easeInOut"
+                                            }}
+                                          >
+                                            {daysLeft} day{daysLeft !== 1 ? 's' : ''}
+                                          </motion.span>
+                                        ) : (
+                                          <span className="text-red-600">Expired</span>
+                                        )
+                                      ) : '—'}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex items-center justify-end gap-1">
+                                        {/* History Button */}
+                                        {sub.paymentHistory?.length > 0 && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <motion.div
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                              >
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  className="h-8 w-8 p-0"
+                                                  onClick={() => {
+                                                    setSelectedRestaurantForHistory(sub);
+                                                    setPaymentDialogOpen(true);
+                                                    setPaymentPage(1);
+                                                    setPaymentSearch('');
+                                                  }}
+                                                >
+                                                  <Clock className="w-3.5 h-3.5" />
+                                                </Button>
+                                              </motion.div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>View Payment History</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )}
 
-                                    {/* History Button */}
-                                    {sub.paymentHistory?.length > 0 && (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-8 w-8 p-0"
-                                        onClick={() => {
-                                          setSelectedRestaurantForHistory(sub);
-                                          setPaymentDialogOpen(true);
-                                          setPaymentPage(1);
-                                          setPaymentSearch('');
-                                        }}
-                                      >
-                                        <Clock className="w-3.5 h-3.5" />
-                                      </Button>
-                                    )}
+                                        {/* Renew */}
+                                        {isActive && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <motion.div
+                                                whileHover={{ scale: 1.05, rotate: 180 }}
+                                                whileTap={{ scale: 0.95 }}
+                                                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                                              >
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  className="h-8 w-8 p-0"
+                                                  onClick={() => handleRenew(sub.restaurantId, current?.packageId)}
+                                                  disabled={cancelMutation.isPending}
+                                                >
+                                                  <RefreshCw className="w-3.5 h-3.5" />
+                                                </Button>
+                                              </motion.div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>Renew Subscription</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )}
 
-                                    {/* Renew */}
-                                    {isActive && (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-8 w-8 p-0"
-                                        onClick={() => handleRenew(sub.restaurantId, current?.packageId)}
-                                        title="Renew Subscription"
-                                      >
-                                        <RefreshCw className="w-3.5 h-3.5" />
-                                      </Button>
-                                    )}
+                                        {/* Cancel */}
+                                        {isActive && (
+                                          <AlertDialog>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <AlertDialogTrigger asChild>
+                                                  <motion.div
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                  >
+                                                    <Button 
+                                                      size="sm" 
+                                                      variant="destructive" 
+                                                      className="h-8 w-8 p-0"
+                                                      disabled={cancelMutation.isPending}
+                                                    >
+                                                      {cancelMutation.isPending ? (
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                      ) : (
+                                                        <X className="w-3.5 h-3.5" />
+                                                      )}
+                                                    </Button>
+                                                  </motion.div>
+                                                </AlertDialogTrigger>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>Cancel Subscription</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                            <AlertDialogContent>
+                                              <AlertDialogHeader>
+                                                <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                  Cancel subscription for <strong>{sub.restaurantName}</strong>
+                                                  <br />
+                                                  <strong>This action cannot be undone.</strong>
+                                                </AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                                <AlertDialogCancel>Keep</AlertDialogCancel>
+                                                <AlertDialogAction 
+                                                  onClick={() => {
+                                                    cancelMutation.mutate(current.subscriptionId, {
+                                                      onSuccess: () => {
+                                                        toast({
+                                                          title: "Subscription Canceled",
+                                                          description: `Subscription for ${sub.restaurantName} has been canceled.`,
+                                                          variant: "default",
+                                                        });
+                                                      },
+                                                      onError: () => {
+                                                        toast({
+                                                          title: "Error",
+                                                          description: "Failed to cancel subscription. Please try again.",
+                                                          variant: "destructive",
+                                                        });
+                                                      }
+                                                    });
+                                                  }}
+                                                >
+                                                  Yes, Cancel
+                                                </AlertDialogAction>
+                                              </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                          </AlertDialog>
+                                        )}
 
-                                    {/* Cancel */}
-                                    {isActive && (
-                                      <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                          <Button size="sm" variant="destructive" className="h-8 w-8 p-0">
-                                            <X className="w-3.5 h-3.5" />
-                                          </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                              Cancel subscription for <strong>{sub.restaurantName}</strong>
-                                              <br />
-                                              <strong>This action cannot be undone.</strong>
-                                            </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>Keep</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => cancelMutation.mutate(current.subscriptionId)}>
-                                              Yes, Cancel
-                                            </AlertDialogAction>
-                                          </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
-                                    )}
-
-                                    {/* Change Package */}
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-8 w-8 p-0"
-                                      onClick={() => handleUpgradePackageClick(sub.restaurantId, current?.packageId)}
-                                      disabled={!isActive}
-                                      title="Upgrade Package"
-                                    >
-                                      <PackageIcon className="w-3.5 h-3.5" />
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <PackageIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p className="text-xl font-medium mb-2">No restaurants available</p>
-                    </div>
-                  )}
+                                        {/* Upgrade Package */}
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <motion.div
+                                              whileHover={{ scale: 1.05 }}
+                                              whileTap={{ scale: 0.95 }}
+                                            >
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-8 w-8 p-0"
+                                                onClick={() => handleUpgradePackageClick(sub.restaurantId, current?.packageId)}
+                                                disabled={!isActive || cancelMutation.isPending}
+                                              >
+                                                <PackageIcon className="w-3.5 h-3.5" />
+                                              </Button>
+                                            </motion.div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Upgrade Package</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </div>
+                                    </TableCell>
+                                  </motion.tr>
+                                );
+                              })}
+                            </AnimatePresence>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <motion.div 
+                        className="text-center py-12 text-muted-foreground"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4 }}
+                      >
+                        <PackageIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p className="text-xl font-medium mb-2">No restaurants available</p>
+                      </motion.div>
+                    )}
+                  </TooltipProvider>
                 </CardContent>
               </Card>
 
@@ -826,12 +1016,6 @@ const Profile = () => {
                                       </span>
                                     </div>
                                   </div>
-
-                                  <div className="pt-2">
-                                    <Button variant="outline" size="sm" className="w-full">
-                                      Manage Branch
-                                    </Button>
-                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -869,43 +1053,68 @@ const Profile = () => {
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto">
             {(() => {
-              const upgradablePackages = packages.filter((pkg: Package) => {
-                const currentSub = overviewData.find(r => r.restaurantId === selectedRestaurantId)?.currentSubscription;
-                if (!currentSub?.packageId) return false;
-                const currentPkg = packages.find(p => p.packageId === currentSub.packageId);
-                return currentPkg && pkg.price > currentPkg.price;
-              });
+              // For renew mode: show all packages
+              // For upgrade mode: only show packages with higher price
+              const currentSub = overviewData.find(r => r.restaurantId === selectedRestaurantId)?.currentSubscription;
+              const currentPkg = currentSub?.packageId ? packages.find(p => p.packageId === currentSub.packageId) : null;
+              
+              const availablePackages = renewMode === 'renew' 
+                ? packages // Show all packages for renew
+                : packages.filter((pkg: Package) => {
+                    // For upgrade, only show packages with higher price
+                    return currentPkg && pkg.price > currentPkg.price;
+                  });
 
-              if (upgradablePackages.length === 0) {
+              if (availablePackages.length === 0) {
                 return (
                   <div className="text-center py-16 text-muted-foreground">
                     <PackageIcon className="w-16 h-16 mx-auto mb-4 opacity-40" />
-                    <p className="text-lg font-semibold">You are using the highest package</p>
-                    <p className="text-sm mt-1">No higher packages for upgrade.</p>
+                    <p className="text-lg font-semibold">
+                      {renewMode === 'upgrade' 
+                        ? 'You are using the highest package' 
+                        : 'No packages available'}
+                    </p>
+                    <p className="text-sm mt-1">
+                      {renewMode === 'upgrade' 
+                        ? 'No higher packages for upgrade.' 
+                        : 'Please contact support.'}
+                    </p>
                   </div>
                 );
               }
 
-              return upgradablePackages.map((pkg: Package) => (
-                <div
-                  key={pkg.packageId}
-                  className={`p-4 border rounded-lg cursor-pointer transition ${selectedNewPackage === pkg.packageId
-                    ? 'border-primary bg-primary/5'
-                    : 'hover:border-primary/50 hover:bg-muted/50'
+              return availablePackages.map((pkg: Package) => {
+                const isCurrentPackage = currentPkg?.packageId === pkg.packageId;
+                
+                return (
+                  <div
+                    key={pkg.packageId}
+                    className={`p-4 border rounded-lg cursor-pointer transition ${
+                      selectedNewPackage === pkg.packageId
+                        ? 'border-primary bg-primary/5'
+                        : isCurrentPackage && renewMode === 'renew'
+                        ? 'border-blue-300 bg-blue-50/50'
+                        : 'hover:border-primary/50 hover:bg-muted/50'
                     }`}
-                  onClick={() => setSelectedNewPackage(pkg.packageId)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="font-semibold text-lg">{pkg.name}</p>
-                      <p className="text-sm text-muted-foreground">{pkg.description}</p>
+                    onClick={() => setSelectedNewPackage(pkg.packageId)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-lg">{pkg.name}</p>
+                          {isCurrentPackage && renewMode === 'renew' && (
+                            <Badge variant="secondary" className="text-xs">Current</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{pkg.description}</p>
+                      </div>
                     </div>
+                    <p className="text-lg font-bold text-primary mt-2">
+                      {pkg.price.toLocaleString()} VND/month
+                    </p>
                   </div>
-                  <p className="text-lg font-bold text-primary mt-2">
-                    {pkg.price.toLocaleString()} VND/month
-                  </p>
-                </div>
-              ));
+                );
+              });
             })()}
           </div>
           <div className="flex gap-2 pt-4">

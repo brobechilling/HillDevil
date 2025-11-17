@@ -1,7 +1,6 @@
 package com.example.backend.dto;
 
 import com.example.backend.dto.response.SubscriptionPaymentResponse;
-import com.example.backend.dto.response.SubscriptionResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -9,7 +8,7 @@ import java.util.UUID;
 public class RestaurantSubscriptionOverviewDTO {
     private UUID restaurantId;
     private String restaurantName;
-    private SubscriptionResponse currentSubscription;
+    private CurrentSubscriptionOverviewDTO currentSubscription;
     private List<SubscriptionPaymentResponse> paymentHistory;
 
     public UUID getRestaurantId() {
@@ -20,11 +19,11 @@ public class RestaurantSubscriptionOverviewDTO {
         this.restaurantId = restaurantId;
     }
 
-    public SubscriptionResponse getCurrentSubscription() {
+    public CurrentSubscriptionOverviewDTO getCurrentSubscription() {
         return currentSubscription;
     }
 
-    public void setCurrentSubscription(SubscriptionResponse currentSubscription) {
+    public void setCurrentSubscription(CurrentSubscriptionOverviewDTO currentSubscription) {
         this.currentSubscription = currentSubscription;
     }
 

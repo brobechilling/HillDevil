@@ -12,6 +12,8 @@ export interface SubscriptionPaymentResponse {
   date: string;
   protatedAmount: number;
   purpose: string;
+  restaurantId: string;
+  restaurantName: string;
 }
 
 export interface TopSpenderDTO {

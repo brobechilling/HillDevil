@@ -8,11 +8,8 @@ import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.example.backend.repository.PackageRepository;
 import com.example.backend.repository.SubscriptionRepository;
 
-import java.time.Instant;
-import java.time.LocalDate;
 import java.util.UUID;
 
 @Service
@@ -22,18 +19,15 @@ public class RestaurantSubscriptionService {
     private final SubscriptionService subscriptionService;
     private final SubscriptionPaymentService subscriptionPaymentService;
     private final SubscriptionRepository subscriptionRepository;
-    private final PackageRepository packageRepository;
 
     public RestaurantSubscriptionService(RestaurantService restaurantService,
             SubscriptionService subscriptionService,
             SubscriptionPaymentService subscriptionPaymentService,
-            SubscriptionRepository subscriptionRepository,
-            PackageRepository packageRepository) {
+            SubscriptionRepository subscriptionRepository) {
         this.restaurantService = restaurantService;
         this.subscriptionService = subscriptionService;
         this.subscriptionPaymentService = subscriptionPaymentService;
         this.subscriptionRepository = subscriptionRepository;
-        this.packageRepository = packageRepository;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -44,11 +38,16 @@ public class RestaurantSubscriptionService {
 
         Subscription subscription = subscriptionService.createEntitySubscription(restaurant, packageId);
 
-        return subscriptionPaymentService.createPayment(
+        SubscriptionPaymentResponse payment = subscriptionPaymentService.createPayment(
                 subscription.getSubscriptionId(),
                 SubscriptionPaymentPurpose.NEW_SUBSCRIPTION,
-                packageId
-        );
+                packageId);
+
+        // attach restaurant info
+        payment.setRestaurantId(restaurant.getRestaurantId());
+        payment.setRestaurantName(restaurant.getName());
+
+        return payment;
     }
 
     @Transactional
@@ -65,11 +64,17 @@ public class RestaurantSubscriptionService {
 
         UUID targetPackageId = currentPackage.getPackageId();
 
-        return subscriptionPaymentService.createPayment(
+        SubscriptionPaymentResponse payment = subscriptionPaymentService.createPayment(
                 currentSubscription.getSubscriptionId(),
                 SubscriptionPaymentPurpose.RENEW,
-                targetPackageId
-        );
+                targetPackageId);
+
+        // attach restaurant info
+        Restaurant restaurant = currentSubscription.getRestaurant();
+        payment.setRestaurantId(restaurant.getRestaurantId());
+        payment.setRestaurantName(restaurant.getName());
+
+        return payment;
     }
 
     @Transactional
@@ -80,11 +85,16 @@ public class RestaurantSubscriptionService {
             throw new AppException(ErrorCode.SUBSCRIPTION_NOT_ACTIVE);
         }
 
-        return subscriptionPaymentService.createPayment(
+        SubscriptionPaymentResponse payment = subscriptionPaymentService.createPayment(
                 current.getSubscriptionId(),
                 SubscriptionPaymentPurpose.UPGRADE,
-                newPackageId
-        );
+                newPackageId);
+
+        Restaurant restaurant = current.getRestaurant();
+        payment.setRestaurantId(restaurant.getRestaurantId());
+        payment.setRestaurantName(restaurant.getName());
+
+        return payment;
     }
 
     private Subscription getLatestSubscription(UUID restaurantId) {

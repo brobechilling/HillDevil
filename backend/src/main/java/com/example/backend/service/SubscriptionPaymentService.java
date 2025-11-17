@@ -89,7 +89,8 @@ public class SubscriptionPaymentService {
                     : "Renew package " + targetPackage.getName();
         }
 
-        if (description.length() > 25) description = description.substring(0, 22) + "...";
+        if (description.length() > 25)
+            description = description.substring(0, 22) + "...";
 
         long orderCode = generateUniqueOrderCode();
 
@@ -127,7 +128,8 @@ public class SubscriptionPaymentService {
             subscriptionRepository.save(subscription);
 
             Restaurant restaurant = subscription.getRestaurant();
-            if (restaurant != null) restaurant.setStatus(false);
+            if (restaurant != null)
+                restaurant.setStatus(false);
         }
 
         return subscriptionPaymentMapper.toSubscriptionPaymentResponse(payment);
@@ -152,7 +154,8 @@ public class SubscriptionPaymentService {
         return new ProratedResult(amountToPay, credit);
     }
 
-    private record ProratedResult(int amountToPay, int creditAmount) {}
+    private record ProratedResult(int amountToPay, int creditAmount) {
+    }
 
     private long generateUniqueOrderCode() {
         long orderCode = System.currentTimeMillis() % 1_000_000_000L;
@@ -185,26 +188,47 @@ public class SubscriptionPaymentService {
             if ("00".equals(data.getCode())) {
                 payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.SUCCESS);
 
-                if (payment.getPurpose() == SubscriptionPaymentPurpose.UPGRADE) {
-                    subscription.setaPackage(payment.getTargetPackage());
-                    subscription.setStatus(SubscriptionStatus.ACTIVE);
-                    subscription.setUpdatedAt(Instant.now());
-                    subscriptionRepository.save(subscription);
-                } else if (payment.getPurpose() == SubscriptionPaymentPurpose.NEW_SUBSCRIPTION) {
-                    subscription.setStartDate(LocalDate.now());
-                    subscription.setEndDate(LocalDate.now().plusMonths(payment.getTargetPackage().getBillingPeriod()));
-                    subscription.setStatus(SubscriptionStatus.ACTIVE);
-                    subscription.setUpdatedAt(Instant.now());
-                    subscriptionRepository.save(subscription);
-                } else if (payment.getPurpose() == SubscriptionPaymentPurpose.RENEW) {
-                    LocalDate newEndDate = subscription.getEndDate() != null
-                            ? subscription.getEndDate().plusMonths(payment.getTargetPackage().getBillingPeriod())
-                            : LocalDate.now().plusMonths(payment.getTargetPackage().getBillingPeriod());
-                    subscription.setEndDate(newEndDate);
-                    subscription.setStatus(SubscriptionStatus.ACTIVE);
-                    subscription.setUpdatedAt(Instant.now());
-                    subscriptionRepository.save(subscription);
+                LocalDate today = LocalDate.now();
+                Package targetPackage = payment.getTargetPackage();
+                
+                // Ensure targetPackage is loaded (handle lazy loading)
+                if (targetPackage == null) {
+                    throw new AppException(ErrorCode.PACKAGE_NOTEXISTED);
                 }
+
+                if (payment.getPurpose() == SubscriptionPaymentPurpose.UPGRADE) {
+                    // When upgrading, keep the same subscription period (start and end dates)
+                    // Only change the package to the new one
+                    // The user has already paid the prorated difference for the remaining time
+                    subscription.setaPackage(targetPackage);
+                    subscription.setStatus(SubscriptionStatus.ACTIVE);
+                    subscription.setUpdatedAt(Instant.now());
+                }
+
+                else if (payment.getPurpose() == SubscriptionPaymentPurpose.NEW_SUBSCRIPTION) {
+
+                    subscription.setaPackage(targetPackage);
+                    subscription.setStartDate(today);
+                    subscription.setEndDate(today.plusMonths(targetPackage.getBillingPeriod()));
+                    subscription.setStatus(SubscriptionStatus.ACTIVE);
+                    subscription.setUpdatedAt(Instant.now());
+                }
+
+                else if (payment.getPurpose() == SubscriptionPaymentPurpose.RENEW) {
+
+                    subscription.setaPackage(targetPackage);
+
+                    LocalDate newStart = subscription.getEndDate() != null && subscription.getEndDate().isAfter(today)
+                            ? subscription.getEndDate()
+                            : today;
+
+                    subscription.setStartDate(newStart);
+                    subscription.setEndDate(newStart.plusMonths(targetPackage.getBillingPeriod()));
+                    subscription.setStatus(SubscriptionStatus.ACTIVE);
+                    subscription.setUpdatedAt(Instant.now());
+                }
+
+                subscriptionRepository.save(subscription);
 
                 if (restaurant != null) {
                     restaurant.setStatus(true);
@@ -253,7 +277,8 @@ public class SubscriptionPaymentService {
             }
         }
 
-        else if (payment.getPurpose() == SubscriptionPaymentPurpose.NEW_SUBSCRIPTION && subscription.getStartDate() == null) {
+        else if (payment.getPurpose() == SubscriptionPaymentPurpose.NEW_SUBSCRIPTION
+                && subscription.getStartDate() == null) {
             subscription.setStatus(SubscriptionStatus.CANCELED);
             subscriptionRepository.save(subscription);
         }
@@ -280,8 +305,7 @@ public class SubscriptionPaymentService {
         Instant now = Instant.now();
         List<SubscriptionPayment> expiredPayments = subscriptionPaymentRepository
                 .findAllBySubscriptionPaymentStatusAndExpiredAtBefore(
-                        SubscriptionPaymentStatus.PENDING, now
-                );
+                        SubscriptionPaymentStatus.PENDING, now);
 
         for (SubscriptionPayment payment : expiredPayments) {
             payment.setSubscriptionPaymentStatus(SubscriptionPaymentStatus.CANCELED);

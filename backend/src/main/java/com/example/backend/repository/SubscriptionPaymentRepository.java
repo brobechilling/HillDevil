@@ -12,7 +12,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface SubscriptionPaymentRepository extends JpaRepository<SubscriptionPayment, UUID> {
-    Optional<SubscriptionPayment> findByPayOsOrderCode(Long payOsOrderCode);
+    @Query("SELECT sp FROM SubscriptionPayment sp " +
+           "LEFT JOIN FETCH sp.targetPackage " +
+           "LEFT JOIN FETCH sp.subscription s " +
+           "LEFT JOIN FETCH s.aPackage " +
+           "WHERE sp.payOsOrderCode = :orderCode")
+    Optional<SubscriptionPayment> findByPayOsOrderCode(@Param("orderCode") Long payOsOrderCode);
 
     boolean existsByPayOsOrderCode(long orderCode);
 
