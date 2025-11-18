@@ -24,7 +24,7 @@ interface MenuItemDialogProps {
 }
 
 const MenuItemDialog = ({ open, onOpenChange, menuItem, onAddItem }: MenuItemDialogProps) => {
-  const { data: customizations, isLoading } = useCustomizationsOfMenuItems(menuItem.menuItemId);
+  const { data: customizations, isLoading } = useCustomizationsOfMenuItems(menuItem.menuItemId, true);
   const [quantity, setQuantity] = useState(1);
   const [selectedCustoms, setSelectedCustoms] = useState<Record<string, number>>({});
   const [note, setNote] = useState('');

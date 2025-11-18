@@ -16,4 +16,5 @@ export interface OrderItemDTO {
     status: boolean;
     menuItemName: string;
     customizations: OrderItemCustomizationDTO[];
+    menuItemId: string;
 }

@@ -3,16 +3,10 @@ package com.example.backend.dto.response;
 import com.example.backend.entities.OrderLineStatus;
 
 public class UpdateOrderLineStatusResponse {
-    private boolean isSuccessful;
+    private boolean successful;
     private OrderLineStatus previousStatus;
     private OrderLineStatus newStatus;
     
-    public boolean isSuccessful() {
-        return isSuccessful;
-    }
-    public void setSuccessful(boolean isSuccessful) {
-        this.isSuccessful = isSuccessful;
-    }
     public OrderLineStatus getPreviousStatus() {
         return previousStatus;
     }
@@ -24,6 +18,12 @@ public class UpdateOrderLineStatusResponse {
     }
     public void setNewStatus(OrderLineStatus newStatus) {
         this.newStatus = newStatus;
+    }
+    public boolean isSuccessful() {
+        return successful;
+    }
+    public void setSuccessful(boolean successful) {
+        this.successful = successful;
     }
     
 }

@@ -87,8 +87,7 @@ public class OrderItemService {
     // update orderItem: increase quantity or remove an orderItem, change customization for an orderItem
     public OrderItemDTO updateOrderItem(OrderItemDTO orderItemDTO) {
         OrderItem orderItem = orderItemRepository.findById(orderItemDTO.getOrderItemId()).orElseThrow(() -> new AppException(ErrorCode.ORDERITEM_NOT_EXISTS));
-        orderItem.setNote(orderItemDTO.getNote());
-        orderItem.setStatus(orderItemDTO.isStatus());
+        OrderItem orderItemClone = orderItem;
         
         // old customization handling
         Set<OrderItemCustomization> oldCustomization = orderItem.getOrderItemCustomizations();
@@ -96,8 +95,10 @@ public class OrderItemService {
         
         // new customization handling
         // this will update orderItemCustomization in db, not just create shallow copy of orderItemCustomization
+        
         Set<OrderItemCustomization> newCustomization = orderItemDTO.getCustomizations().stream().filter(customization -> customization.getQuantity() != 0)
-                                                                                                .map(orderItemCustomizationService::udpateOrderItemCustomization).collect(Collectors.toSet());
+                                                                                                .map(customization -> orderItemCustomizationService.udpateOrderItemCustomization(customization, orderItemClone))
+                                                                                                .collect(Collectors.toSet());
         BigDecimal newCustomizationPrice = getCustomizationPrice(newCustomization);
         // delete customization -> quantity must be 0
         orderItemDTO.getCustomizations().stream().filter(customization -> customization.getQuantity() == 0).forEach(orderItemCustomizationService::deleteOrderItemCustomization);
@@ -108,6 +109,11 @@ public class OrderItemService {
         orderItem.setQuantity(orderItemDTO.getQuantity());
         BigDecimal basePrice = orderItem.getTotalPrice().subtract(oldCustomizationPrice).divide(BigDecimal.valueOf(oldQuantity));
         orderItem.setTotalPrice(basePrice.multiply(BigDecimal.valueOf(orderItem.getQuantity())).add(newCustomizationPrice));
+
+        // update note and status
+        orderItem.setNote(orderItemDTO.getNote());
+        orderItem.setStatus(orderItemDTO.isStatus());
+        
         orderItem = orderItemRepository.save(orderItem);
         
         // re-calculate totalPrice of orderLine after update orderItem

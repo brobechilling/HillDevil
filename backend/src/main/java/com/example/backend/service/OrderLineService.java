@@ -24,6 +24,9 @@ import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -92,10 +95,18 @@ public class OrderLineService {
         return orderRepository.findTopByAreaTable_AreaTableIdAndStatusOrderByUpdatedAtDesc(areaTableId, OrderStatus.EATING).orElseGet( () -> createOrder(areaTableId));
     }
 
+    // used to return orderItems today
     // this returns orderItems with status false because of soft delete and mapping using mapstruct -> can try to fix this in mapper
     public List<OrderLineDTO> getOrderLinesByStatusAndBranch(UUID branchId, OrderLineStatus orderLineStatus) {
         Branch branch = branchRepository.findById(branchId).orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
-        List<OrderLine> orderLines = orderLineRepository.findAllByOrderLineStatusAndOrder_AreaTable_Area_Branch(orderLineStatus, branch);
+        
+        ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
+        LocalDate today = LocalDate.now(zone);
+        Instant startOfDay = today.atStartOfDay(zone).toInstant();
+        Instant endOfDay = today.plusDays(1).atStartOfDay(zone).toInstant();
+        
+        // List<OrderLine> orderLines = orderLineRepository.findAllByOrderLineStatusAndOrder_AreaTable_Area_Branch(orderLineStatus, branch);
+        List<OrderLine> orderLines = orderLineRepository.findAllTodayByStatusAndBranch(orderLineStatus, branch, startOfDay, endOfDay);
         List<OrderLineDTO> orderLineDTOs = new ArrayList<>();
         for (OrderLine orderLine : orderLines) {
             OrderLineDTO orderLineDTO = orderLineMapper.toOrderLineDTO(orderLine);

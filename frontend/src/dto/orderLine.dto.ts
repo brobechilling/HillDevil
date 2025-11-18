@@ -29,7 +29,7 @@ export interface UpdateOrderLineStatusRequest {
 }
 
 export interface UpdateOrderLineStatusResponse {
-    isSuccessful: boolean;
+    successful: boolean;
     previousStatus: OrderLineStatus;
     newStatus: OrderLineStatus;
 }

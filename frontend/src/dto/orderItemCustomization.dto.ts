@@ -6,8 +6,9 @@ export interface CreateOrderItemCustomizationRequest {
 }
 
 export interface OrderItemCustomizationDTO {
-    orderItemCustomizationId: string;
+    orderItemCustomizationId?: string;
     customizationName: string;
     quantity: number;
     totalPrice: number;
+    customizationId: string;
 }

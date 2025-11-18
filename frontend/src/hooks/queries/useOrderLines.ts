@@ -8,34 +8,6 @@ export const useCreateOrderLine = () => {
   });
 };
 
-// export const useGetPendingOrderLine = (branchId: string) => {
-//     return useQuery<OrderLineDTO[]>({
-//         queryKey: ['branches', branchId, 'pending'],
-//         queryFn: () => getPendingOrderLineByBranch(branchId),
-//     });
-// };
-
-// export const useGetPreparingOrderLine = (branchId: string) => {
-//     return useQuery<OrderLineDTO[]>({
-//         queryKey: ['branches', branchId, 'preparing'],
-//         queryFn: () => getPreparingOrderLineByBranch(branchId),
-//     });
-// };
-
-// export const useGetCompletedOrderLine = (branchId: string) => {
-//     return useQuery<OrderLineDTO[]>({
-//         queryKey: ['branches', branchId, 'completed'],
-//         queryFn: () => getCompletedOrderLineByBranch(branchId),
-//     });
-// };
-
-// export const useGetCancelledOrderLine = (branchId: string) => {
-//     return useQuery<OrderLineDTO[]>({
-//         queryKey: ['branches', branchId, 'cancelled'],
-//         queryFn: () => getCancelledOrderLineByBranch(branchId),
-//     });
-// };
-
 export const useOrderLinesByStatus = (
   branchId: string,
   status: OrderLineStatus,
@@ -44,6 +16,7 @@ export const useOrderLinesByStatus = (
   return useQuery<OrderLineDTO[]>({
     queryKey: ['orderLines', branchId, status],
     queryFn: () => fetcher(branchId),
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -65,9 +38,15 @@ export const useUpdateOrderLineStatus = (branchId: string) => {
   return useMutation({
     mutationFn: udpateOrderLineStatus,
     onSuccess: (data) => {
-      if (data.isSuccessful) {
-        queryClient.invalidateQueries({queryKey: ['orderLines', branchId, data.previousStatus]});
-        queryClient.invalidateQueries({queryKey: ['orderLines', branchId, data.newStatus]});
+      if (data.successful) {
+        queryClient.invalidateQueries({
+          queryKey: ['orderLines', branchId, data.previousStatus],
+          refetchType: 'active',
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['orderLines', branchId, data.newStatus],
+          refetchType: 'active',
+        });
       }
     },
   });

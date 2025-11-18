@@ -10,6 +10,7 @@ public interface OrderItemMapper {
 
     @Mapping(target = "customizations", source = "orderItemCustomizations")
     @Mapping(target = "menuItemName", source = "menuItem.name")
+    @Mapping(target = "menuItemId", source = "menuItem.menuItemId")
     OrderItemDTO toOrderItemDTO(OrderItem orderItem);
 
     // manually handled in servcie
