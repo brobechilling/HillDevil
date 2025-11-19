@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,9 @@ import { OrderLineDTO, OrderLineStatus } from "@/dto/orderLine.dto";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OrderItemDTO } from "@/dto/orderItem.dto";
 import { OrderLineEditDialog } from "@/components/waiter/OrderLineEditDialog";
+import { io, Socket } from "socket.io-client";
+import { useQueryClient } from "@tanstack/react-query";
+
 
 const OrdersPage = () => {
   const { user } = useSessionStore();
@@ -77,6 +80,48 @@ const OrdersPage = () => {
         return [];
     }
   }, [activeTab, search, pendingQuery.data, preparingQuery.data, completedQuery.data, cancelledQuery.data]);
+
+  const SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const newSocket = io(SOCKET_URL, {
+      transports: ["websocket"], 
+      query: { branchId },
+    });
+
+    setSocket(newSocket);
+
+    newSocket.on("connect", () => {
+      console.log("Connected to Socket.IO server");
+    });
+
+    newSocket.on("disconnect", () => {
+      console.log("Disconnected from server");
+    });
+
+    newSocket.on("create_orderLine", (newOrderLine: OrderLineDTO) => {
+      if (newOrderLine.orderLineStatus !== OrderLineStatus.PENDING) 
+        return;
+      
+      const key = ['orderLines', branchId, OrderLineStatus.PENDING];
+
+      queryClient.setQueryData<OrderLineDTO[]>(key, (oldList) => {
+        if (!oldList) 
+          return [newOrderLine];
+        const exists = oldList.some(
+          (o) => o.orderLineId === newOrderLine.orderLineId
+        );
+        if (exists) 
+          return oldList;
+        return [newOrderLine, ...oldList];
+      });
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
 
   const renderLoading = () => (
     <Card>

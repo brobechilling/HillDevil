@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import com.corundumstudio.socketio.SocketIOServer;
 import com.example.backend.dto.OrderLineDTO;
 import com.example.backend.dto.request.CreateOrderLineRequest;
 import com.example.backend.dto.request.UpdateOrderLineStatusRequest;
@@ -42,19 +43,22 @@ public class OrderLineService {
     private final TableRepository tableRepository;
     private final BranchRepository branchRepository;
     private Logger logger = org.slf4j.LoggerFactory.getLogger(getClass());
+    private final SocketIOServer socketIOServer;
 
     public OrderLineService(OrderLineRepository orderLineRepository,
                             OrderLineMapper orderLineMapper,
                             OrderItemService orderItemService,
                             OrderRepository orderRepository,
                             TableRepository tableRepository,
-                            BranchRepository branchRepository) {
+                            BranchRepository branchRepository,
+                            SocketIOServer socketIOServer) {
         this.orderLineRepository = orderLineRepository;
         this.orderLineMapper = orderLineMapper;
         this.orderItemService = orderItemService;
         this.orderRepository = orderRepository;
         this.tableRepository = tableRepository;
         this.branchRepository = branchRepository;
+        this.socketIOServer = socketIOServer;
     }
 
     public boolean createOrderLine(CreateOrderLineRequest createOrderLineRequest) {
@@ -68,7 +72,19 @@ public class OrderLineService {
         savedOrderLine.setOrderItems(orderItemService.createOrderItem(createOrderLineRequest.getOrderItems(), savedOrderLine));
         savedOrderLine.setTotalPrice(getOrderLinePrice(savedOrderLine.getOrderItems()));
         order.setTotalPrice(order.getTotalPrice().add(savedOrderLine.getTotalPrice()));
-        return orderRepository.save(order) != null && orderLineRepository.save(savedOrderLine) != null;
+        order = orderRepository.save(order);
+        savedOrderLine = orderLineRepository.save(savedOrderLine);
+        boolean createSuccessful = order != null && savedOrderLine != null;
+        if (createSuccessful)
+        {
+            OrderLineDTO orderLineDTO = orderLineMapper.toOrderLineDTO(savedOrderLine);
+            AreaTable table = savedOrderLine.getOrder().getAreaTable();
+            orderLineDTO.setTableTag(table.getTag());
+            orderLineDTO.setAreaName(table.getArea().getName());
+            String branchId = table.getArea().getBranch().getBranchId().toString();
+            socketIOServer.getRoomOperations(branchId).sendEvent("create_orderLine", orderLineDTO);
+        }
+        return createSuccessful;
     }
 
     private BigDecimal getOrderLinePrice(Set<OrderItem> orderItems) {

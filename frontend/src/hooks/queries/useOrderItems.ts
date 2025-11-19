@@ -9,15 +9,22 @@ export const useUpdateOrderItem = (branchId: string, activeTab: OrderLineStatus)
         mutationFn: updateOrderItem,
         onSuccess: () => {
             queryClient.invalidateQueries({
-            queryKey: ['orderLines', branchId, activeTab],
-            refetchType: 'active',
-        });
+                queryKey: ['orderLines', branchId, activeTab],
+                refetchType: 'active',
+            });
         }
     });
 };
 
-export const useDeleteOrderItem = () => {
+export const useDeleteOrderItem = (branchId: string, activeTab: OrderLineStatus) => {
+    const queryClient = useQueryClient();
     return useMutation({
         mutationFn: deleteOrderItem,
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ['orderLines', branchId, activeTab],
+                refetchType: 'active',
+            });
+        }
     })
 };

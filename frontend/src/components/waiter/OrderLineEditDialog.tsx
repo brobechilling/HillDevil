@@ -1,9 +1,8 @@
-import React, { useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useCustomizationsOfMenuItems } from "@/hooks/queries/useMenuItems";
-import { useUpdateOrderItem } from "@/hooks/queries/useOrderItems";
+import { useDeleteOrderItem, useUpdateOrderItem } from "@/hooks/queries/useOrderItems";
 import { OrderItemDTO } from "@/dto/orderItem.dto";
 import { OrderItemCustomizationDTO } from "@/dto/orderItemCustomization.dto";
 import { OrderLineStatus } from "@/dto/orderLine.dto";
@@ -18,15 +17,15 @@ interface OrderLineEditDialogProps {
     activeTab: string;
 }
 
-export const OrderLineEditDialog: React.FC<OrderLineEditDialogProps> = ({
+export const OrderLineEditDialog = ({
   open,
   onOpenChange,
   orderItem,
   branchId,
   activeTab,
-}) => {
-  const queryClient = useQueryClient();
+}: OrderLineEditDialogProps) => {
   const updateOrderItemMutation = useUpdateOrderItem(branchId, activeTab as OrderLineStatus);
+  const deleteOrderItemMutation = useDeleteOrderItem(branchId, activeTab as OrderLineStatus);
 
   // Local editable copy
   const [edited, setEdited] = useState<OrderItemDTO | null>(() =>
@@ -34,7 +33,7 @@ export const OrderLineEditDialog: React.FC<OrderLineEditDialogProps> = ({
   );
 
   // Reload when orderItem prop changes (open again for different item)
-  React.useEffect(() => {
+  useEffect(() => {
     if (orderItem) setEdited(JSON.parse(JSON.stringify(orderItem)));
   }, [orderItem]);
 
@@ -103,7 +102,7 @@ export const OrderLineEditDialog: React.FC<OrderLineEditDialogProps> = ({
   };
 
   // add customization from menu's available list
-  const [showAdd, setShowAdd] = React.useState(false);
+  const [showAdd, setShowAdd] = useState(false);
   const { data: availableCustomizations, isLoading: isLoadingCustoms } = useCustomizationsOfMenuItems(
     orderItem.menuItemId,
     showAdd
@@ -137,22 +136,21 @@ export const OrderLineEditDialog: React.FC<OrderLineEditDialogProps> = ({
 
     recomputeTotal(draft);
     setEdited(draft);
-    setShowAdd(false);
+    // setShowAdd(false);
   };
 
   const handleSave = async () => {
     if (!edited) return;
-    try {
-      await updateOrderItemMutation.mutateAsync(edited);
-      // invalidate order lines so list updates
-      // should only invalidate the current tab
-    //   queryClient.invalidateQueries({ queryKey: ["orderLines"] });
-      onOpenChange(false);
-    } catch (err) {
-      // let mutation hook handle toast; otherwise you can show a toast here
-      console.error(err);
-    }
+    await updateOrderItemMutation.mutateAsync(edited);
+    onOpenChange(false);
   };
+
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+  const handleDelete = () => {
+    deleteOrderItemMutation.mutate(orderItem?.orderItemId);
+    onOpenChange(false);
+  }
 
   if (!edited) return null;
 
@@ -161,7 +159,7 @@ export const OrderLineEditDialog: React.FC<OrderLineEditDialogProps> = ({
       <DialogContent className="max-w-2xl w-full">
         <DialogHeader>
           <DialogTitle>
-            Edit: {edited.menuItemName} — {edited.quantity} pcs
+            Edit order item: {edited.menuItemName}
           </DialogTitle>
         </DialogHeader>
 
@@ -227,7 +225,7 @@ export const OrderLineEditDialog: React.FC<OrderLineEditDialogProps> = ({
                 )}
 
                 <div className="pt-2">
-                  <Button variant="ghost" onClick={() => setShowAdd(false)}>Close</Button>
+                  <Button  onClick={() => setShowAdd(false)}>Close</Button>
                 </div>
               </div>
             )}
@@ -246,13 +244,44 @@ export const OrderLineEditDialog: React.FC<OrderLineEditDialogProps> = ({
 
         <DialogFooter>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+            {/* <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button> */}
+            <Button variant="destructive" onClick={() => setConfirmDeleteOpen(true)}>Remove</Button>
             <Button onClick={handleSave} disabled={updateOrderItemMutation.isPending}>
               {updateOrderItemMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </div>
         </DialogFooter>
       </DialogContent>
+
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+
+          <p className="text-sm">
+            Are you sure you want to remove this order item?
+          </p>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)}>
+              Cancel
+            </Button>
+
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setConfirmDeleteOpen(false);
+                handleDelete();
+              }}
+            >
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </Dialog>
+    
   );
 };

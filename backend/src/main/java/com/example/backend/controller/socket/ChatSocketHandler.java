@@ -19,6 +19,11 @@ public class ChatSocketHandler {
     @OnConnect
     public void onConnect(com.corundumstudio.socketio.SocketIOClient client) {
         System.out.println("Client connected: " + client.getSessionId());
+        String branchId = client.getHandshakeData().getSingleUrlParam("branchId");
+        if (branchId != null) {
+            client.joinRoom(branchId);
+            System.out.println("Client joined room with branchId: " + branchId);
+        }
     }
 
     @OnDisconnect
