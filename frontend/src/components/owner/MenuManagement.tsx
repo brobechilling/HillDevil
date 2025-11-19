@@ -82,7 +82,7 @@ const BestSellerToggle = ({ isBestSeller, onToggle, disabled }: {
         "absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap",
         isBestSeller ? "text-yellow-600" : "text-muted-foreground"
       )}>
-        {isBestSeller ? "Best Seller" : "Set as Best"}
+        {isBestSeller ? "Best Seller" : "Set Best Seller"}
       </span>
     </button>
   );
@@ -351,7 +351,7 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
 
                           {/* Price */}
                           <p className="text-2xl font-bold text-primary">
-                            ${parseFloat(item.price).toFixed(2)}
+                            {parseFloat(item.price).toFixed(2)} VND
                           </p>
 
                           {/* === Toggles: Status + Best Seller === */}

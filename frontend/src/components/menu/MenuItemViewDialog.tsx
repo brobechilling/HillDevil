@@ -182,7 +182,7 @@ export const MenuItemViewDialog = ({
             <div className="flex items-baseline gap-2 pb-4 border-b">
               <span className="text-sm text-muted-foreground font-medium">Price</span>
               <p className="text-4xl font-bold text-primary">
-                ${parseFloat(item.price).toFixed(2)}
+                {parseFloat(item.price).toFixed(2)} VND
               </p>
             </div>
 
@@ -235,8 +235,8 @@ export const MenuItemViewDialog = ({
                         style={{ animationDelay: `${index * 50}ms` }}
                       >
                         <span className="font-medium text-foreground">{cust.name}</span>
-                        <Badge variant="secondary" className="font-mono">
-                          {parseFloat(cust.price) > 0 ? `+$${parseFloat(cust.price).toFixed(2)}` : 'Free'}
+                        <Badge className="font-mono">
+                          {cust.price > 0 ? `+${cust.price.toFixed(2)} VND` : 'Free'}
                         </Badge>
                       </div>
                     ))}

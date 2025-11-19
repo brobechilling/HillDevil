@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useCustomizationByCategory } from '@/hooks/queries/useCustomizations';
 
 const menuItemSchema = z.object({
   name: z.string().min(2, 'Name must have at least 2 characters'),
@@ -85,6 +86,7 @@ export const MenuItemDialog = ({
 
   const hasCustomization = watch('hasCustomization');
   const categoryId = watch('categoryId');
+  const { data: customizationIds = [], isLoading: isCustomizationLoading } = useCustomizationByCategory(categoryId);
 
   useEffect(() => {
     if (open) {
@@ -114,7 +116,6 @@ export const MenuItemDialog = ({
     }
   }, [item, open, reset]);
 
-  // ✅ Preview ảnh mới chọn
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setImageFile(file);
@@ -131,12 +132,17 @@ export const MenuItemDialog = ({
     try {
       setIsUploading(true);
 
+      const finalCustomizationIds = data.hasCustomization ? customizationIds : [];
+
       const payload = {
         ...data,
         price: String(data.price),
         restaurantId,
-        customizationIds: [],
+        // fix this customizationID
+        customizationIds: finalCustomizationIds,
       };
+
+      payload.categoryId
 
       if (item) {
         await updateMutation.mutateAsync({

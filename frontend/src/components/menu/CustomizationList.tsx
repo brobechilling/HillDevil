@@ -43,7 +43,7 @@ export const CustomizationList = () => {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [editPrice, setEditPrice] = useState('');
+  const [editPrice, setEditPrice] = useState(0);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
@@ -98,13 +98,13 @@ export const CustomizationList = () => {
     updateMutation.mutate(
       {
         id: editingId,
-        data: { ...customization, name: editName.trim(), price: editPrice || '0' },
+        data: { ...customization, name: editName.trim(), price: editPrice || 0 },
       },
       {
         onSuccess: () => {
           setEditingId(null);
           setEditName('');
-          setEditPrice('');
+          setEditPrice(0);
           toast({ title: 'Customization updated', description: 'The customization has been updated.' });
         },
         onError: () => {
@@ -117,7 +117,7 @@ export const CustomizationList = () => {
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditName('');
-    setEditPrice('');
+    setEditPrice(0);
   };
 
   const handleDelete = (id: string) => {
@@ -255,7 +255,7 @@ export const CustomizationList = () => {
                         type="number"
                         step="0.01"
                         value={editPrice}
-                        onChange={(e) => setEditPrice(e.target.value)}
+                        onChange={(e) => setEditPrice(Number.parseFloat(e.target.value))}
                         className="w-32"
                         placeholder="Price"
                       />
@@ -287,9 +287,9 @@ export const CustomizationList = () => {
                             {customization.name}
                           </h3>
                           <div className="mt-1 flex items-center gap-2">
-                            {parseFloat(customization.price) > 0 ? (
+                            {customization.price > 0 ? (
                               <Badge variant="default" className="font-mono text-xs">
-                                +${parseFloat(customization.price).toFixed(2)}
+                                +{customization.price.toFixed(2)} VND
                               </Badge>
                             ) : (
                               <Badge variant="secondary" className="text-xs">Free</Badge>

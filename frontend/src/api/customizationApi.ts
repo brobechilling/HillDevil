@@ -43,3 +43,8 @@ export const getCustomizationLimit  = async (restaurantId: string) => {
   );
   return res.data.result;
 }
+
+export const getCustomizationByCategory = async (categoryId: string) => {
+  const res = await axiosClient.get<ApiResponse<string[]>>(`/customizations/category/${categoryId}`);
+  return res.data.result;
+}

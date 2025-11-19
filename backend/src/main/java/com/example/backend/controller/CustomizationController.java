@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 @RestController
 @RequestMapping("/api/customizations")
@@ -79,4 +82,12 @@ public class CustomizationController {
         res.setResult(limit);
         return res;
     }   
+
+    @GetMapping("/category/{categoryId}")
+    public ApiResponse<List<UUID>> getCustomizationByCategory(@PathVariable UUID categoryId) {
+        ApiResponse<List<UUID>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(customizationService.getCustomizationByCategoryId(categoryId));
+        return apiResponse;
+    }
+    
 }
