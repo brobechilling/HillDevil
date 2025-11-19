@@ -12,6 +12,7 @@ public class OrderItemDTO {
     private boolean status;
     private String menuItemName;
     private List<OrderItemCustomizationDTO> customizations;
+    private UUID menuItemId;
 
     public UUID getOrderItemId() {
         return orderItemId;
@@ -67,6 +68,14 @@ public class OrderItemDTO {
 
     public void setMenuItemName(String menuItemName) {
         this.menuItemName = menuItemName;
+    }
+
+    public UUID getMenuItemId() {
+        return menuItemId;
+    }
+
+    public void setMenuItemId(UUID menuItemId) {
+        this.menuItemId = menuItemId;
     }
 
 }

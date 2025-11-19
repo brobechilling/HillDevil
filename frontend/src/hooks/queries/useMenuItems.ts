@@ -251,10 +251,11 @@ export const useCanCreateMenuItem = (restaurantId: string | undefined) => {
 };
 
 
-export const useCustomizationsOfMenuItems = (menuItemId: string) => {
+export const useCustomizationsOfMenuItems = (menuItemId: string, enabled: boolean) => {
   return useQuery<CustomizationDTO[]>({
     queryKey: ["customization", "menu-item", menuItemId],
     queryFn: () => getCustomizationOfMenuItem(menuItemId),
     staleTime: 10 * 60 * 1000,
+    enabled: !!menuItemId && enabled,
   })
 };

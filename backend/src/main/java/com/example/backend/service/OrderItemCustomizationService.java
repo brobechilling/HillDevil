@@ -10,11 +10,14 @@ import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.OrderItemCustomizationMapper;
 import com.example.backend.repository.CustomizationRepository;
 import com.example.backend.repository.OrderItemCustomizationRepository;
+import com.example.backend.repository.OrderItemRepository;
+
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -24,13 +27,16 @@ public class OrderItemCustomizationService {
     private final OrderItemCustomizationRepository orderItemCustomizationRepository;
     private final CustomizationRepository customizationRepository;
     private final OrderItemCustomizationMapper orderItemCustomizationMapper;
+    private final OrderItemRepository orderItemRepository;
 
     public OrderItemCustomizationService(OrderItemCustomizationRepository orderItemCustomizationRepository,
                                          CustomizationRepository customizationRepository,
-                                         OrderItemCustomizationMapper orderItemCustomizationMapper) {
+                                         OrderItemCustomizationMapper orderItemCustomizationMapper,
+                                         OrderItemRepository orderItemRepository) {
         this.orderItemCustomizationRepository = orderItemCustomizationRepository;
         this.customizationRepository = customizationRepository;
         this.orderItemCustomizationMapper = orderItemCustomizationMapper;
+        this.orderItemRepository = orderItemRepository;
     }
 
     public Set<OrderItemCustomization> createOrderItemCustomization(OrderItem orderItem, List<CreateOrderItemCustomizationRequest> createOrderItemCustomizationRequestList) {
@@ -48,4 +54,43 @@ public class OrderItemCustomizationService {
         return orderItemCustomizationRepository.saveAll(orderItemCustomizations).stream().collect(Collectors.toSet());
     }
 
+    // used by OrderItemService
+    // update quantity and totalPrice
+    // be careful that this will update the field of orderItemCustomizations passed in
+    public OrderItemCustomization udpateOrderItemCustomization(OrderItemCustomizationDTO orderItemCustomizationDTO, OrderItem orderItem) {
+        Optional<OrderItemCustomization> optionalCustomization = orderItemCustomizationRepository.findById(orderItemCustomizationDTO.getOrderItemCustomizationId());
+        if (optionalCustomization.isPresent())
+        {
+            // update current customization
+            OrderItemCustomization orderItemCustomization = optionalCustomization.get();
+            BigDecimal oldQuantity = BigDecimal.valueOf(orderItemCustomization.getQuantity());
+            orderItemCustomization.setTotalPrice(orderItemCustomization.getTotalPrice().divide(oldQuantity).multiply(BigDecimal.valueOf(orderItemCustomizationDTO.getQuantity())));
+            orderItemCustomization.setQuantity(orderItemCustomizationDTO.getQuantity());
+            return orderItemCustomizationRepository.save(orderItemCustomization);
+        }
+        else 
+        {
+            // add new customization
+            OrderItemCustomization newOrderItemCustomization = new OrderItemCustomization();
+            newOrderItemCustomization.setQuantity(orderItemCustomizationDTO.getQuantity());
+            Customization customization = customizationRepository.findById(orderItemCustomizationDTO.getCustomizationId()).orElseThrow(() -> new AppException(ErrorCode.CUSTOMIZATION_NOT_FOUND));
+            newOrderItemCustomization.setCustomization(customization);
+            newOrderItemCustomization.setOrderItem(orderItem);
+            newOrderItemCustomization.setTotalPrice(BigDecimal.valueOf(newOrderItemCustomization.getQuantity()).multiply(customization.getPrice()));
+            return orderItemCustomizationRepository.save(newOrderItemCustomization);
+        }
+    }
+
+    // used by OrderItemService
+    public void deleteOrderItemCustomization(OrderItemCustomizationDTO orderItemCustomizationDTO) {
+        // if id not exist then this orderItemCustomizationDTO is trash from fe
+        Optional<OrderItemCustomization> orderItemCustomizationExist = orderItemCustomizationRepository.findById(orderItemCustomizationDTO.getOrderItemCustomizationId());
+        if (orderItemCustomizationExist.isPresent())
+            orderItemCustomizationRepository.delete(orderItemCustomizationExist.get());
+    }
+
+    // used by OrderItemService
+    public void deleteOrderItemCustomization(OrderItemCustomization orderItemCustomization) {
+        orderItemCustomizationRepository.delete(orderItemCustomization);
+    }
 }

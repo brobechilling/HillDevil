@@ -4,10 +4,11 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public class OrderItemCustomizationDTO {
-    private UUID orderItemCustomizationId;
+    private UUID orderItemCustomizationId = UUID.randomUUID();
     private String customizationName;
     private int quantity;
     private BigDecimal totalPrice;
+    private UUID customizationId;
 
     public UUID getOrderItemCustomizationId() {
         return orderItemCustomizationId;
@@ -39,6 +40,14 @@ public class OrderItemCustomizationDTO {
 
     public void setCustomizationName(String customizationName) {
         this.customizationName = customizationName;
+    }
+
+    public UUID getCustomizationId() {
+        return customizationId;
+    }
+
+    public void setCustomizationId(UUID customizationId) {
+        this.customizationId = customizationId;
     }
     
 }

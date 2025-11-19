@@ -12,10 +12,10 @@ import com.example.backend.entities.OrderItemCustomization;
 public interface OrderItemCustomizationMapper {
 
     @Mapping(target = "customizationName", source = "customization.name")
+    @Mapping(target = "customizationId", source = "customization.customizationId")
     OrderItemCustomizationDTO toOrderItemCustomizationDTO(OrderItemCustomization entity);
 
     @Mapping(target = "customization", ignore = true)
     @Mapping(target = "orderItem", ignore = true)
     OrderItemCustomization createOrderItemCustomization(CreateOrderItemCustomizationRequest createOrderItemCustomizationRequest);
-
 }

@@ -1,215 +1,298 @@
-import { useState } from 'react';
-import { useOrderStore, Order } from '@/store/orderStore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Check, X, Plus } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { ManualOrderDialog } from '@/components/waiter/ManualOrderDialog';
-import { useSessionStore } from '@/store/sessionStore';
-import { isStaffAccountDTO } from '@/utils/typeCast';
+import { useState, useMemo, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Check, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { useSessionStore } from "@/store/sessionStore";
+import { isStaffAccountDTO } from "@/utils/typeCast";
+
+import {
+  useGetPendingOrderLine,
+  useGetPreparingOrderLine,
+  useGetCompletedOrderLine,
+  useGetCancelledOrderLine,
+  useUpdateOrderLineStatus,
+} from "@/hooks/queries/useOrderLines";
+import { OrderLineDTO, OrderLineStatus } from "@/dto/orderLine.dto";
+import { Skeleton } from "@/components/ui/skeleton";
+import { OrderItemDTO } from "@/dto/orderItem.dto";
+import { OrderLineEditDialog } from "@/components/waiter/OrderLineEditDialog";
+import { io, Socket } from "socket.io-client";
+import { useQueryClient } from "@tanstack/react-query";
+
 
 const OrdersPage = () => {
-  const { user } = useSessionStore(); 
+  const { user } = useSessionStore();
   const branchId = isStaffAccountDTO(user) ? user.branchId : "";
-  const { orders, updateOrderStatus } = useOrderStore();
-  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
-  const [addOrderlineDialogOpen, setAddOrderlineDialogOpen] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  const branchOrders = orders?.filter(o => o.branchId === branchId) || [];
-  const pendingOrders = branchOrders.filter(o => o.status === 'pending');
-  const activeOrders = branchOrders.filter(o => ['preparing', 'ready'].includes(o.status));
+  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("PENDING");
 
-  const handleAcceptOrder = (orderId: string) => {
-    updateOrderStatus(orderId, 'preparing');
-    toast({ title: 'Order accepted', description: 'Order is now being prepared.' });
+  // Fetch data hooks (assume these hooks are imported the same as before)
+  const pendingQuery = useGetPendingOrderLine(branchId);
+  const preparingQuery = useGetPreparingOrderLine(branchId);
+  const completedQuery = useGetCompletedOrderLine(branchId);
+  const cancelledQuery = useGetCancelledOrderLine(branchId);
+
+  const updateStatusMutation = useUpdateOrderLineStatus(branchId);
+
+  const handleUpdateStatus = (orderLineId: string, newStatus: OrderLineStatus) => {
+    updateStatusMutation.mutate({ orderLineId, orderLineStatus: newStatus });
   };
 
-  const handleRejectOrder = (orderId: string) => {
-    updateOrderStatus(orderId, 'cancelled');
-    toast({ title: 'Order rejected', description: 'Order has been cancelled.' });
-  };
+  // dialog state
+  const [selectedOrderItem, setSelectedOrderItem] = useState<OrderItemDTO | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const handleComplete = (orderId: string) => {
-    updateOrderStatus(orderId, 'completed');
-    toast({ title: 'Order completed', description: 'Order has been served and ready for billing.' });
-  };
-
-  const handleAddOrderline = (orderId: string) => {
-    setSelectedOrderId(orderId);
-    setAddOrderlineDialogOpen(true);
-  };
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
-      pending: 'secondary',
-      preparing: 'default',
-      ready: 'default',
-      completed: 'default',
-      cancelled: 'destructive',
+  const getStatusBadge = (status: OrderLineStatus) => {
+    const variants: Record<OrderLineStatus, any> = {
+      PENDING: "secondary",
+      PREPARING: "default",
+      COMPLETED: "default",
+      CANCELLED: "destructive",
     };
-    return <Badge variant={variants[status] || 'secondary'}>{status}</Badge>;
+    return <Badge variant={variants[status]}>{status}</Badge>;
   };
 
-  const calculateLineTotal = (line: any) => {
-    if (!line.items || line.items.length === 0) return 0;
-    return line.items.reduce((sum: number, item: any) => {
-      const itemTotal = (item.quantity || 0) * (item.price || 0);
-      const customizationTotal = item.customizations?.reduce((cSum: number, c: any) => cSum + (c.price || 0), 0) || 0;
-      return sum + itemTotal + customizationTotal;
-    }, 0);
-  };
+  const filterBySearch = (list?: OrderLineDTO[]) => {
+    if (!list) return [];
+    if (!search.trim()) return list;
 
-  const calculateOrderTotal = (order: Order) => {
-    if (!order.orderLines || order.orderLines.length === 0) return 0;
-    return order.orderLines.reduce((sum, line) => sum + calculateLineTotal(line), 0);
-  };
-
-  const renderOrderCard = (order: Order, showActions: boolean = true) => {
-    const orderTotal = order.total || calculateOrderTotal(order);
-
-    return (
-      <Card key={order.id} className="space-y-3">
-        <CardHeader className="pb-2 border-b">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg font-semibold">
-              Order #{order.id} - Table {order.tableNumber}
-            </CardTitle>
-            {getStatusBadge(order.status)}
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {order.orderLines?.map((line, lineIdx) => {
-            const lineTotal = line.total || calculateLineTotal(line);
-            return (
-              <div key={line.id || lineIdx} className="p-3 bg-muted/20 rounded border">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs text-muted-foreground">
-                    Line {lineIdx + 1} - {line.createdAt ? new Date(line.createdAt).toLocaleTimeString() : 'N/A'}
-                  </span>
-                  <Badge variant="outline" className="text-xs">
-                    ${lineTotal.toFixed(2)}
-                  </Badge>
-                </div>
-
-                {line.items?.map((item, idx) => (
-                  <div key={idx} className="ml-2 space-y-1">
-                    <div className="flex justify-between text-sm font-medium">
-                      <span>{item.quantity || 0}x {item.name || 'Unknown Item'}</span>
-                      <span>${((item.quantity || 0) * (item.price || 0)).toFixed(2)}</span>
-                    </div>
-                    {item.customizations && item.customizations.length > 0 && (
-                      <div className="ml-4 text-xs text-muted-foreground space-y-0.5">
-                        {item.customizations.map((custom, cIdx) => (
-                          <div key={cIdx} className="flex justify-between">
-                            <span>+ {custom.optionName || custom.customizationName || 'Customization'}</span>
-                            <span>+${(custom.price || 0).toFixed(2)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {line.notes && (
-                  <div className="text-xs text-muted-foreground italic border-t pt-1 mt-1">
-                    Note: {line.notes}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          <div className="pt-2 border-t flex justify-between font-semibold text-sm">
-            <span>Total</span>
-            <span>${orderTotal.toFixed(2)}</span>
-          </div>
-
-          {showActions && (
-            <div className="flex flex-wrap gap-2 pt-2">
-              {order.status === 'pending' && (
-                <>
-                  <Button className="flex-1" onClick={() => handleAcceptOrder(order.id)}>
-                    <Check className="mr-2 h-4 w-4" />
-                    Accept
-                  </Button>
-                  <Button variant="destructive" className="flex-1" onClick={() => handleRejectOrder(order.id)}>
-                    <X className="mr-2 h-4 w-4" />
-                    Reject
-                  </Button>
-                </>
-              )}
-              {(order.status === 'preparing' || order.status === 'ready') && (
-                <>
-                  <Button variant="outline" className="flex-1" onClick={() => handleAddOrderline(order.id)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Orderline
-                  </Button>
-                  <Button className="flex-1" onClick={() => handleComplete(order.id)}>
-                    Complete
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+    const keyword = search.toLowerCase();
+    return list.filter(
+      (o) => o.tableTag.toLowerCase().includes(keyword) || o.areaName.toLowerCase().includes(keyword)
     );
   };
 
+  const filteredList = useMemo(() => {
+    switch (activeTab) {
+      case "PENDING":
+        return filterBySearch(pendingQuery.data);
+      case "PREPARING":
+        return filterBySearch(preparingQuery.data);
+      case "COMPLETED":
+        return filterBySearch(completedQuery.data);
+      case "CANCELLED":
+        return filterBySearch(cancelledQuery.data);
+      default:
+        return [];
+    }
+  }, [activeTab, search, pendingQuery.data, preparingQuery.data, completedQuery.data, cancelledQuery.data]);
+
+  const SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const newSocket = io(SOCKET_URL, {
+      transports: ["websocket"], 
+      query: { branchId },
+    });
+
+    setSocket(newSocket);
+
+    newSocket.on("connect", () => {
+      console.log("Connected to Socket.IO server");
+    });
+
+    newSocket.on("disconnect", () => {
+      console.log("Disconnected from server");
+    });
+
+    newSocket.on("create_orderLine", (newOrderLine: OrderLineDTO) => {
+      if (newOrderLine.orderLineStatus !== OrderLineStatus.PENDING) 
+        return;
+      
+      const key = ['orderLines', branchId, OrderLineStatus.PENDING];
+
+      queryClient.setQueryData<OrderLineDTO[]>(key, (oldList) => {
+        if (!oldList) 
+          return [newOrderLine];
+        const exists = oldList.some(
+          (o) => o.orderLineId === newOrderLine.orderLineId
+        );
+        if (exists) 
+          return oldList;
+        return [newOrderLine, ...oldList];
+      });
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
+  const renderLoading = () => (
+    <Card>
+      <CardContent className="py-6 space-y-3">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-4 w-24" />
+      </CardContent>
+    </Card>
+  );
+
+  const renderOrderCard = (order: OrderLineDTO) => (
+    <Card key={order.orderLineId} className="space-y-3">
+      <CardHeader className="pb-2 border-b">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg font-semibold">
+            {order.tableTag} - {order.areaName}
+          </CardTitle>
+          {getStatusBadge(order.orderLineStatus)}
+        </div>
+
+        <div className="text-xs text-muted-foreground">{new Date(order.createdAt).toLocaleTimeString()}</div>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        {order.orderItems
+          .filter((item) => item.status)
+          .map((item) => (
+            <div key={item.orderItemId} className="p-3 bg-muted/20 rounded border space-y-1">
+              <div className="flex justify-between font-medium text-sm">
+                <span>
+                  {item.quantity} {item.menuItemName}
+                </span>
+                <span>{item.totalPrice.toFixed(2)} VND</span>
+              </div>
+
+              {item.customizations.length > 0 && (
+                <div className="ml-4 text-xs text-muted-foreground space-y-0.5">
+                  {item.customizations.map((c) => (
+                    <div key={c.orderItemCustomizationId} className="flex justify-between">
+                      <span>+ {c.quantity} {c.customizationName}</span>
+                      <span>+{c.totalPrice.toFixed(2)} VND</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {item.note && (
+                <div className="text-xs italic text-muted-foreground border-t pt-1">Note: {item.note}</div>
+              )}
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                {(order.orderLineStatus === OrderLineStatus.PENDING || order.orderLineStatus === OrderLineStatus.PREPARING) && (
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      setSelectedOrderItem(item);
+                      setIsDialogOpen(true);
+                    }}
+                  >
+                    Edit
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+
+        <div className="border-t pt-2 flex justify-between font-semibold">
+          <span>Total</span>
+          <span>{order.totalPrice.toFixed(2)} VND</span>
+        </div>
+
+        <div className="flex flex-wrap gap-2 pt-2">
+          {order.orderLineStatus === OrderLineStatus.PENDING && (
+            <>
+              <Button
+                className="flex-1"
+                onClick={() =>
+                  handleUpdateStatus(order.orderLineId, OrderLineStatus.PREPARING)
+                }
+              >
+                Accept
+              </Button>
+
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={() =>
+                  handleUpdateStatus(order.orderLineId, OrderLineStatus.CANCELLED)
+                }
+              >
+                Reject
+              </Button>
+            </>
+          )}
+
+          {order.orderLineStatus === OrderLineStatus.PREPARING && (
+            <>
+              <Button
+                className="flex-1"
+                onClick={() =>
+                  handleUpdateStatus(order.orderLineId, OrderLineStatus.COMPLETED)
+                }
+              >
+                Complete
+              </Button>
+
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={() =>
+                  handleUpdateStatus(order.orderLineId, OrderLineStatus.CANCELLED)
+                }
+              >
+                Cancel
+              </Button>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold">Order Management</h2>
-        <Button onClick={() => setOrderDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Order
-        </Button>
-      </div>
+      <h2 className="text-2xl font-semibold">Order Management</h2>
 
-      <Tabs defaultValue="pending">
+      <Input placeholder="Search by table or area..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="pending">Pending ({pendingOrders.length})</TabsTrigger>
-          <TabsTrigger value="active">Active ({activeOrders.length})</TabsTrigger>
+          <TabsTrigger value="PENDING">Pending ({pendingQuery.data?.length ?? 0})</TabsTrigger>
+          <TabsTrigger value="PREPARING">Preparing ({preparingQuery.data?.length ?? 0})</TabsTrigger>
+          <TabsTrigger value="COMPLETED">Completed ({completedQuery.data?.length ?? 0})</TabsTrigger>
+          <TabsTrigger value="CANCELLED">Cancelled ({cancelledQuery.data?.length ?? 0})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="mt-4 space-y-4">
-          {pendingOrders.map(order => renderOrderCard(order, true))}
-          {pendingOrders.length === 0 && (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                No pending orders
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+        {["PENDING", "PREPARING", "COMPLETED", "CANCELLED"].map((tab) => {
+          const query =
+            tab === "PENDING"
+              ? pendingQuery
+              : tab === "PREPARING"
+              ? preparingQuery
+              : tab === "COMPLETED"
+              ? completedQuery
+              : cancelledQuery;
 
-        <TabsContent value="active" className="mt-4 space-y-4">
-          {activeOrders.map(order => renderOrderCard(order, true))}
-          {activeOrders.length === 0 && (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                No active orders
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+          return (
+            <TabsContent key={tab} value={tab} className="mt-4 space-y-4">
+              {query.isLoading && renderLoading()}
+
+              {activeTab === tab && filteredList.map((order) => renderOrderCard(order))}
+
+              {!query.isLoading && activeTab === tab && filteredList.length === 0 && (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">No {tab.toLowerCase()} orders.</CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          );
+        })}
       </Tabs>
 
-      <ManualOrderDialog
-        open={orderDialogOpen}
-        onOpenChange={setOrderDialogOpen}
-        branchId={branchId}
-      />
-
-      {selectedOrderId && (
-        <ManualOrderDialog
-          open={addOrderlineDialogOpen}
-          onOpenChange={setAddOrderlineDialogOpen}
+      {/* Dialog for editing an order item */}
+      {selectedOrderItem && (
+        <OrderLineEditDialog
+          orderItem={selectedOrderItem}
+          open={isDialogOpen}
+          onOpenChange={(v) => setIsDialogOpen(v)}
           branchId={branchId}
+          activeTab={activeTab}
         />
       )}
     </div>
