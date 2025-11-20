@@ -9,7 +9,6 @@ import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.OrderMapper;
 import com.example.backend.repository.OrderRepository;
 import com.example.backend.repository.TableRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;

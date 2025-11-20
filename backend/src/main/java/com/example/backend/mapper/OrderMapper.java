@@ -5,7 +5,6 @@ import com.example.backend.entities.Order;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import java.util.List;
 
 @Mapper(componentModel = "spring", uses = {OrderLineMapper.class})
 public interface OrderMapper {
