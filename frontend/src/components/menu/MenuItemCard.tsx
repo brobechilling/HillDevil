@@ -7,15 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Eye, AlertTriangle, Loader2, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BranchMenuItemDTO } from '@/dto/branchMenuItem.dto';
+import { BranchMenuItemDTO, GuestBranchMenuItemDTO } from '@/dto/branchMenuItem.dto';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 
 interface MenuItemCardProps {
-  item: BranchMenuItemDTO;
+  item: GuestBranchMenuItemDTO;
   isWaiter?: boolean;
   isUpdating?: boolean;
-  onToggleAvailability: (item: BranchMenuItemDTO) => void;
+  onToggleAvailability: (item: GuestBranchMenuItemDTO) => void;
   onViewDetails: (itemId: string) => void;
 }
 
@@ -113,7 +113,7 @@ export const MenuItemCard = ({
 
           {/* Price */}
           <p className="text-base font-bold text-primary">
-            ${Number(item.price).toFixed(2)}
+            {Number(item.price).toFixed(2)} VND
           </p>
 
           {/* === Actions === */}

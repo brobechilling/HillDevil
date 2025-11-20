@@ -7,6 +7,7 @@ import {
   deleteCustomization,
   canCreateCustomization,
   getCustomizationLimit,
+  getCustomizationByCategory,
 } from "@/api/customizationApi";
 import { CustomizationDTO, CustomizationCreateRequest } from "@/dto/customization.dto";
 
@@ -73,4 +74,13 @@ export const useCustomizationLimit = (restaurantId: string | undefined) => {
     enabled: !!restaurantId,
     refetchOnWindowFocus: false,
   });
+}
+
+
+export const useCustomizationByCategory = (categoryId: string) => {
+  return useQuery<string[]>({
+    queryKey: ["customizations", categoryId],
+    queryFn: () => getCustomizationByCategory(categoryId),
+    enabled: !!categoryId
+  })
 }

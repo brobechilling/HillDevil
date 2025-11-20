@@ -80,6 +80,12 @@ const GuestLanding = () => {
     }
   };
 
+  const handleViewOrderItem = (item : GuestBranchMenuItemDTO) => {
+    if (item.available) {
+      setSelectedItem(item);
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       <Card className="shadow-md">
@@ -98,7 +104,7 @@ const GuestLanding = () => {
             <Card
               key={item.branchMenuItemId}
               className="hover:shadow-lg transition cursor-pointer relative"
-              onClick={() => setSelectedItem(item)}
+              onClick={() => handleViewOrderItem(item)} 
             >
               {selectedCount > 0 && (
                 <Badge className="absolute top-2 right-2 bg-green-600 text-white">
@@ -120,6 +126,7 @@ const GuestLanding = () => {
                 <CardDescription className="line-clamp-2 text-sm text-gray-600">
                   {item.description}
                 </CardDescription>
+                {!item.available && <Badge variant="destructive">Out of order</Badge>}
                 <div className="text-right font-medium text-primary">{item.price.toFixed(2)} VND</div>
               </CardContent>
             </Card>

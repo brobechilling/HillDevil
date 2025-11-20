@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface CustomizationRepository extends JpaRepository<Customization, UUID> {
     List<Customization> findAllByRestaurant_RestaurantIdAndStatusTrue(UUID restaurantId);
     long countByCategories_CategoryIdAndStatusTrue(UUID categoryId);
+    List<Customization> findAllByCategories_CategoryIdAndStatusTrue(UUID categoryId);
+
 }

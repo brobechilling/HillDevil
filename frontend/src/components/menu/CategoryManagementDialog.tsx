@@ -260,12 +260,12 @@ export const CategoryManagementDialog = ({
                           )}>
                             {cust.name}
                           </span>
-                          {parseFloat(cust.price) > 0 && (
+                          {cust.price > 0 && (
                             <Badge variant={isSelected ? "default" : "secondary"} className="text-xs font-mono">
-                              +${parseFloat(cust.price).toFixed(2)}
+                              +{cust.price.toFixed(2)} VND
                             </Badge>
                           )}
-                          {parseFloat(cust.price) === 0 && isSelected && (
+                          {cust.price === 0 && isSelected && (
                             <Badge variant="outline" className="text-xs">Free</Badge>
                           )}
                         </div>
