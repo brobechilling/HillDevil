@@ -9,19 +9,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Loader2 } from "lucide-react";
-import { useBranchMenuItems, useUpdateAvailability } from "@/hooks/queries/useBranchMenuItems";
+import { useBranchMenuItems, useGuestBranchMenuItems, useUpdateAvailability } from "@/hooks/queries/useBranchMenuItems";
 import { useCategories } from "@/hooks/queries/useCategories";
 import { useRestaurantByBranch } from "@/hooks/queries/useBranches";
 import { toast } from "@/hooks/use-toast";
 import { ManualOrderDialog } from "./ManualOrderDialog";
-import { BranchMenuItemDTO } from "@/dto/branchMenuItem.dto";
+import { BranchMenuItemDTO, GuestBranchMenuItemDTO } from "@/dto/branchMenuItem.dto";
 import { useSessionStore } from "@/store/sessionStore";
 import { isStaffAccountDTO } from "@/utils/typeCast";
 import { MenuItemViewDialog } from "@/components/menu/MenuItemViewDialog";
 import { MenuItemCard } from "@/components/menu/MenuItemCard";
 
 export const MenuManagement= () => {
-  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | undefined>();
 
@@ -35,7 +34,7 @@ export const MenuManagement= () => {
     data: menuItems = [],
     isLoading: loadingItems,
     isError: errorItems,
-  } = useBranchMenuItems(branchId);
+  } = useGuestBranchMenuItems(branchId);
   const {
     data: categories = [],
     isLoading: loadingCategories,
@@ -54,7 +53,7 @@ export const MenuManagement= () => {
   }, [categories]);
 
   const groupedItems = useMemo(() => {
-    const groups: Record<string, BranchMenuItemDTO[]> = {};
+    const groups: Record<string, GuestBranchMenuItemDTO[]> = {};
     menuItems.forEach((item) => {
       const catName = categoryMap.get(item.categoryId) || "Uncategorized";
       if (!groups[catName]) groups[catName] = [];
@@ -72,7 +71,7 @@ export const MenuManagement= () => {
   }, [groupedItems]);
 
   // === Handlers ===
-  const handleToggleAvailability = (item: BranchMenuItemDTO) => {
+  const handleToggleAvailability = (item: GuestBranchMenuItemDTO) => {
     updateAvailability.mutate(
       {
         menuItemId: item.menuItemId,
@@ -147,10 +146,6 @@ export const MenuManagement= () => {
                 <CardTitle>Menu Management</CardTitle>
                 <CardDescription>Manage item availability and create manual order</CardDescription>
               </div>
-              <Button onClick={() => setOrderDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Manual Order
-              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -165,12 +160,6 @@ export const MenuManagement= () => {
             </div>
           </CardContent>
         </Card>
-
-        <ManualOrderDialog
-          open={orderDialogOpen}
-          onOpenChange={setOrderDialogOpen}
-          branchId={branchId!}
-        />
       </>
     );
   }
@@ -185,10 +174,6 @@ export const MenuManagement= () => {
               <CardTitle>Menu Management</CardTitle>
               <CardDescription>Manage item availability by category</CardDescription>
             </div>
-            <Button onClick={() => setOrderDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Manual Order
-            </Button>
           </div>
         </CardHeader>
 
@@ -240,11 +225,6 @@ export const MenuManagement= () => {
         isWaiter={isWaiter}
       />
 
-      <ManualOrderDialog
-        open={orderDialogOpen}
-        onOpenChange={setOrderDialogOpen}
-        branchId={branchId!}
-      />
     </>
   );
 };

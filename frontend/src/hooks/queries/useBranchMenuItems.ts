@@ -22,12 +22,12 @@ export const useUpdateAvailability = (branchId: string | undefined) => {
       updateAvailability(branchId!, menuItemId, available),
 
     onMutate: async ({ menuItemId, available }) => {
-      await queryClient.cancelQueries({ queryKey: ["branch-menu-items", branchId] });
-      const prevData = queryClient.getQueryData<BranchMenuItemDTO[]>(["branch-menu-items", branchId]);
+      await queryClient.cancelQueries({ queryKey: ["guest-branch-menu-items", branchId] });
+      const prevData = queryClient.getQueryData<BranchMenuItemDTO[]>(["guest-branch-menu-items", branchId]);
 
       if (prevData) {
         queryClient.setQueryData<BranchMenuItemDTO[]>(
-          ["branch-menu-items", branchId],
+          ["guest-branch-menu-items", branchId],
           prevData.map(item =>
             item.menuItemId === menuItemId ? { ...item, available } : item
           )

@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCategories } from '@/hooks/queries/useCategories';
 import { useCreateMenuItem, useUpdateMenuItem } from '@/hooks/queries/useMenuItems';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info  } from 'lucide-react';
 import { MenuItemDTO } from '@/dto/menuItem.dto';
 import {
   Select,
@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCustomizationByCategory } from '@/hooks/queries/useCustomizations';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const menuItemSchema = z.object({
   name: z.string().min(2, 'Name must have at least 2 characters'),
@@ -250,14 +251,31 @@ export const MenuItemDialog = ({
           <div className="flex items-center gap-2">
             <Checkbox
               checked={hasCustomization}
-              onCheckedChange={(v) => setValue('hasCustomization', v === true)}
+              onCheckedChange={(v) => setValue("hasCustomization", v === true)}
             />
+
             <Label className="text-sm">Has Customization</Label>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-pointer text-muted-foreground">
+                    <Info />
+                  </span>
+                </TooltipTrigger>
+
+                <TooltipContent className="max-w-xs text-sm">
+                  Enable this if you want the item to have all customizations of its category.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
+
+
 
           {/* Image Upload */}
           <div className="space-y-1.5">
-            <Label className="text-sm">Image</Label>
+            <Label className="text-sm">Image *</Label>
             <Input
               type="file"
               accept="image/*"

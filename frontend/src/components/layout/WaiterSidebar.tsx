@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/store/sessionStore';
 
-const menuItems = [
+const navigationList = [
   { 
     id: 'orders',
     path: '/dashboard/waiter/orders',
@@ -69,7 +69,7 @@ export const WaiterSidebar = () => {
       </div>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {menuItems.map((item) => (
+        {navigationList.map((item) => (
           <Link key={item.id} to={item.path}>
             <Button
               variant="ghost"
