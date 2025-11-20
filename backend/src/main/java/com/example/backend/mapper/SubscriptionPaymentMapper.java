@@ -12,6 +12,8 @@ import org.mapstruct.ReportingPolicy;
 )
 public interface SubscriptionPaymentMapper {
     @Mapping(source = "purpose", target = "purpose")
+    @Mapping(source = "subscription.restaurant.restaurantId", target = "restaurantId")
+    @Mapping(source = "subscription.restaurant.name", target = "restaurantName")
     SubscriptionPaymentResponse toSubscriptionPaymentResponse(SubscriptionPayment payment);
 
 }

@@ -55,9 +55,15 @@ public class SecurityConfig {
                 // Role API
                 .requestMatchers("/api/roles/**").hasAnyRole(RoleName.ADMIN.name())
 
-                // Table API
-                .requestMatchers(HttpMethod.PATCH, "/api/owner/tables/*/status").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name())
+                // Table API - Manager, waiter và owner được update status
+                .requestMatchers(HttpMethod.PATCH, "/api/owner/tables/*/status").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name(), RoleName.WAITER.name())
+                .requestMatchers(HttpMethod.PUT, "/api/owner/tables/*").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name(), RoleName.WAITER.name())
+                .requestMatchers(HttpMethod.GET, "/api/owner/tables/**").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name(), RoleName.WAITER.name())
                 .requestMatchers("/api/owner/tables/**").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name())
+                
+                // Area API
+                .requestMatchers(HttpMethod.GET, "/api/owner/areas").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name(), RoleName.WAITER.name())
+                .requestMatchers("/api/owner/areas/**").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name())
 
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/api/**").authenticated()

@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.ActivePackageStatsDTO;
+import com.example.backend.dto.CurrentSubscriptionOverviewDTO;
 import com.example.backend.dto.RestaurantSubscriptionOverviewDTO;
 import com.example.backend.dto.response.SubscriptionPaymentResponse;
 import com.example.backend.dto.response.SubscriptionResponse;
@@ -175,9 +176,7 @@ public class SubscriptionService {
                     .max(Comparator.comparing(Subscription::getCreatedAt))
                     .orElse(null);
 
-            if (currentSub != null) {
-                overview.setCurrentSubscription(mapToResponse(currentSub));
-            }
+            overview.setCurrentSubscription(mapToCurrentSubscriptionOverview(currentSub));
 
             List<SubscriptionPaymentResponse> payments = restaurant.getSubscriptions().stream()
                     .flatMap(sub -> sub.getSubscriptionPayments().stream())
@@ -186,6 +185,7 @@ public class SubscriptionService {
                     .collect(Collectors.toList());
 
             overview.setPaymentHistory(payments);
+
             return overview;
         }).toList();
     }
@@ -321,6 +321,22 @@ public class SubscriptionService {
         dto.setSubscriptionPaymentStatus(
                 payment.getSubscriptionPaymentStatus() != null ? payment.getSubscriptionPaymentStatus().name() : null);
         dto.setDate(payment.getDate());
+        return dto;
+    }
+
+    private CurrentSubscriptionOverviewDTO mapToCurrentSubscriptionOverview(Subscription subscription) {
+        if (subscription == null)
+            return null;
+        CurrentSubscriptionOverviewDTO dto = new CurrentSubscriptionOverviewDTO();
+        dto.setSubscriptionId(subscription.getSubscriptionId());
+        dto.setPackageId(subscription.getaPackage() != null ? subscription.getaPackage().getPackageId() : null);
+        dto.setStatus(subscription.getStatus());
+        dto.setStartDate(subscription.getStartDate());
+        dto.setEndDate(subscription.getEndDate());
+
+        Package currentPackage = subscription.getaPackage();
+        dto.setAmount(currentPackage != null ? BigDecimal.valueOf(currentPackage.getPrice()) : BigDecimal.ZERO);
+
         return dto;
     }
 }

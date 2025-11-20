@@ -21,6 +21,9 @@ public class SubscriptionPaymentResponse {
     private Integer proratedAmount;
     private SubscriptionPaymentPurpose purpose;
 
+    private UUID restaurantId;
+    private String restaurantName;
+
     public UUID getSubscriptionPaymentId() {
         return subscriptionPaymentId;
     }
@@ -123,5 +126,21 @@ public class SubscriptionPaymentResponse {
 
     public void setPurpose(SubscriptionPaymentPurpose purpose) {
         this.purpose = purpose;
+    }
+
+    public UUID getRestaurantId() {
+        return restaurantId;
+    }
+
+    public void setRestaurantId(UUID restaurantId) {
+        this.restaurantId = restaurantId;
+    }
+
+    public String getRestaurantName() {
+        return restaurantName;
+    }
+
+    public void setRestaurantName(String restaurantName) {
+        this.restaurantName = restaurantName;
     }
 }
