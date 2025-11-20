@@ -1,7 +1,7 @@
 export interface CustomizationDTO  {
   customizationId: string;
   name: string;
-  price: string;
+  price: number;
   restaurantId: string;
 };
 

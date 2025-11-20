@@ -47,36 +47,116 @@ export const useIsMenuItemActiveInBranch = (menuItemId: string | undefined, bran
   });
 };
 
-export const useCreateMenuItem = () => {
-  const queryClient = useQueryClient();
+export const useCreateMenuItem = (restaurantId?: string) => {
+  const qc = useQueryClient();
+
   return useMutation({
     mutationFn: ({ data, imageFile }: { data: MenuItemCreateRequest; imageFile?: File }) =>
       createMenuItem(data, imageFile),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu-items"] }),
-  });
-};
 
-export const useUpdateMenuItem = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data, imageFile }: { id: string; data: MenuItemCreateRequest; imageFile?: File }) =>
-      updateMenuItem(id, data, imageFile),
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["menu-items"] });
-      queryClient.setQueryData(["menu-items", data.menuItemId], data);
+    onSuccess: (newItem) => {
+      // Chỉ invalidate, KHÔNG setQueryData
+      qc.invalidateQueries({
+        queryKey: ["menu-items", restaurantId]
+      });
 
-      queryClient.invalidateQueries({
-        queryKey: ["media", "target", variables.id, "MENU_ITEM_IMAGE"],
+      qc.invalidateQueries({
+        queryKey: ["menu-items", "can-create", restaurantId]
+      });
+
+      toast({
+        title: "Created successfully",
+        description: `Added "${newItem.name}" to menu.`,
+      });
+    },
+
+    onError: () => {
+      toast({
+        title: "Failed",
+        description: "Cannot create new menu item.",
+        variant: "destructive",
       });
     },
   });
 };
 
-export const useDeleteMenuItem = () => {
+export const useUpdateMenuItem = (restaurantId?: string) => {
   const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data, imageFile }: { id: string; data: MenuItemCreateRequest; imageFile?: File }) =>
+      updateMenuItem(id, data, imageFile),
+
+    onSuccess: (updatedItem, variables) => {
+      queryClient.setQueryData<MenuItemDTO>(["menu-items", variables.id], updatedItem);
+
+      queryClient.setQueryData<MenuItemDTO[]>(["menu-items", restaurantId], (old = []) =>
+        old.map((item) => (item.menuItemId === updatedItem.menuItemId ? updatedItem : item))
+      );
+
+      queryClient.invalidateQueries({
+        queryKey: ["media", "target", variables.id, "MENU_ITEM_IMAGE"],
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["menu-items", restaurantId] });
+
+      toast({
+        title: "Updated successfully",
+        description: ` "${updatedItem.name}" has been updated.`,
+      });
+    },
+
+    onError: () => {
+      toast({
+        title: "Failed to update",
+        description: "Cannot update menu items.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useDeleteMenuItem = (restaurantId?: string) => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: deleteMenuItem,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu-items"] }),
+
+    onMutate: async (menuItemId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["menu-items", restaurantId] });
+
+      const previousData = queryClient.getQueryData<MenuItemDTO[]>(["menu-items", restaurantId]);
+
+      if (previousData) {
+        queryClient.setQueryData<MenuItemDTO[]>(["menu-items", restaurantId],
+          previousData.filter((item) => item.menuItemId !== menuItemId)
+        );
+      }
+
+      return { previousData };
+    },
+
+    onError: (error, menuItemId, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["menu-items", restaurantId], context.previousData);
+      }
+
+      toast({
+        title: "Deleted failed",
+        description: "Cannot delete this menu items.",
+        variant: "destructive",
+      });
+    },
+
+    onSuccess: (_, menuItemId) => {
+      queryClient.invalidateQueries({ queryKey: ["menu-items", restaurantId] });
+      queryClient.invalidateQueries({ queryKey: ["menu-items", "can-create", restaurantId] });
+
+      toast({
+        title: "Deleted successfully",
+        description: "Menu items has been deleted from the menu.",
+      });
+    },
   });
 };
 
@@ -171,9 +251,11 @@ export const useCanCreateMenuItem = (restaurantId: string | undefined) => {
 };
 
 
-const useCustomizationsOfMenuItems = (menuItemId: string) => {
+export const useCustomizationsOfMenuItems = (menuItemId: string, enabled: boolean) => {
   return useQuery<CustomizationDTO[]>({
     queryKey: ["customization", "menu-item", menuItemId],
     queryFn: () => getCustomizationOfMenuItem(menuItemId),
+    staleTime: 10 * 60 * 1000,
+    enabled: !!menuItemId && enabled,
   })
 };

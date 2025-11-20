@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Settings, Star, Tag } from 'lucide-react';
-import { useMenuItem } from '@/hooks/queries/useMenuItems';
+import { useCustomizationsOfMenuItems, useMenuItem } from '@/hooks/queries/useMenuItems';
 import { useCategory } from '@/hooks/queries/useCategories';
 import { useCustomizations } from '@/hooks/queries/useCustomizations';
 import { MenuItemCustomizationDialog } from '../menu/MenuItemCustomizationDialog';
@@ -53,12 +53,8 @@ export const MenuItemViewDialog = ({
 
   const imageUrl = item?.imageUrl;
 
-  const customizations = React.useMemo(() => {
-    if (!item?.customizationIds) return [];
-    return item.customizationIds
-      .map((id) => allCustomizations.find((c) => c.customizationId === id))
-      .filter(Boolean);
-  }, [item?.customizationIds, allCustomizations]);
+  const { data: customizations, isLoading } = useCustomizationsOfMenuItems(itemId, true);
+
 
   if (!open || !itemId) return null;
 
@@ -182,7 +178,7 @@ export const MenuItemViewDialog = ({
             <div className="flex items-baseline gap-2 pb-4 border-b">
               <span className="text-sm text-muted-foreground font-medium">Price</span>
               <p className="text-4xl font-bold text-primary">
-                ${parseFloat(item.price).toFixed(2)}
+                {parseFloat(item.price).toFixed(2)} VND
               </p>
             </div>
 
@@ -196,15 +192,15 @@ export const MenuItemViewDialog = ({
               </p>
             </div>
 
-            {/* Customizations */}
-            {item.hasCustomization && (
+            {/* Customizations always apppear */}
+            {true && (
               <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="flex items-center justify-between">
                   <h4 className="font-semibold text-lg flex items-center gap-2">
                     Customizations
                   </h4>
                   {/* Ẩn nút Manage nếu là waiter */}
-                  {!isWaiter && (
+                  {restaurantId && !isWaiter && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -235,8 +231,8 @@ export const MenuItemViewDialog = ({
                         style={{ animationDelay: `${index * 50}ms` }}
                       >
                         <span className="font-medium text-foreground">{cust.name}</span>
-                        <Badge variant="secondary" className="font-mono">
-                          {parseFloat(cust.price) > 0 ? `+$${parseFloat(cust.price).toFixed(2)}` : 'Free'}
+                        <Badge className="font-mono">
+                          {cust.price > 0 ? `+${cust.price.toFixed(2)} VND` : 'Free'}
                         </Badge>
                       </div>
                     ))}

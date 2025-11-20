@@ -14,9 +14,9 @@ import { MenuItemCard } from '@/components/menu/MenuItemCard';
 import { useSessionStore } from "@/store/sessionStore";
 import { isStaffAccountDTO } from "@/utils/typeCast";
 import { useRestaurantByBranch } from "@/hooks/queries/useBranches";
-import { useBranchMenuItems, useUpdateAvailability } from "@/hooks/queries/useBranchMenuItems";
+import { useBranchMenuItems, useGuestBranchMenuItems, useUpdateAvailability } from "@/hooks/queries/useBranchMenuItems";
 import { useCategories } from "@/hooks/queries/useCategories";
-import { BranchMenuItemDTO } from "@/dto/branchMenuItem.dto";
+import { BranchMenuItemDTO, GuestBranchMenuItemDTO } from "@/dto/branchMenuItem.dto";
 import { MenuItemViewDialog } from "@/components/menu/MenuItemViewDialog";
 
 interface MenuManagementProps {
@@ -36,7 +36,7 @@ export const MenuManagement = ({ branchId: branchIdProp }: MenuManagementProps =
     // Queries
     const { data: restaurantId, isLoading: loadingRestaurant } = useRestaurantByBranch(branchId);
     const { data: menuItems = [], isLoading: loadingItems, isError: errorItems } =
-        useBranchMenuItems(branchId);
+        useGuestBranchMenuItems(branchId);
     const { data: categories = [], isLoading: loadingCategories, isError: errorCategories } =
         useCategories(restaurantId);
     const updateAvailability = useUpdateAvailability(branchId);
@@ -59,7 +59,7 @@ export const MenuManagement = ({ branchId: branchIdProp }: MenuManagementProps =
     }, [categories]);
 
     const groupedItems = useMemo(() => {
-        const groups: Record<string, BranchMenuItemDTO[]> = {};
+        const groups: Record<string, GuestBranchMenuItemDTO[]> = {};
         menuItems.forEach((item) => {
             const catName = categoryMap.get(item.categoryId) || "Uncategorized";
             if (!groups[catName]) groups[catName] = [];
@@ -77,24 +77,27 @@ export const MenuManagement = ({ branchId: branchIdProp }: MenuManagementProps =
     }, [groupedItems]);
 
     // === Event handlers ===
-    const handleToggleAvailability = (item: BranchMenuItemDTO) => {
+    const handleToggleAvailability = (item: GuestBranchMenuItemDTO) => {
         updateAvailability.mutate(
-            { menuItemId: item.menuItemId, available: !item.available },
-            {
-                onSuccess: (_, variables) => {
-                    toast({
-                        title: "Availability updated",
-                        description: `${item.name} is now ${variables.available ? "available" : "unavailable"}.`,
-                    });
-                },
-                onError: () => {
-                    toast({
-                        title: "❌ Error",
-                        description: "Failed to update availability.",
-                        variant: "destructive",
-                    });
-                },
-            }
+        {
+            menuItemId: item.menuItemId,
+            available: !item.available,
+        },
+        {
+            onSuccess: (_, variables) => {
+            toast({
+                title: "Availability updated",
+                description: `${item.name} is now ${variables.available ? "available" : "unavailable"}.`,
+            });
+            },
+            onError: () => {
+            toast({
+                title: "Error",
+                description: "Failed to update item availability.",
+                variant: "destructive",
+            });
+            },
+        }
         );
     };
 
@@ -235,7 +238,7 @@ export const MenuManagement = ({ branchId: branchIdProp }: MenuManagementProps =
                     if (!open) setSelectedItemId(undefined);
                 }}
                 itemId={selectedItemId}
-                isWaiter={false}
+                isWaiter = {true}
             />
         </Card>
     );

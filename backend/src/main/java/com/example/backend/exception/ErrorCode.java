@@ -75,6 +75,8 @@ public enum ErrorCode {
     ORDERLINE_NOT_EXISTS(5002, "Orderline not exists", HttpStatus.NOT_FOUND),
     TABLE_ALREADY_HAS_PENDING_ORDER(5003, "Table already has pending order", HttpStatus.BAD_REQUEST),
     ORDER_ALREADY_COMPLETED(5004, "Order already completed", HttpStatus.BAD_REQUEST),
+    ORDERITEM_NOT_EXISTS(5005, "OrderItem not exists", HttpStatus.NOT_FOUND),
+    ORDERITEM_CUSTOMIZATION_NOT_EXISTS(5005, "OrderItemCustomization not exists", HttpStatus.NOT_FOUND),
 
     // Reservation errors
     RESERVATION_NOT_FOUND(5001, "Reservation not found", HttpStatus.NOT_FOUND),

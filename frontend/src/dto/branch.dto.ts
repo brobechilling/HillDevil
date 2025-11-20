@@ -8,6 +8,7 @@ export interface BranchDTO {
     closingTime?: string;
     isActive: boolean;
     mail?: string;
+    restaurantName?: string;
 }
 
 export interface CreateBranchDTO {

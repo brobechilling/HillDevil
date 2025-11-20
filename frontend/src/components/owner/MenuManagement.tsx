@@ -82,7 +82,7 @@ const BestSellerToggle = ({ isBestSeller, onToggle, disabled }: {
         "absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap",
         isBestSeller ? "text-yellow-600" : "text-muted-foreground"
       )}>
-        {isBestSeller ? "Best Seller" : "Set as Best"}
+        {isBestSeller ? "Best Seller" : "Set Best Seller"}
       </span>
     </button>
   );
@@ -149,15 +149,8 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
   };
 
   const handleDelete = (id: string) => {
-    deleteMutation.mutate(id, {
-      onSuccess: () => {
-        setItemToDelete(null);
-        toast({
-          title: 'Menu Item Deleted',
-          description: 'The menu item has been removed.',
-        });
-      },
-    });
+    deleteMutation.mutate(id);
+    setItemToDelete(null);
   };
 
   const scrollToCategory = (category: string) => {
@@ -205,7 +198,7 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
               <div className="space-y-1">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight">Menu Management</h1>
                 <p className="text-muted-foreground text-sm">
-                  Manage your restaurant&apos;s menu items and categories
+                  Manage your restaurant's menu items and categories
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -238,7 +231,7 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                   <div className="flex-1">
                     <h4 className="font-medium text-amber-500 mb-1">Menu Item Limit Reached</h4>
                     <p className="text-sm text-muted-foreground">
-                      You've reached the maximum number of menu items in your current package. 
+                      You've reached the maximum number of menu items in your current package.
                       Please upgrade to Premium to add more menu items and unlock additional features.
                     </p>
                   </div>
@@ -358,7 +351,7 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
 
                           {/* Price */}
                           <p className="text-2xl font-bold text-primary">
-                            ${parseFloat(item.price).toFixed(2)}
+                            {parseFloat(item.price).toFixed(2)} VND
                           </p>
 
                           {/* === Toggles: Status + Best Seller === */}

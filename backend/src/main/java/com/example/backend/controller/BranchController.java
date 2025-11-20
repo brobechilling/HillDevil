@@ -82,4 +82,11 @@ public class BranchController {
         res.setResult(branchService.canCreateBranch(restaurantId));
         return res;
     }
+
+    @GetMapping("/owner/{ownerId}")
+    public ApiResponse<List<BranchDTO>> getBranchesByOwner(@PathVariable UUID ownerId) {
+        ApiResponse<List<BranchDTO>> res = new ApiResponse<>();
+        res.setResult(branchService.getBranchesByOwner(ownerId));
+        return res;
+    }
 }

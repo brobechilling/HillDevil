@@ -23,7 +23,7 @@ import com.example.backend.entities.RoleName;
 public class SecurityConfig {
 
 
-    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated", "/api/staff/**",  "/api/packages/**", "/api/branches/**", "/api/public/**", "/api/public/tables/**", "/api/users/mail/**", "/api/users/forgetpass", "/api/orderlines", "/api/branch-menu-items/branch/**", "/api/branch-menu-items/guest/branch/**", "/api/menu-items/customization/**"};
+    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated", "/api/staff/**",  "/api/packages/**", "/api/branches/**", "/api/public/**", "/api/public/tables/**", "/api/users/mail/**", "/api/users/forgetpass", "/api/orderlines/**", "/api/branch-menu-items/branch/**", "/api/branch-menu-items/guest/branch/**", "/api/menu-items/customization/**", "/api/order-items/**"};
     private final String[] ADMIN_ENDPOINTS = {"/api/users/**", "/api/roles/**"};
     private final String[] RESTAURANT_OWNER_ENDPOINTS = {};
     private final String[] BRANCH_MANAGER_ENDPOINTS = {};
@@ -55,9 +55,15 @@ public class SecurityConfig {
                 // Role API
                 .requestMatchers("/api/roles/**").hasAnyRole(RoleName.ADMIN.name())
 
-                // Table API
-                .requestMatchers(HttpMethod.PATCH, "/api/owner/tables/*/status").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name())
+                // Table API - Manager, waiter và owner được update status
+                .requestMatchers(HttpMethod.PATCH, "/api/owner/tables/*/status").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name(), RoleName.WAITER.name())
+                .requestMatchers(HttpMethod.PUT, "/api/owner/tables/*").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name(), RoleName.WAITER.name())
+                .requestMatchers(HttpMethod.GET, "/api/owner/tables/**").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name(), RoleName.WAITER.name())
                 .requestMatchers("/api/owner/tables/**").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name())
+                
+                // Area API
+                .requestMatchers(HttpMethod.GET, "/api/owner/areas").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name(), RoleName.WAITER.name())
+                .requestMatchers("/api/owner/areas/**").hasAnyRole(RoleName.RESTAURANT_OWNER.name(), RoleName.BRANCH_MANAGER.name())
 
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/api/**").authenticated()

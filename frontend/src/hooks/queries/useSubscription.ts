@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { subscriptionApi } from "@/api/subscriptionApi";
-import { SubscriptionResponse } from "@/dto/subscription.dto";
+import { SubscriptionResponse, RestaurantSubscriptionOverviewDTO } from "@/dto/subscription.dto";
 
 export const useSubscription = (id: string) => {
   return useQuery({
@@ -23,10 +23,9 @@ export const useActiveSubscriptionByRestaurant = (restaurantId: string) => {
 };
 
 export const useOverviewForOwner = () => {
-  return useQuery({
+  return useQuery<RestaurantSubscriptionOverviewDTO[], Error>({
     queryKey: ["subscriptions", "overview"],
     queryFn: () => subscriptionApi.getOverviewForOwner(),
-    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
   });
 };

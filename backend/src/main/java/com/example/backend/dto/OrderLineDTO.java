@@ -3,14 +3,14 @@ package com.example.backend.dto;
 import com.example.backend.entities.OrderLineStatus;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 public class OrderLineDTO {
     private UUID orderLineId;
     private OrderLineStatus orderLineStatus;
-    private Instant createdAt;
+    // change to String to allow socket 
+    private String createdAt;
     private BigDecimal totalPrice;
     private List<OrderItemDTO> orderItems;
     private String tableTag;
@@ -24,11 +24,11 @@ public class OrderLineDTO {
         this.orderLineId = orderLineId;
     }
 
-    public Instant getCreatedAt() {
+    public String getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Instant createdAt) {
+    public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
     }
 

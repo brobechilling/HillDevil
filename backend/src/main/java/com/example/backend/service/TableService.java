@@ -309,6 +309,40 @@ public class TableService {
         tableRepository.delete(table);
     }
 
+    @Transactional
+    public TableResponse updateTable(UUID tableId, CreateTableRequest req) {
+        AreaTable table = tableRepository.findByIdWithDetails(tableId)
+                .orElseThrow(() -> new NoSuchElementException("Table not found"));
+
+        Area area = areaRepository.findById(req.getAreaId())
+                .orElseThrow(() -> new IllegalArgumentException("Area not found"));
+        table.setArea(area);
+        table.setTag(req.getTag());
+        table.setCapacity(req.getCapacity());
+
+        table = tableRepository.save(table);
+        TableResponse response = tableMapper.toTableResponse(table);
+        if (table.getArea() != null && table.getArea().getBranch() != null) {
+            response.setBranchId(table.getArea().getBranch().getBranchId());
+        }
+        return response;
+    }
+
+    @Transactional
+    public TableResponse updateTableStatus(UUID tableId, TableStatus status) {
+        AreaTable table = tableRepository.findByIdWithDetails(tableId)
+                .orElseThrow(() -> new NoSuchElementException("Table not found"));
+        
+        table.setStatus(status);
+        table = tableRepository.save(table);
+        
+        TableResponse response = tableMapper.toTableResponse(table);
+        if (table.getArea() != null && table.getArea().getBranch() != null) {
+            response.setBranchId(table.getArea().getBranch().getBranchId());
+        }
+        return response;
+    }
+
 
     private TableResponse toTableResponse(AreaTable t) {
         // Use MapStruct mapper for standard field mapping and then apply small custom

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class BranchDTO {
     private UUID branchId;
     private UUID restaurantId;
+    private String restaurantName;
     private String address;
     private String branchPhone;
     private LocalTime openingTime;
@@ -79,5 +80,13 @@ public class BranchDTO {
 
     public void setMail(String mail) {
         this.mail = mail;
+    }
+
+    public String getRestaurantName() {
+        return restaurantName;
+    }
+
+    public void setRestaurantName(String restaurantName) {
+        this.restaurantName = restaurantName;
     }
 }

@@ -14,10 +14,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from '@/hooks/use-toast';
 import { useCategories } from '@/hooks/queries/useCategories';
 import { useCreateMenuItem, useUpdateMenuItem } from '@/hooks/queries/useMenuItems';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info  } from 'lucide-react';
 import { MenuItemDTO } from '@/dto/menuItem.dto';
 import {
   Select,
@@ -26,6 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useCustomizationByCategory } from '@/hooks/queries/useCustomizations';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const menuItemSchema = z.object({
   name: z.string().min(2, 'Name must have at least 2 characters'),
@@ -54,8 +55,8 @@ export const MenuItemDialog = ({
   item,
 }: Props) => {
   const { data: categories = [] } = useCategories(restaurantId);
-  const createMutation = useCreateMenuItem();
-  const updateMutation = useUpdateMenuItem();
+  const createMutation = useCreateMenuItem(restaurantId);
+  const updateMutation = useUpdateMenuItem(restaurantId);
 
   // ✅ Dùng imageUrl từ item (BE đã có)
   const existingImageUrl = item?.imageUrl || null;
@@ -86,6 +87,7 @@ export const MenuItemDialog = ({
 
   const hasCustomization = watch('hasCustomization');
   const categoryId = watch('categoryId');
+  const { data: customizationIds = [], isLoading: isCustomizationLoading } = useCustomizationByCategory(categoryId);
 
   useEffect(() => {
     if (open) {
@@ -115,7 +117,6 @@ export const MenuItemDialog = ({
     }
   }, [item, open, reset]);
 
-  // ✅ Preview ảnh mới chọn
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setImageFile(file);
@@ -128,17 +129,21 @@ export const MenuItemDialog = ({
     }
   };
 
-  // ✅ Submit
   const onSubmit = async (data: FormData) => {
     try {
       setIsUploading(true);
+
+      const finalCustomizationIds = data.hasCustomization ? customizationIds : [];
 
       const payload = {
         ...data,
         price: String(data.price),
         restaurantId,
-        customizationIds: [],
+        // fix this customizationID
+        customizationIds: finalCustomizationIds,
       };
+
+      payload.categoryId
 
       if (item) {
         await updateMutation.mutateAsync({
@@ -153,23 +158,10 @@ export const MenuItemDialog = ({
         });
       }
 
-      toast({
-        title: item ? 'Updated' : 'Created',
-        description: 'Menu item saved successfully.',
-      });
-
       onOpenChange(false);
       reset();
     } catch (error: any) {
-      console.error('Error saving menu item:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description:
-          error?.response?.data?.message ||
-          error.message ||
-          'Failed to save menu item.',
-      });
+      // Toast handled in mutations
     } finally {
       setIsUploading(false);
     }
@@ -259,14 +251,31 @@ export const MenuItemDialog = ({
           <div className="flex items-center gap-2">
             <Checkbox
               checked={hasCustomization}
-              onCheckedChange={(v) => setValue('hasCustomization', v === true)}
+              onCheckedChange={(v) => setValue("hasCustomization", v === true)}
             />
+
             <Label className="text-sm">Has Customization</Label>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-pointer text-muted-foreground">
+                    <Info />
+                  </span>
+                </TooltipTrigger>
+
+                <TooltipContent className="max-w-xs text-sm">
+                  Enable this if you want the item to have all customizations of its category.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
+
+
 
           {/* Image Upload */}
           <div className="space-y-1.5">
-            <Label className="text-sm">Image</Label>
+            <Label className="text-sm">Image *</Label>
             <Input
               type="file"
               accept="image/*"
@@ -344,8 +353,8 @@ export const MenuItemDialog = ({
               {(createMutation.isPending ||
                 updateMutation.isPending ||
                 isUploading) && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
               {item ? 'Update' : 'Create'}
             </Button>
           </div>

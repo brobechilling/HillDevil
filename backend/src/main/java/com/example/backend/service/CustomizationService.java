@@ -121,4 +121,9 @@ public class CustomizationService {
                 currentCountSupplier
         );
     }
+
+    public List<UUID> getCustomizationByCategoryId(UUID categoryId) {
+        return customizationRepository.findAllByCategories_CategoryIdAndStatusTrue(categoryId)
+                                    .stream().map(customization -> customization.getCustomizationId()).toList();
+    }
 }

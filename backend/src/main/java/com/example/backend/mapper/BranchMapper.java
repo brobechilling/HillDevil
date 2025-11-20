@@ -13,6 +13,7 @@ import com.example.backend.entities.Branch;
 public interface BranchMapper {
 
     @Mapping(source = "restaurant.restaurantId", target = "restaurantId")
+    @Mapping(source = "restaurant.name", target = "restaurantName")
     BranchDTO toDto(Branch branch);
 
     @Mapping(source = "restaurantId", target = "restaurant.restaurantId")
