@@ -12,17 +12,17 @@ import { Building2, ArrowRight, ArrowLeft, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useRestaurantsByOwner } from "@/hooks/queries/useRestaurants";
 import { useSessionStore } from "@/store/sessionStore";
+import { isUserDTO } from "@/utils/typeCast";
 
 const BrandSelection = () => {
   const navigate = useNavigate();
   const { user } = useSessionStore();
 
-  // Route protection ensures user exists and is a restaurant owner
-  if (!user) return null;
+  const ownerId = isUserDTO(user) ? user.userId : ""; 
 
   // Fetch restaurants owned by this user
   const { data: restaurants = [], isLoading, isError } = useRestaurantsByOwner(
-    user.userId
+    ownerId
   );
 
   // Optional: store fetched restaurants in localStorage for cross-page usage
@@ -118,7 +118,7 @@ const BrandSelection = () => {
         ) : (
           <>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {restaurants.map((restaurant) => (
+              {restaurants.filter(restaurant => restaurant.status).map((restaurant) => (
                 <Card
                   key={restaurant.restaurantId}
                   className="cursor-pointer transition-smooth hover:shadow-medium hover:border-primary border-border/50"

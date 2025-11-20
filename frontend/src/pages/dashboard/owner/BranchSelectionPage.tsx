@@ -21,7 +21,7 @@ export default function BranchSelectionPage() {
             sessionStorage.setItem('owner_selected_branch_id', String(selectedBranch.branchId));
         }
         // temporary allow access to staff page in manager dashboard
-        navigate("/dashboard/manager/staff", {
+        navigate("/dashboard/manager/overview", {
         state: {
             branchId: selectedBranch?.branchId
         },

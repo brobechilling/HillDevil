@@ -4,7 +4,7 @@ export interface RestaurantDTO {
     userId: string;
     name: string;
     email: string;
-    status: string;
+    status: boolean;
     restaurantPhone: string;
     publicUrl: string;
     description: string;
