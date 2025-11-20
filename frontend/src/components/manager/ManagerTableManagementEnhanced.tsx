@@ -708,7 +708,7 @@ export const ManagerTableManagementEnhanced = ({
                     <Plus className="mr-2 h-4 w-4" />
                     Add Table
                   </Button>
-                  <Button
+                  {/* <Button
                     variant="outline"
                     onClick={() => {
                       const currentBranchId = validBranchId;
@@ -727,7 +727,7 @@ export const ManagerTableManagementEnhanced = ({
                   >
                     <QrCode className="mr-2 h-4 w-4" />
                     Branch QR
-                  </Button>
+                  </Button> */}
                 </div>
               )}
             </div>
