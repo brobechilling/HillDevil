@@ -142,9 +142,7 @@ export default function PaymentSuccessPage() {
                   className="w-full bg-green-600 hover:bg-green-700 text-white font-medium shadow-lg"
                   onClick={handleGoToRestaurant}
                 >
-                  {restaurantName
-                    ? `Go to ${restaurantName}'s Dashboard`
-                    : "Go to Dashboard"}
+                  Go to dashboard
                 </Button>
               </div>
             </CardContent>
