@@ -69,14 +69,13 @@ public class SubscriptionPaymentService {
                 .orElseThrow(() -> new AppException(ErrorCode.PACKAGE_NOTEXISTED));
 
         int amountToPay;
-        Integer proratedAmount = null; // tiền dư gói cũ
+        Integer proratedAmount = null;
         String description;
 
         if (purpose == SubscriptionPaymentPurpose.UPGRADE) {
             if (subscription.getStatus() != SubscriptionStatus.ACTIVE || subscription.getEndDate() == null) {
                 throw new AppException(ErrorCode.SUBSCRIPTION_NOT_ACTIVE);
             }
-            // Tách riêng amount vs credit
             ProratedResult result = calculateProratedAmounts(subscription, targetPackage);
             amountToPay = result.amountToPay();
             proratedAmount = result.creditAmount();
@@ -85,8 +84,8 @@ public class SubscriptionPaymentService {
         } else {
             amountToPay = targetPackage.getPrice();
             description = purpose == SubscriptionPaymentPurpose.NEW_SUBSCRIPTION
-                    ? "Register new package " + targetPackage.getName()
-                    : "Renew package " + targetPackage.getName();
+                    ? "Register " + targetPackage.getName()
+                    : "Renew " + targetPackage.getName();
         }
 
         if (description.length() > 25)

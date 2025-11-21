@@ -165,50 +165,56 @@ export const PackageTab = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y dark:divide-border/50">
-                  {activePackageStats.map((stat, index) => (
-                    <tr 
-                      key={stat.packageName}
-                      className="hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors animate-in fade-in"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 dark:from-blue-500/30 dark:to-purple-500/30 flex items-center justify-center">
-                            <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  {activePackageStats.map((stat, index) => {
+                    // Find the actual package to get its availability status
+                    const pkg = packages.find(p => p.name === stat.packageName);
+                    const isAvailable = pkg?.available ?? false;
+                    
+                    return (
+                      <tr 
+                        key={stat.packageName}
+                        className="hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors animate-in fade-in"
+                        style={{ animationDelay: `${index * 50}ms` }}
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 dark:from-blue-500/30 dark:to-purple-500/30 flex items-center justify-center">
+                              <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <span className="font-semibold text-foreground">{stat.packageName}</span>
                           </div>
-                          <span className="font-semibold text-foreground">{stat.packageName}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex flex-col items-center">
-                          <p className="text-xl font-bold text-green-600 dark:text-green-400">{stat.activeCount}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">subscriptions</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex flex-col items-center">
-                          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{stat.paymentCount}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">orders</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex flex-col items-center">
-                          <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
-                            {(stat.totalRevenue / 1000).toFixed(2)}k
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5">VND</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <Badge 
-                          variant={stat.activeCount > 0 ? "default" : "secondary"}
-                          className="animate-pulse dark:bg-opacity-90"
-                        >
-                          {stat.activeCount > 0 ? '🚀 Active' : '💀 Inactive'}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col items-center">
+                            <p className="text-xl font-bold text-green-600 dark:text-green-400">{stat.activeCount}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">subscriptions</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col items-center">
+                            <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{stat.paymentCount}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">orders</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col items-center">
+                            <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                              {(stat.totalRevenue / 1000).toFixed(2)}k
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">VND</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <Badge 
+                            variant={isAvailable ? "default" : "secondary"}
+                            className={isAvailable ? "animate-pulse dark:bg-opacity-90" : ""}
+                          >
+                            {isAvailable ? '✅ Available' : '🚫 Unavailable'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
