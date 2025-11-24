@@ -34,7 +34,20 @@ export const useCreateCustomization = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createCustomization,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customizations"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customizations"] });
+    },
+  });
+};
+
+export const useCreateCustomizationMenuItem = (menuItemId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createCustomization,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customizations"] });
+      queryClient.invalidateQueries({ queryKey: ["customization", "menu-item", menuItemId] });
+    },
   });
 };
 

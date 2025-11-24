@@ -23,7 +23,5 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     """)
     List<Order> findAllByBranchIdAndStatus(@Param("branchId") UUID branchId,
                                            @Param("status") OrderStatus status);
-    Optional<Order> findByAreaTable_AreaTableIdAndStatus(UUID areaTableId, OrderStatus status);
-    boolean existsByAreaTable_AreaTableIdAndStatus(UUID tableId, OrderStatus status);
     Optional<Order> findTopByAreaTable_AreaTableIdAndStatusOrderByUpdatedAtDesc(UUID areaTableId, OrderStatus status);
 }

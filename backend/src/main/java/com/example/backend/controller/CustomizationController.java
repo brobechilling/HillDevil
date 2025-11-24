@@ -75,13 +75,29 @@ public class CustomizationController {
     @GetMapping("/restaurant/{restaurantId}/limit")
     public ApiResponse<Integer> getCustomizationLimit(
             @PathVariable UUID restaurantId) {
-        int limit = featureLimitCheckerService.getLimitValue(
-                restaurantId,
-                FeatureCode.LIMIT_CUSTOMIZATION_PER_CATEGORY);
         ApiResponse<Integer> res = new ApiResponse<>();
-        res.setResult(limit);
+        try {
+            int limit = featureLimitCheckerService.getLimitValue(
+                    restaurantId,
+                    FeatureCode.LIMIT_CUSTOMIZATION_PER_CATEGORY);
+            res.setResult(limit);
+            // -1 means unlimited (Premium package)
+            // 0 means no access (no subscription)
+            // >0 means specific limit (Basic package)
+            if (limit == -1) {
+                res.setMessage("Unlimited customizations");
+            } else if (limit == 0) {
+                res.setMessage("No active subscription");
+            } else {
+                res.setMessage("Limit: " + limit + " customizations per category");
+            }
+        } catch (Exception e) {
+            // If error, return 0 as limit
+            res.setResult(0);
+            res.setMessage("Error retrieving limit");
+        }
         return res;
-    }   
+    }
 
     @GetMapping("/category/{categoryId}")
     public ApiResponse<List<UUID>> getCustomizationByCategory(@PathVariable UUID categoryId) {

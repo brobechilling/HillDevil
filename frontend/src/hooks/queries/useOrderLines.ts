@@ -1,4 +1,5 @@
 import { createOrderLine, getCancelledOrderLineByBranch, getCompletedOrderLineByBranch, getPendingOrderLineByBranch, getPreparingOrderLineByBranch, udpateOrderLineStatus } from "@/api/orderLineApi"
+import { OrderStatus } from "@/dto/order.dto";
 import { OrderLineDTO, OrderLineStatus } from "@/dto/orderLine.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
@@ -45,6 +46,10 @@ export const useUpdateOrderLineStatus = (branchId: string) => {
         });
         queryClient.invalidateQueries({
           queryKey: ['orderLines', branchId, data.newStatus],
+          refetchType: 'active',
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['orders', branchId, OrderStatus.EATING],
           refetchType: 'active',
         });
       }

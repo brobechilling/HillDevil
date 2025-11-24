@@ -138,6 +138,12 @@ public class OrderLineService {
         OrderLine orderLine = orderLineRepository.findById(request.getOrderLineId()).orElseThrow(() -> new AppException(ErrorCode.ORDERLINE_NOT_EXISTS));
         UpdateOrderLineStatusResponse result = new UpdateOrderLineStatusResponse();
         result.setPreviousStatus(orderLine.getOrderLineStatus());
+        if (request.getOrderLineStatus() == OrderLineStatus.CANCELLED) {
+            // re-calculate order total price 
+            Order order = orderLine.getOrder();
+            order.setTotalPrice(order.getTotalPrice().subtract(orderLine.getTotalPrice()));
+            orderRepository.save(order);
+        }
         orderLine.setOrderLineStatus(request.getOrderLineStatus());
         orderLine = orderLineRepository.save(orderLine);
         result.setSuccessful( orderLine != null);

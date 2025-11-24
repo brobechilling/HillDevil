@@ -1,56 +1,58 @@
-// package com.example.backend.controller;
+package com.example.backend.controller;
 
-// import com.example.backend.dto.ApiResponse;
-// import com.example.backend.dto.OrderDTO;
-// import com.example.backend.dto.request.CreateOrderRequest;
-// import com.example.backend.service.OrderService;
-// import org.springframework.web.bind.annotation.*;
+import com.example.backend.dto.ApiResponse;
+import com.example.backend.dto.OrderDTO;
+import com.example.backend.dto.request.UpdateOrderStatusRequest;
+import com.example.backend.dto.response.UpdateOrderStatusResponse;
+import com.example.backend.entities.OrderStatus;
+import com.example.backend.service.OrderService;
+import org.springframework.web.bind.annotation.*;
 
-// import java.util.List;
-// import java.util.UUID;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PathVariable;
 
-// @RestController
-// @RequestMapping("/api/orders")
-// public class OrderController {
 
-//     private final OrderService orderService;
 
-//     public OrderController(OrderService orderService) {
-//         this.orderService = orderService;
-//     }
+@RestController
+@RequestMapping("/api/orders")
+public class OrderController {
 
-//     @GetMapping("/branch/{branchId}/history")
-//     public ApiResponse<List<OrderDTO>> getOrdersHistory(@PathVariable UUID branchId) {
-//         ApiResponse<List<OrderDTO>> res = new ApiResponse<>();
-//         res.setResult(orderService.getOrdersHistoryFromBranch(branchId));
-//         return res;
-//     }
+    private final OrderService orderService;
 
-//     @GetMapping("/{orderId}")
-//     public ApiResponse<OrderDTO> getById(@PathVariable UUID orderId) {
-//         ApiResponse<OrderDTO> res = new ApiResponse<>();
-//         res.setResult(orderService.getById(orderId));
-//         return res;
-//     }
+    public OrderController(OrderService orderService) {
+        this.orderService = orderService;
+    }
 
-//     @PostMapping("/create")
-//     public ApiResponse<OrderDTO> create(@RequestBody CreateOrderRequest request) {
-//         ApiResponse<OrderDTO> res = new ApiResponse<>();
-//         res.setResult(orderService.create(request));
-//         return res;
-//     }
+    @GetMapping("/eating/{branchId}")
+    public ApiResponse<List<OrderDTO>> getEatingOrder(@PathVariable UUID branchId) {
+        ApiResponse<List<OrderDTO>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(orderService.getOrderByStatusAndBranch(branchId, OrderStatus.EATING));
+        return apiResponse;
+    }
 
-//     @GetMapping("/table/{tableId}/pending")
-//     public ApiResponse<OrderDTO> getPendingByTable(@PathVariable UUID tableId) {
-//         ApiResponse<OrderDTO> res = new ApiResponse<>();
-//         res.setResult(orderService.getPendingOrderByTable(tableId));
-//         return res;
-//     }
+    @GetMapping("/completed/{branchId}")
+    public ApiResponse<List<OrderDTO>> getCompletedOrder(@PathVariable UUID branchId) {
+        ApiResponse<List<OrderDTO>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(orderService.getOrderByStatusAndBranch(branchId, OrderStatus.COMPLETED));
+        return apiResponse;
+    }
 
-//     @PutMapping("/{orderId}/complete")
-//     public ApiResponse<OrderDTO> completeOrder(@PathVariable UUID orderId) {
-//         ApiResponse<OrderDTO> res = new ApiResponse<>();
-//         res.setResult(orderService.completeOrder(orderId));
-//         return res;
-//     }
-// }
+    @GetMapping("/cancelled/{branchId}")
+    public ApiResponse<List<OrderDTO>> getCancelleddOrder(@PathVariable UUID branchId) {
+        ApiResponse<List<OrderDTO>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(orderService.getOrderByStatusAndBranch(branchId, OrderStatus.CANCELLED));
+        return apiResponse;
+    }
+
+    @PutMapping("")
+    public ApiResponse<UpdateOrderStatusResponse> setOrderStatus(@RequestBody UpdateOrderStatusRequest request) {
+        ApiResponse<UpdateOrderStatusResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(orderService.setOrderStatus(request));
+        return apiResponse;
+    }
+
+}

@@ -5,13 +5,11 @@ import com.example.backend.entities.Order;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import java.util.List;
 
 @Mapper(componentModel = "spring", uses = {OrderLineMapper.class})
 public interface OrderMapper {
     
-    // @Mapping(source = "areaTable.tag", target = "tableTag")
-    // @Mapping(source = "status", target = "status")
-    // OrderDTO toOrderDTO(Order order);
-    // List<OrderDTO> toDtoList(List<Order> orders);
+    @Mapping(target = "tableTag", source = "areaTable.tag")
+    @Mapping(target = "areaName", source = "areaTable.area.name")
+    OrderDTO toOrderDTO(Order order);
 }

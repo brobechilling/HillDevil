@@ -181,14 +181,14 @@ export const OrderLineEditDialog = ({
                 <div key={c.orderItemCustomizationId} className="flex justify-between items-center p-2 bg-muted/10 rounded">
                   <div>
                     <div className="font-medium">{c.customizationName}</div>
-                    <div className="text-xs text-muted-foreground">{c.quantity} × { (c.quantity>0 ? (c.totalPrice / c.quantity).toFixed(2) : '0') } VND</div>
+                    <div className="text-xs text-muted-foreground">{c.quantity} × { (c.quantity>0 ? (c.totalPrice / c.quantity).toLocaleString() : '0') } VND</div>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <Button size="sm" onClick={() => changeCustomizationQty(c.orderItemCustomizationId, -1)}>-</Button>
                     <div className="w-6 text-center">{c.quantity}</div>
                     <Button size="sm" onClick={() => changeCustomizationQty(c.orderItemCustomizationId, 1)}>+</Button>
-                    <div className="w-24 text-right font-medium">{c.totalPrice.toFixed(2)} VND</div>
+                    <div className="w-24 text-right font-medium">{c.totalPrice.toLocaleString()} VND</div>
                     <Button variant="destructive" size="sm" onClick={() => removeCustomization(c.orderItemCustomizationId)}>Remove</Button>
                   </div>
                 </div>
@@ -238,7 +238,7 @@ export const OrderLineEditDialog = ({
 
           <div className="flex justify-between font-semibold">
             <div>Item total</div>
-            <div>{edited.totalPrice.toFixed(2)} VND</div>
+            <div>{edited.totalPrice.toLocaleString()} VND</div>
           </div>
         </div>
 

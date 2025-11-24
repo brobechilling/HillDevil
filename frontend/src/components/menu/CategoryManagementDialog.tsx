@@ -46,8 +46,10 @@ export const CategoryManagementDialog = ({
   }, [open, category]);
 
   const totalSelected = selectedIds.length;
-  const isOverLimit = limit !== undefined && totalSelected > limit;
-  const isAtLimit = limit !== undefined && totalSelected >= limit;
+  // -1 means unlimited (Premium), 0 means no access, >0 means specific limit (Basic)
+  const isUnlimited = limit === -1;
+  const isOverLimit = limit !== undefined && limit > 0 && totalSelected > limit;
+  const isAtLimit = limit !== undefined && limit > 0 && totalSelected >= limit;
 
   const handleToggle = (custId: string, checked: boolean) => {
     // Nếu đang đạt limit và user cố tick thêm → chặn lại
@@ -147,7 +149,7 @@ export const CategoryManagementDialog = ({
 
         <div className="space-y-5 pt-4">
           {/* Limit warning */}
-          {limit !== undefined && (
+          {limit !== undefined && limit !== -1 && (
             <>
               <div className="text-sm text-muted-foreground text-center">
                 {totalSelected}/{limit} selected
@@ -262,7 +264,7 @@ export const CategoryManagementDialog = ({
                           </span>
                           {cust.price > 0 && (
                             <Badge variant={isSelected ? "default" : "secondary"} className="text-xs font-mono">
-                              +{cust.price.toFixed(2)} VND
+                              +{cust.price.toLocaleString()} VND
                             </Badge>
                           )}
                           {cust.price === 0 && isSelected && (

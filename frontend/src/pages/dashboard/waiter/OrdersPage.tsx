@@ -30,7 +30,6 @@ const OrdersPage = () => {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("PENDING");
 
-  // Fetch data hooks (assume these hooks are imported the same as before)
   const pendingQuery = useGetPendingOrderLine(branchId);
   const preparingQuery = useGetPreparingOrderLine(branchId);
   const completedQuery = useGetCompletedOrderLine(branchId);
@@ -155,7 +154,7 @@ const OrdersPage = () => {
                 <span>
                   {item.quantity} {item.menuItemName}
                 </span>
-                <span>{item.totalPrice.toFixed(2)} VND</span>
+                <span>{item.totalPrice.toLocaleString()} VND</span>
               </div>
 
               {item.customizations.length > 0 && (
@@ -163,7 +162,7 @@ const OrdersPage = () => {
                   {item.customizations.map((c) => (
                     <div key={c.orderItemCustomizationId} className="flex justify-between">
                       <span>+ {c.quantity} {c.customizationName}</span>
-                      <span>+{c.totalPrice.toFixed(2)} VND</span>
+                      <span>+{c.totalPrice.toLocaleString()} VND</span>
                     </div>
                   ))}
                 </div>
@@ -191,7 +190,7 @@ const OrdersPage = () => {
 
         <div className="border-t pt-2 flex justify-between font-semibold">
           <span>Total</span>
-          <span>{order.totalPrice.toFixed(2)} VND</span>
+          <span>{order.totalPrice.toLocaleString()} VND</span>
         </div>
 
         <div className="flex flex-wrap gap-2 pt-2">

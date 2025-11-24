@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-import { useCustomizations, useCreateCustomization } from '@/hooks/queries/useCustomizations';
-import { useUpdateMenuItem, useMenuItem } from '@/hooks/queries/useMenuItems';
+import { useCustomizations, useCreateCustomization, useCreateCustomizationMenuItem } from '@/hooks/queries/useCustomizations';
+import { useUpdateMenuItem, useMenuItem, useCustomizationsOfMenuItems } from '@/hooks/queries/useMenuItems';
 
 interface Props {
   open: boolean;
@@ -27,13 +27,15 @@ export const MenuItemCustomizationDialog = ({
 }: Props) => {
   const { data: allCustomizations = [] } = useCustomizations(restaurantId);
   const { data: menuItem } = useMenuItem(menuItemId);
-  const createMutation = useCreateCustomization();
+  const createMutation = useCreateCustomizationMenuItem(menuItemId);
   const updateMenuItemMutation = useUpdateMenuItem();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
+
+  const { data: customizations, isLoading } = useCustomizationsOfMenuItems(menuItemId, true);
 
   // Load linked customizations
   useEffect(() => {
@@ -209,7 +211,7 @@ export const MenuItemCustomizationDialog = ({
                           </span>
                           {cust.price > 0 && (
                             <Badge variant={isSelected ? "default" : "secondary"} className="text-xs font-mono">
-                              +{cust.price.toFixed(2)} VND
+                              +{cust.price.toLocaleString()} VND
                             </Badge>
                           )}
                           {cust.price === 0 && isSelected && (

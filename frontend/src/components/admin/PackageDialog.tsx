@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, Check } from "lucide-react";
+import { Plus, Trash2, Check, ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
@@ -165,10 +166,20 @@ export const PackageDialog = ({ open, onOpenChange, packageId }: Props) => {
               featureId: feature.id,
               featureName: feature.name,
               description: feature.description,
+              // Reset value if feature doesn't have value
+              value: feature.hasValue ? (f.value || 0) : 0,
             }
           : f
       )
     );
+  };
+
+  // Get features that have value (must be selected from dropdown)
+  const featuresWithValue = allFeatures.filter(f => f.hasValue);
+  
+  // Check if a feature is one that requires value
+  const isFeatureWithValue = (featureName: string) => {
+    return featuresWithValue.some(f => f.name === featureName);
   };
 
   return (
@@ -245,105 +256,166 @@ export const PackageDialog = ({ open, onOpenChange, packageId }: Props) => {
                 </Button>
               </div>
 
-              {features.map((f) => (
-                <div key={f.tempId} className="flex gap-2 items-start border p-3 rounded-md">
-                  <div className="flex-1 space-y-2">
-                    {/* Editable feature name + select existing */}
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={f.featureName}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setFeatures((prev) =>
-                            prev.map((x) =>
-                              x.tempId === f.tempId
-                                ? { ...x, featureName: value, description: "" }
-                                : x
-                            )
-                          );
-                        }}
-                        placeholder="Type or select feature name"
-                        className="flex-1"
-                      />
+              {features.map((f) => {
+                const selectedFeature = allFeatures.find((ft) => ft.id === f.featureId);
+                const isValueFeature = selectedFeature?.hasValue || isFeatureWithValue(f.featureName);
+                
+                return (
+                  <div key={f.tempId} className="flex gap-2 items-start border p-3 rounded-md">
+                    <div className="flex-1 space-y-2">
+                      {/* Feature Name Input/Select */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Feature Name</Label>
+                        <div className="flex gap-2">
+                          {/* Text input for custom feature name (disabled if it's a value feature) */}
+                          <Input
+                            value={f.featureName}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setFeatures((prev) =>
+                                prev.map((x) =>
+                                  x.tempId === f.tempId
+                                    ? { ...x, featureName: value, featureId: null }
+                                    : x
+                                )
+                              );
+                            }}
+                            placeholder="Enter feature name or select from list"
+                            className="flex-1"
+                            disabled={isValueFeature}
+                          />
 
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button type="button" variant="outline" size="icon">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[250px] p-0">
-                          <Command>
-                            <CommandInput placeholder="Search feature..." />
-                            <CommandEmpty>No feature found</CommandEmpty>
-                            <CommandGroup>
-                              {allFeatures.map((feature) => (
-                                <CommandItem
-                                  key={feature.id as string}
-                                  value={feature.name}
-                                  onSelect={() => handleSelectFeature(f.tempId, feature)}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      f.featureName === feature.name
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  {feature.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                          {/* Dropdown to select from existing features */}
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                title="Select from existing features"
+                              >
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0">
+                              <Command>
+                                <CommandInput placeholder="Search feature..." />
+                                <CommandEmpty>No feature found</CommandEmpty>
+                                <CommandGroup heading="Features with Value (Required)">
+                                  {featuresWithValue.map((feature) => (
+                                    <CommandItem
+                                      key={feature.id as string}
+                                      value={feature.name}
+                                      onSelect={() => handleSelectFeature(f.tempId, feature)}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          f.featureId === feature.id
+                                            ? "opacity-100"
+                                            : "opacity-0"
+                                        )}
+                                      />
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">{feature.name}</span>
+                                        <span className="text-xs text-muted-foreground">{feature.description}</span>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                                <CommandGroup heading="Other Features">
+                                  {allFeatures.filter(f => !f.hasValue).map((feature) => (
+                                    <CommandItem
+                                      key={feature.id as string}
+                                      value={feature.name}
+                                      onSelect={() => handleSelectFeature(f.tempId, feature)}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          f.featureId === feature.id
+                                            ? "opacity-100"
+                                            : "opacity-0"
+                                        )}
+                                      />
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">{feature.name}</span>
+                                        <span className="text-xs text-muted-foreground">{feature.description}</span>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        
+                        {/* Show hint for value features */}
+                        {isValueFeature && (
+                          <p className="text-xs text-amber-600">
+                            ⚠️ This feature requires a value and must be selected from the list
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Description Input */}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">Description</Label>
+                        <Textarea
+                          placeholder="Enter feature description"
+                          value={f.description}
+                          rows={2}
+                          onChange={(e) =>
+                            setFeatures((prev) =>
+                              prev.map((x) =>
+                                x.tempId === f.tempId
+                                  ? { ...x, description: e.target.value }
+                                  : x
+                              )
+                            )
+                          }
+                          disabled={!!selectedFeature}
+                        />
+                        {selectedFeature && (
+                          <p className="text-xs text-muted-foreground">
+                            Description is auto-filled from selected feature
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Value input - only show if feature has value */}
+                      {(selectedFeature?.hasValue || isValueFeature) && (
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium">Value *</Label>
+                          <Input
+                            type="number"
+                            placeholder="Enter value"
+                            value={f.value ?? 0}
+                            onChange={(e) =>
+                              setFeatures((prev) =>
+                                prev.map((x) =>
+                                  x.tempId === f.tempId
+                                    ? { ...x, value: Number(e.target.value) }
+                                    : x
+                                )
+                              )
+                            }
+                          />
+                        </div>
+                      )}
                     </div>
 
-                    {/* Description */}
-                    <Input
-                      placeholder="Description"
-                      value={f.description}
-                      onChange={(e) =>
-                        setFeatures((prev) =>
-                          prev.map((x) =>
-                            x.tempId === f.tempId
-                              ? { ...x, description: e.target.value }
-                              : x
-                          )
-                        )
-                      }
-                    />
-
-                    {/* Value */}
-                    {allFeatures.find((ft) => ft.name === f.featureName)?.hasValue && (
-                      <Input
-                        type="number"
-                        placeholder="Value"
-                        value={f.value ?? 0}
-                        onChange={(e) =>
-                          setFeatures((prev) =>
-                            prev.map((x) =>
-                              x.tempId === f.tempId
-                                ? { ...x, value: Number(e.target.value) }
-                                : x
-                            )
-                          )
-                        }
-                      />
-                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveFeature(f.tempId)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveFeature(f.tempId)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Submit */}

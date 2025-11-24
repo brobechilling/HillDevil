@@ -41,7 +41,7 @@ export const RestaurantLoginForm = ({ restaurant, onBack }: RestaurantLoginFormP
           navigate('/dashboard/manager');
           return;
         case ROLE_NAME.WAITER:
-          navigate('/dashboard/waiter');
+          navigate('/dashboard/waiter/orderlines');
           return;
         case ROLE_NAME.RECEPTIONIST:
           navigate('/dashboard/receptionist');
