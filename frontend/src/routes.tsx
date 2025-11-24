@@ -105,7 +105,7 @@ export const routes: RouteObject[] = [
     ),
   },
   {
-    
+
     path: '/:restaurantSlug',
     element: <ReservationGuestLanding />,
   },

@@ -65,7 +65,7 @@ import { TableQRDialog } from "@/components/owner/TableQRDialog";
 import { QRCodeSVG } from "qrcode.react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { getReservationsByTable as apiGetReservationsByTable } from "@/api/reservationApi";
+import { useReservationsByTable } from '@/hooks/queries/useReservationsByTable';
 
 interface ManagerTableManagementEnhancedProps {
   branchId?: string;
@@ -149,11 +149,9 @@ export const ManagerTableManagementEnhanced = ({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reservationIndex, setReservationIndex] = useState(0);
 
-  const selectedTableReservationsQuery = useQuery({
-    queryKey: ["reservationsByTable", selectedTable?.id],
-    queryFn: () => apiGetReservationsByTable(selectedTable?.id),
-    enabled: !!selectedTable && !!dialogOpen,
-  });
+  const { data: selectedTableReservations = [], isLoading: selectedTableReservationsLoading } = useReservationsByTable(
+    selectedTable?.id && dialogOpen ? selectedTable?.id : null
+  );
 
   const [isAddTableOpen, setIsAddTableOpen] = useState(false);
   const [isAreaDialogOpen, setIsAreaDialogOpen] = useState(false);
@@ -571,22 +569,9 @@ export const ManagerTableManagementEnhanced = ({
   }) => {
     const [isHovered, setIsHovered] = useState(false);
 
-    const reservationsQuery = useQuery({
-      queryKey: ["reservationsByTable", table.id],
-      queryFn: () => apiGetReservationsByTable(table.id),
-      // Only fetch when the user hovers the table or opens the details dialog for it
-      enabled:
-        !!table?.id &&
-        (isHovered || (dialogOpen && selectedTable?.id === table.id)),
-      staleTime: 60_000,
-      // cacheTime: 5 * 60_000,
-      // Avoid refetch storms from focus/reconnect/mount
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
-    });
-
-    const reservations = reservationsQuery.data || [];
+    const { data: reservations = [] } = useReservationsByTable(
+      isHovered || (dialogOpen && selectedTable?.id === table.id) ? table.id : null
+    );
 
     return (
       <div
@@ -1342,8 +1327,8 @@ export const ManagerTableManagementEnhanced = ({
               </div>
 
               {(() => {
-                const reservations = selectedTableReservationsQuery.data || [];
-                const isLoading = selectedTableReservationsQuery.isLoading;
+                const reservations = selectedTableReservations || [];
+                const isLoading = selectedTableReservationsLoading;
                 if (isLoading) {
                   return (
                     <div className="border-t pt-6">

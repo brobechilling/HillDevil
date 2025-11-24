@@ -10,6 +10,8 @@ export const useReservations = (
         queryKey: ['reservations', branchId, page, size],
         queryFn: () => reservationApi.fetchByBranch(branchId!, page, size),
         enabled: !!branchId,
+        staleTime: 30 * 1000, // 30 seconds
+        gcTime: 5 * 60 * 1000, // 5 minutes (formerly cacheTime)
     });
 };
 
@@ -31,6 +33,40 @@ export const useCreateReservationReceptionist = () => {
         mutationFn: reservationApi.createForReceptionist,
         onSuccess: (data: any, variables: any) => {
             const bid = variables?.branchId;
+            qc.invalidateQueries({
+                predicate: (query) =>
+                    Array.isArray(query.queryKey) &&
+                    query.queryKey[0] === 'reservations' &&
+                    (bid ? query.queryKey[1] === bid : true),
+            });
+        },
+    });
+};
+
+export const useAssignTable = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ reservationId, tableId }: { reservationId: string; tableId: string | null }) =>
+            reservationApi.assignTable(reservationId, tableId),
+        onSuccess: (data: any, variables: any) => {
+            const bid = data?.result?.branchId || data?.branchId || variables?.branchId;
+            qc.invalidateQueries({
+                predicate: (query) =>
+                    Array.isArray(query.queryKey) &&
+                    query.queryKey[0] === 'reservations' &&
+                    (bid ? query.queryKey[1] === bid : true),
+            });
+        },
+    });
+};
+
+export const useUpdateReservationStatus = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ reservationId, status }: { reservationId: string; status: string }) =>
+            reservationApi.updateStatus(reservationId, status),
+        onSuccess: (data: any, variables: any) => {
+            const bid = variables?.branchId || data?.result?.branchId || data?.branchId;
             qc.invalidateQueries({
                 predicate: (query) =>
                     Array.isArray(query.queryKey) &&

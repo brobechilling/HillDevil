@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useGuestContext from '@/hooks/queries/useGuestContext';
-import { publicApi } from '@/api/publicApi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, MapPin, Phone, Mail, Clock, Plus, Minus, Loader2, Calendar } from 'lucide-react';
@@ -65,8 +64,9 @@ const ReservationGuestLanding = () => {
   const [loading, setLoading] = useState(true);
   const [tableNumber, setTableNumber] = useState<string>('');
   const [flowState, setFlowState] = useState<'menu' | 'reservation' | 'post-reservation'>('menu');
+  const [guestReservationId, setGuestReservationId] = useState<string | undefined>(undefined);
 
-  const { tableContext, restaurant, branchMenu, derivedSlug, branchId: branchIdToUse, isLoading: contextLoading } =
+  const { tableContext, restaurant, branchMenu, derivedSlug, branchId: branchIdToUse, isLoading: contextLoading, restaurantError, menuError, queries } =
     useGuestContext({ slug: shortCode, branchId: routeBranchId });
   // Precompute theme values early so selection UI can use them
   const selectedTheme = branch?.selectedThemeId ? getThemeById(branch.selectedThemeId) : null;
@@ -123,8 +123,17 @@ const ReservationGuestLanding = () => {
   const loadBranchMenu = useCallback(async (bid: string) => {
     setLoading(true);
     try {
-      // Lấy menu từ slug thay vì branchId
-      const res = await publicApi.getRestaurantMenuBySlug(derivedSlug!);
+      // Use branchMenu from useGuestContext (it already fetches menu by slug).
+      let resData = branchMenu;
+      if (!resData || !resData.items) {
+        // try to refetch via the returned query if available
+        try {
+          const refetchResult = await queries?.menuQuery?.refetch();
+          resData = refetchResult?.data ?? resData;
+        } catch (e) {
+          // ignore and fallthrough
+        }
+      }
       const bdata = (restaurant as any)?.branches?.find((x: any) => x.branchId === bid) || {};
       setBranch({
         id: bid,
@@ -144,15 +153,14 @@ const ReservationGuestLanding = () => {
         openingTime: bdata.openingTime,
         closingTime: bdata.closingTime,
       });
-      setMenuItems(res?.items || []);
+      setMenuItems(resData?.items || []);
       setFlowState('menu');
-      navigate(`/${derivedSlug}/branch/${bid}`, { replace: true });
     } catch (err) {
       toast({ title: 'Unable to load menu', description: 'Please try again later.' });
     } finally {
       setLoading(false);
     }
-  }, [derivedSlug, restaurant, navigate]);
+  }, [derivedSlug, restaurant, branchMenu, queries]);
 
 
   useEffect(() => {
@@ -170,6 +178,31 @@ const ReservationGuestLanding = () => {
     );
   }
 
+  // If there's a restaurant error (status=false, no active branches, etc), show error message
+  if (restaurantError || menuError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Restaurant Unavailable</CardTitle>
+            <CardDescription>
+              This restaurant is currently not accepting reservations. Please try again later.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="w-full"
+            >
+              Back to Home
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // If there's no restaurant data at all, show not found.
   if (!restaurant) {
     return (
@@ -181,6 +214,15 @@ const ReservationGuestLanding = () => {
               The restaurant you're looking for doesn't exist or is no longer available.
             </CardDescription>
           </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="w-full"
+            >
+              Back to Home
+            </Button>
+          </CardContent>
         </Card>
       </div>
     );
@@ -242,7 +284,10 @@ const ReservationGuestLanding = () => {
           <ReservationPanel
             displayBranch={displayBranch}
             branches={branches}
-            onBookingComplete={() => setFlowState('post-reservation')}
+            onBookingComplete={(reservationId?: string) => {
+              if (reservationId) setGuestReservationId(reservationId);
+              setFlowState('post-reservation');
+            }}
           />
         </motion.div>
       </div>

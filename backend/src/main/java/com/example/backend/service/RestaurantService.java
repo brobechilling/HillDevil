@@ -38,17 +38,16 @@ public class RestaurantService {
     private String webUrl; // 👈 lấy từ application.yml, ví dụ hilldevil.space
 
     public RestaurantService(
-        RestaurantRepository restaurantRepository,
-        RestaurantMapper restaurantMapper,
-        UserRepository userRepository,
-        SubscriptionRepository subscriptionRepository,
-        BranchRepository branchRepository 
-    ) {
+            RestaurantRepository restaurantRepository,
+            RestaurantMapper restaurantMapper,
+            UserRepository userRepository,
+            SubscriptionRepository subscriptionRepository,
+            BranchRepository branchRepository) {
         this.restaurantRepository = restaurantRepository;
         this.restaurantMapper = restaurantMapper;
         this.userRepository = userRepository;
         this.subscriptionRepository = subscriptionRepository;
-        this.branchRepository = branchRepository; 
+        this.branchRepository = branchRepository;
     }
 
     public List<RestaurantDTO> getAll() {

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useTables } from '@/hooks/queries/useTables';
-import { useQuery } from '@tanstack/react-query';
-import { getReservationsByTable as apiGetReservationsByTable } from '@/api/reservationApi';
+import { useReservationsByTable } from '@/hooks/queries/useReservationsByTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -94,11 +93,7 @@ const TablesPage = () => {
   };
 
   const TableCard = ({ table }: { table: any }) => {
-    const { data: tableReservations = [] } = useQuery({
-      queryKey: ['reservations', 'table', table.id],
-      queryFn: () => apiGetReservationsByTable(table.id),
-      enabled: !!table.id,
-    });
+    const { data: tableReservations = [] } = useReservationsByTable(table.id);
 
     return (
       <Card className="flex flex-col justify-between w-full max-w-[320px] h-full min-h-[150px] bg-card border border-border rounded-2xl shadow-md hover:shadow-lg hover:border-primary/40 transition-all duration-200 ease-in-out overflow-hidden">
