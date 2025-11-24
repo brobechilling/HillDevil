@@ -16,26 +16,22 @@ import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.repository.AreaRepository;
 import com.example.backend.repository.BranchRepository;
-import com.example.backend.repository.TableRepository;
 
 @Service
 public class AreaService {
 
     private final AreaRepository areaRepository;
     private final BranchRepository branchRepository;
-    private final TableRepository tableRepository;
 
-    public AreaService(AreaRepository areaRepository, BranchRepository branchRepository, TableRepository tableRepository) {
+    public AreaService(AreaRepository areaRepository, BranchRepository branchRepository) {
         this.areaRepository = areaRepository;
         this.branchRepository = branchRepository;
-        this.tableRepository = tableRepository;
     }
 
     @Transactional(readOnly = true)
     public List<AreaResponse> getAreasByBranch(UUID branchId) {
-        return areaRepository.findByBranchBranchId(branchId)
+        return areaRepository.findByBranchBranchIdAndStatusTrue(branchId)
                 .stream()
-                .filter(area -> area.isStatus()) // Chỉ lấy area có status = true
                 .map(area -> new AreaResponse(
                         area.getAreaId(),
                         area.getName(),
@@ -93,61 +89,14 @@ public class AreaService {
 
     @Transactional
     public void deleteArea(UUID areaId) {
-        // Load area with branch (eager loading) to avoid LazyInitializationException
-        Area area = areaRepository.findByIdWithBranch(areaId)
+        Area area = areaRepository.findById(areaId)
                 .orElseThrow(() -> new AppException(ErrorCode.AREA_NOT_FOUND));
-        
-        // Get branchId from loaded area
-        UUID branchId = area.getBranch().getBranchId();
-        
-        // Get all tables in this area
-        List<com.example.backend.entities.AreaTable> tablesInArea = tableRepository.findAllByAreaId(areaId);
-        
-        // If area has tables, move them to "Undefined Area" (Unassigned Area)
-        if (!tablesInArea.isEmpty()) {
-            // Find or create default "Undefined Area" area
-            Area defaultArea = findOrCreateUnassignedArea(branchId);
-            
-            // Move all tables to default area
-            for (com.example.backend.entities.AreaTable table : tablesInArea) {
-                table.setArea(defaultArea);
-            }
-            tableRepository.saveAll(tablesInArea);
+
+        if (!area.isStatus()) {
+            return;
         }
-        
-        // Delete the area (no check for tables - we already moved them)
-        areaRepository.delete(area);
-    }
-    
-    /**
-     * Find or create the default "Undefined Area" (Unassigned Area) for a branch
-     */
-    private Area findOrCreateUnassignedArea(UUID branchId) {
-        String defaultAreaName = "Undefined Area";
-        
-        // Try to find existing default area
-        Optional<Area> existingDefaultArea = areaRepository.findByBranchBranchIdAndNameIgnoreCaseAnyStatus(
-                branchId, defaultAreaName);
-        
-        if (existingDefaultArea.isPresent()) {
-            Area area = existingDefaultArea.get();
-            // Ensure it's active
-            if (!area.isStatus()) {
-                area.setStatus(true);
-                area = areaRepository.save(area);
-            }
-            return area;
-        }
-        
-        // Create new default area if not found
-        Branch branch = branchRepository.findById(branchId)
-                .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
-        
-        Area defaultArea = new Area();
-        defaultArea.setBranch(branch);
-        defaultArea.setName(defaultAreaName);
-        defaultArea.setStatus(true);
-        
-        return areaRepository.save(defaultArea);
+
+        area.setStatus(false);
+        areaRepository.save(area);
     }
 }

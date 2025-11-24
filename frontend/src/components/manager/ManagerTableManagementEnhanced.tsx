@@ -129,27 +129,62 @@ export const ManagerTableManagementEnhanced = ({
 
   const apiTables = useMemo(() => tablesData?.content || [], [tablesData?.content]);
 
+  const UNASSIGNED_AREA_ID = 'unassigned';
+  const UNASSIGNED_AREA_LABEL = 'Unassigned tables';
+
   const areaMap = useMemo(() => {
-    const map = new Map<string, { areaName: string; tables: TableDTO[] }>();
+    const map = new Map<string, { areaName: string; tables: TableDTO[]; isFallback?: boolean }>();
+
+    areas.forEach((area) => {
+      map.set(area.areaId, {
+        areaName: area.name,
+        tables: [],
+      });
+    });
+
+    const orphanTables: TableDTO[] = [];
 
     apiTables.forEach((table) => {
-      const areaId = table.areaId || 'unknown';
-      const areaName = table.areaName || areas.find(a => a.areaId === areaId)?.name || 'Unassigned';
+      const areaId = table.areaId;
 
-      if (!map.has(areaId)) {
-        map.set(areaId, { areaName, tables: [] });
+      if (areaId && map.has(areaId)) {
+        map.get(areaId)!.tables.push(table);
+      } else {
+        orphanTables.push(table);
       }
-      map.get(areaId)!.tables.push(table);
     });
+
+    if (orphanTables.length > 0) {
+      map.set(UNASSIGNED_AREA_ID, {
+        areaName: UNASSIGNED_AREA_LABEL,
+        tables: orphanTables,
+        isFallback: true,
+      });
+    }
 
     return map;
   }, [apiTables, areas]);
 
   // Filter areas based on selectedAreaId
   const filteredAreaEntries = useMemo(() => {
-    const entries = Array.from(areaMap.entries()).sort((a, b) =>
-      a[1].areaName.localeCompare(b[1].areaName)
-    );
+    // Filter out "Undefined Area" (both virtual and real) if it has no tables
+    const validEntries = Array.from(areaMap.entries()).filter(([areaId, { areaName, tables }]) => {
+      // Hide virtual "Undefined Area" if no tables
+      if (areaId === UNASSIGNED_AREA_ID) {
+        return tables.length > 0;
+      }
+      // Also hide real areas from backend with "Undefined Area" name if no tables
+      if (areaName.toLowerCase().includes('undefined') || areaName.toLowerCase().includes('unassigned')) {
+        return tables.length > 0;
+      }
+      return true;
+    });
+
+    const entries = validEntries.sort((a, b) => {
+      if (a[0] === UNASSIGNED_AREA_ID) return 1;
+      if (b[0] === UNASSIGNED_AREA_ID) return -1;
+      return a[1].areaName.localeCompare(b[1].areaName);
+    });
 
     if (selectedAreaId === null || selectedAreaId === 'all') {
       return entries;
@@ -241,7 +276,7 @@ export const ManagerTableManagementEnhanced = ({
     if (areaTables.length > 0) {
       toast({
         title: 'Area has tables',
-        description: `Area "${areaName}" has ${areaTables.length} table(s). These tables will be moved to "Undefined Area" after deletion.`,
+        description: `Area "${areaName}" hiện có ${areaTables.length} bàn. Sau khi xoá, khu vực này sẽ bị ẩn và các bàn sẽ nằm trong nhóm "${UNASSIGNED_AREA_LABEL}" cho đến khi bạn gán lại.`,
       });
     }
 
@@ -256,9 +291,9 @@ export const ManagerTableManagementEnhanced = ({
       const areaTables = areaMap.get(areaToDelete.id)?.tables || [];
       await deleteAreaMutation.mutateAsync(areaToDelete.id);
 
-      let description = `Area "${areaToDelete.name}" has been deleted successfully.`;
+      let description = `Area "${areaToDelete.name}" đã được xoá (ẩn) thành công.`;
       if (areaTables.length > 0) {
-        description += ` ${areaTables.length} table(s) have been moved to "Undefined Area".`;
+        description += ` ${areaTables.length} bàn đã được chuyển vào nhóm "${UNASSIGNED_AREA_LABEL}".`;
       }
 
       toast({
@@ -702,7 +737,19 @@ export const ManagerTableManagementEnhanced = ({
                     Add Area
                   </Button>
                   <Button
-                    onClick={() => { setInitialTableCount(apiTables.length); setIsAddTableOpen(true); }}
+                    onClick={() => {
+                      if (!areas || areas.length === 0) {
+                        toast({
+                          variant: 'destructive',
+                          title: 'No area found',
+                          description: 'Please add an area before creating tables.',
+                        });
+                        setIsAreaDialogOpen(true);
+                        return;
+                      }
+                      setInitialTableCount(apiTables.length);
+                      setIsAddTableOpen(true);
+                    }}
                     className="transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -795,6 +842,9 @@ export const ManagerTableManagementEnhanced = ({
                           {area.name}
                         </SelectItem>
                       ))}
+                      {areaMap.has(UNASSIGNED_AREA_ID) && areaMap.get(UNASSIGNED_AREA_ID)?.tables.length > 0 && (
+                        <SelectItem value={UNASSIGNED_AREA_ID}>{UNASSIGNED_AREA_LABEL}</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -807,7 +857,17 @@ export const ManagerTableManagementEnhanced = ({
                   </div>
                 ) : (
                   <div className="space-y-8">
-                    {sortedAreaEntries.map(([areaId, { areaName, tables: areaTables }], areaIndex) => {
+                    {sortedAreaEntries
+                      .filter(([areaId, { areaName, tables: areaTables }]) => {
+                        // Hide "Undefined Area" (virtual or real) if no tables
+                        if (areaId === UNASSIGNED_AREA_ID || 
+                            areaName.toLowerCase().includes('undefined') || 
+                            areaName.toLowerCase().includes('unassigned')) {
+                          return areaTables.length > 0;
+                        }
+                        return true;
+                      })
+                      .map(([areaId, { areaName, tables: areaTables }], areaIndex) => {
                       const sortedTables = [...areaTables].sort((a, b) => {
                         const numA = parseInt(a.tag.match(/\d+/)?.[0] || '0');
                         const numB = parseInt(b.tag.match(/\d+/)?.[0] || '0');
