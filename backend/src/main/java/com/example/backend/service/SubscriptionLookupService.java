@@ -21,6 +21,6 @@ public class SubscriptionLookupService {
     @Transactional(readOnly = true)
     public Package getActivePackageByRestaurant(UUID restaurantId) {
         return subscriptionRepository.findActivePackageByRestaurantId(restaurantId)
-                .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.SUBSCRIPTION_NOT_ACTIVE));
     }
 }

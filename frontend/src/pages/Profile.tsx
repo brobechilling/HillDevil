@@ -74,7 +74,7 @@ import { isUserDTO } from '@/utils/typeCast';
 import { useChangePasswordd, useUpdateUserProfile } from '@/hooks/queries/useUsers';
 import { ROLE_NAME, UserDTO } from '@/dto/user.dto';
 import { useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 
 interface ProfileFormData {
   username: string;
@@ -562,20 +562,8 @@ useEffect(() => {
                                 const isExpiringSoon = isActive && daysLeft !== null && daysLeft <= 3 && daysLeft > 0;
 
                                 return (
-                                  <motion.tr
+                                  <TableRow
                                     key={sub.restaurantId}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: 20 }}
-                                    transition={{ 
-                                      duration: 0.3, 
-                                      delay: index * 0.05,
-                                      ease: "easeOut"
-                                    }}
-                                    whileHover={{ 
-                                      backgroundColor: "rgba(0, 0, 0, 0.02)",
-                                      transition: { duration: 0.2 }
-                                    }}
                                     className="border-b"
                                   >
                                     <TableCell className="font-medium max-w-[220px] truncate">
@@ -776,7 +764,7 @@ useEffect(() => {
                                         </Tooltip>
                                       </div>
                                     </TableCell>
-                                  </motion.tr>
+                                  </TableRow>
                                 );
                               })}
                             </AnimatePresence>

@@ -37,13 +37,20 @@ public class FeatureLimitCheckerService {
                         pf -> pf.getFeature().getCode(),
                         PackageFeature::getValue));
 
+        // If feature doesn't exist in package (e.g., Premium doesn't have Basic limits)
+        // No limit check needed (unlimited)
+        if (!featureLimitMap.containsKey(featureCode)) {
+            return; // Unlimited
+        }
+
         Integer limit = featureLimitMap.get(featureCode);
+        // If limit is null or 0, it means unlimited
         if (limit == null || limit == 0) {
             return;
         }
 
         long currentCount = currentCountSupplier.get();
-        if (currentCount > limit) {
+        if (currentCount >= limit) {
             throw new AppException(ErrorCode.LIMIT_EXCEEDED);
         }
     }
@@ -59,8 +66,15 @@ public class FeatureLimitCheckerService {
                         pf -> pf.getFeature().getCode(),
                         PackageFeature::getValue));
 
+        // If feature doesn't exist in package (e.g., Premium doesn't have Basic limits)
+        // Return true (unlimited)
+        if (!featureLimitMap.containsKey(featureCode)) {
+            return true; // Unlimited
+        }
+
         Integer limit = featureLimitMap.get(featureCode);
 
+        // If limit is null or 0, it means unlimited
         if (limit == null || limit == 0) {
             return true;
         }
@@ -71,14 +85,27 @@ public class FeatureLimitCheckerService {
 
     @Transactional(readOnly = true)
     public int getLimitValue(UUID restaurantId, FeatureCode featureCode) {
-        Package pack = subscriptionLookupService.getActivePackageByRestaurant(restaurantId);
-        Map<FeatureCode, Integer> featureLimitMap = packageFeatureRepository.findByPackageId(pack.getPackageId())
-                .stream()
-                .filter(pf -> pf.getFeature().getCode() != null)
-                .collect(Collectors.toMap(
-                        pf -> pf.getFeature().getCode(),
-                        PackageFeature::getValue));
+        try {
+            Package pack = subscriptionLookupService.getActivePackageByRestaurant(restaurantId);
+            Map<FeatureCode, Integer> featureLimitMap = packageFeatureRepository.findByPackageId(pack.getPackageId())
+                    .stream()
+                    .filter(pf -> pf.getFeature().getCode() != null)
+                    .collect(Collectors.toMap(
+                            pf -> pf.getFeature().getCode(),
+                            PackageFeature::getValue));
 
-        return featureLimitMap.getOrDefault(featureCode, 0);
+            // If feature doesn't exist in package (e.g., Premium doesn't have Basic limits)
+            // Return -1 to indicate unlimited (no limit)
+            if (!featureLimitMap.containsKey(featureCode)) {
+                return -1; // Unlimited
+            }
+            
+            Integer limit = featureLimitMap.get(featureCode);
+            // If limit is 0, it means unlimited
+            return (limit == null || limit == 0) ? -1 : limit;
+        } catch (AppException e) {
+            // No active subscription found - return 0 (no access)
+            return 0;
+        }
     }
 }

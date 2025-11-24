@@ -285,20 +285,31 @@ public class SubscriptionService {
             return null;
         SubscriptionResponse response = new SubscriptionResponse();
         response.setSubscriptionId(subscription.getSubscriptionId());
-        response.setRestaurantId(
-                subscription.getRestaurant() != null ? subscription.getRestaurant().getRestaurantId() : null);
-        response.setPackageId(subscription.getaPackage() != null ? subscription.getaPackage().getPackageId() : null);
+        
+        // Set restaurant info
+        Restaurant restaurant = subscription.getRestaurant();
+        if (restaurant != null) {
+            response.setRestaurantId(restaurant.getRestaurantId());
+        }
+        
+        // Set package info and amount from current package (not from payment)
+        Package currentPackage = subscription.getaPackage();
+        if (currentPackage != null) {
+            response.setPackageId(currentPackage.getPackageId());
+            response.setAmount(BigDecimal.valueOf(currentPackage.getPrice()));
+        }
+        
         response.setStatus(subscription.getStatus());
         response.setStartDate(subscription.getStartDate());
         response.setEndDate(subscription.getEndDate());
 
+        // Keep payment info for reference but don't use payment amount
         SubscriptionPayment latestPayment = subscription.getLatestPayment();
         if (latestPayment != null) {
             response.setPaymentInfo(subscriptionPaymentToResponse(latestPayment));
             response.setPaymentStatus(latestPayment.getSubscriptionPaymentStatus() != null
                     ? latestPayment.getSubscriptionPaymentStatus().name()
                     : null);
-            response.setAmount(BigDecimal.valueOf(latestPayment.getAmount()));
         }
         return response;
     }

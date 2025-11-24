@@ -57,8 +57,12 @@ const RegisterConfirm = () => {
     currentPackageId?: string;
   } | undefined;
 
+  // Get packageId from query string (for register flow) or state (for renew/upgrade)
+  const queryParams = new URLSearchParams(location.search);
+  const queryPackageId = queryParams.get("packageId");
+  
   const action = state?.action ?? "register";
-  const packageId = state?.packageId ?? "";
+  const packageId = queryPackageId || state?.packageId || "";
   const isRegisterMode = action === "register";
 
   const [restaurantInfo] = useState(
