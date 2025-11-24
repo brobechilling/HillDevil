@@ -1,41 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DollarSign, TrendingUp, ShoppingCart } from 'lucide-react';
-import { useOrderStore } from '@/store/orderStore';
 
 interface ReportsAnalyticsProps {
   branchId: string;
 }
 
 export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
-  const { orders } = useOrderStore();
-  const [topItems, setTopItems] = useState<any[]>([]);
   const [timeframe, setTimeframe] = useState<'day' | 'month' | 'year'>('day');
 
-  useEffect(() => {
-    const branchOrders = orders.filter(order => order.branchId === branchId);
-    const itemSales: { [key: string]: { name: string; revenue: number; quantity: number } } = {};
-
-    branchOrders.forEach(order => {
-      order.orderLines?.forEach(line => { // dùng ?. để tránh undefined
-        line.items?.forEach(item => {     // tương tự ở đây
-          if (!itemSales[item.name]) {
-            itemSales[item.name] = { name: item.name, revenue: 0, quantity: 0 };
-          }
-          itemSales[item.name].revenue += (item.price || 0) * (item.quantity || 0);
-          itemSales[item.name].quantity += item.quantity || 0;
-        });
-      });
-    });
-
-    const sortedItems = Object.values(itemSales)
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-
-    setTopItems(sortedItems);
-  }, [branchId, orders]);
+  // TODO: Replace with real API calls when backend is ready
+  // For now, using mock data for demonstration
+  const topItems: any[] = [];
 
   // Mock data
   const getRevenueData = () => {

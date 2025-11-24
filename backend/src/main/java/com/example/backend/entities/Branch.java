@@ -39,10 +39,10 @@ public class Branch {
     @Column(name = "branch_phone")
     private String branchPhone;
 
-    @Column(name = "opening_time")
+    @Column(name = "opening_time", nullable = false)
     private LocalTime openingTime;
     
-    @Column(name = "closing_time")
+    @Column(name = "closing_time",  nullable = false)
     private LocalTime closingTime;
 
     @CreationTimestamp
