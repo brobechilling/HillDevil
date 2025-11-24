@@ -36,16 +36,16 @@ const bookingSchema = z.object({
 const createBookingSchema = (openingTime?: string, closingTime?: string) => {
   return bookingSchema.superRefine((data, ctx) => {
     if (!data.bookingDate || !data.bookingTime || !openingTime || !closingTime) return;
-    
+
     // Parse times (HH:MM:SS format)
     const [openHour, openMin] = openingTime.split(':').map(Number);
     const [closeHour, closeMin] = closingTime.split(':').map(Number);
     const [bookHour, bookMin] = data.bookingTime.split(':').map(Number);
-    
+
     const openTimeInMinutes = openHour * 60 + openMin;
     const closeTimeInMinutes = closeHour * 60 + closeMin;
     const bookTimeInMinutes = bookHour * 60 + bookMin;
-    
+
     if (bookTimeInMinutes < openTimeInMinutes || bookTimeInMinutes > closeTimeInMinutes) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

@@ -190,8 +190,8 @@ const ReservationGuestLanding = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => navigate('/')}
               className="w-full"
             >
@@ -215,8 +215,8 @@ const ReservationGuestLanding = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => navigate('/')}
               className="w-full"
             >

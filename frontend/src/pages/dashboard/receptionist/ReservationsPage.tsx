@@ -176,7 +176,7 @@ const ReservationsPage = () => {
   const handleCreateReservation = useCallback(async () => {
     // Reset validation error
     setValidationError('');
-    
+
     if (!newReservation.customer_name || !newReservation.customer_phone || !newReservation.start_time) {
       alert('Please fill in all required fields');
       return;
@@ -191,26 +191,26 @@ const ReservationsPage = () => {
     if (newReservation.start_time) {
       const reservationDateTime = new Date(newReservation.start_time);
       const now = new Date();
-      
+
       // Check if date is today or future
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const reservationDate = new Date(reservationDateTime.getFullYear(), reservationDateTime.getMonth(), reservationDateTime.getDate());
-      
+
       if (reservationDate < today) {
         setValidationError('Reservation date must be today or in the future');
         return;
       }
-      
+
       // Check if time is within branch opening/closing hours
       if (branchInfo) {
         const [openHour, openMin] = branchInfo.openingTime.split(':').map(Number);
         const [closeHour, closeMin] = branchInfo.closingTime.split(':').map(Number);
         const [resHour, resMin] = [reservationDateTime.getHours(), reservationDateTime.getMinutes()];
-        
+
         const openTimeInMinutes = openHour * 60 + openMin;
         const closeTimeInMinutes = closeHour * 60 + closeMin;
         const resTimeInMinutes = resHour * 60 + resMin;
-        
+
         if (resTimeInMinutes < openTimeInMinutes || resTimeInMinutes > closeTimeInMinutes) {
           setValidationError(
             `Reservation time must be between ${branchInfo.openingTime.slice(0, 5)} and ${branchInfo.closingTime.slice(0, 5)}`
