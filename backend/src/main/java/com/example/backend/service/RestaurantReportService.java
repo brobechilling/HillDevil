@@ -63,18 +63,16 @@ public class RestaurantReportService {
                 throw new IllegalArgumentException("Invalid timeframe: " + timeframe);
         }
 
-        // Get total orders (all statuses)
-        long totalOrdersEating = orderRepository.countOrdersByBranchAndStatusAndTimeframe(
+        // Get order counts by status
+        int eatingOrders = orderRepository.countOrdersByBranchAndStatusAndTimeframe(
                 branchId, OrderStatus.EATING, startDate, endDate);
-        long totalOrdersCompleted = orderRepository.countOrdersByBranchAndStatusAndTimeframe(
+        int completedOrders = orderRepository.countOrdersByBranchAndStatusAndTimeframe(
                 branchId, OrderStatus.COMPLETED, startDate, endDate);
-        int totalOrders = (int) (totalOrdersEating + totalOrdersCompleted);
-
-        // Get completed orders
-        int completedOrders = (int) totalOrdersCompleted;
-
-        // Get cancelled orders (for now, we don't have a CANCELLED status, so it's 0)
-        int cancelledOrders = 0;
+        int cancelledOrders = orderRepository.countOrdersByBranchAndStatusAndTimeframe(
+                branchId, OrderStatus.CANCELLED, startDate, endDate);
+        
+        // Calculate total orders
+        int totalOrders = eatingOrders + completedOrders + cancelledOrders;
 
         // Get total revenue (COMPLETED orders only)
         BigDecimal totalRevenue = orderRepository.sumRevenueByBranchAndTimeframe(

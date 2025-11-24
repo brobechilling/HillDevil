@@ -45,7 +45,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
         AND o.createdAt >= :startDate
         AND o.createdAt < :endDate
     """)
-    long countOrdersByBranchAndStatusAndTimeframe(
+    int countOrdersByBranchAndStatusAndTimeframe(
             @Param("branchId") UUID branchId,
             @Param("status") OrderStatus status,
             @Param("startDate") Instant startDate,
@@ -111,7 +111,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
      */
     @Query("""
         SELECT new com.example.backend.dto.OrderDistributionDTO(
-            CAST(FUNCTION('EXTRACT', HOUR, o.createdAt) AS int),
+            HOUR(o.createdAt),
             COUNT(o)
         )
         FROM Order o
@@ -121,8 +121,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
         WHERE b.branchId = :branchId
         AND o.createdAt >= :startDate
         AND o.createdAt < :endDate
-        GROUP BY FUNCTION('EXTRACT', HOUR, o.createdAt)
-        ORDER BY FUNCTION('EXTRACT', HOUR, o.createdAt)
+        GROUP BY HOUR(o.createdAt)
+        ORDER BY HOUR(o.createdAt)
     """)
     List<OrderDistributionDTO> findOrderDistributionByBranchAndDate(
             @Param("branchId") UUID branchId,

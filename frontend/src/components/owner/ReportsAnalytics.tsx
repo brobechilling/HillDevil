@@ -1,49 +1,68 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DollarSign, TrendingUp, ShoppingCart } from 'lucide-react';
+import { DollarSign, TrendingUp, ShoppingCart, AlertCircle } from 'lucide-react';
+import { useBranchAnalytics, useTopSellingItems, useOrderDistribution } from '@/hooks/queries/useReports';
+import LoadingSkeleton, { Skeleton } from '@/components/common/LoadingSkeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ReportsAnalyticsProps {
   branchId: string;
 }
 
 export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
-  const [timeframe, setTimeframe] = useState<'day' | 'month' | 'year'>('day');
+  const [timeframe, setTimeframe] = useState<'DAY' | 'MONTH' | 'YEAR'>('DAY');
+  
+  // Get current date for order distribution
+  const currentDate = useMemo(() => {
+    const date = new Date();
+    return date.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  }, []);
 
-  // TODO: Replace with real API calls when backend is ready
-  // For now, using mock data for demonstration
-  const topItems: any[] = [];
+  // Fetch data using React Query hooks
+  const { 
+    data: analytics, 
+    isLoading: analyticsLoading, 
+    error: analyticsError 
+  } = useBranchAnalytics(branchId, timeframe);
+  
+  const { 
+    data: topItems, 
+    isLoading: topItemsLoading, 
+    error: topItemsError 
+  } = useTopSellingItems(branchId, timeframe, 10);
+  
+  const { 
+    data: orderDistribution, 
+    isLoading: distributionLoading, 
+    error: distributionError 
+  } = useOrderDistribution(branchId, currentDate);
 
-  // Mock data
-  const getRevenueData = () => {
-    switch (timeframe) {
-      case 'day':
-        return { total: 2847, growth: 12.5, orders: 38 };
-      case 'month':
-        return { total: 78420, growth: 18.3, orders: 1247 };
-      case 'year':
-        return { total: 856340, growth: 24.7, orders: 12847 };
-    }
+
+  // Format currency with thousand separators
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
   };
 
-  const data = getRevenueData();
+  // Format hour for display (0-23 to 12-hour format)
+  const formatHour = (hour: number) => {
+    if (hour === 0) return '12 AM';
+    if (hour < 12) return `${hour} AM`;
+    if (hour === 12) return '12 PM';
+    return `${hour - 12} PM`;
+  };
 
-  const mockOrdersByHour = [
-    { hour: '9 AM', orders: 5 },
-    { hour: '10 AM', orders: 8 },
-    { hour: '11 AM', orders: 12 },
-    { hour: '12 PM', orders: 18 },
-    { hour: '1 PM', orders: 22 },
-    { hour: '2 PM', orders: 15 },
-    { hour: '3 PM', orders: 10 },
-    { hour: '4 PM', orders: 8 },
-    { hour: '5 PM', orders: 14 },
-    { hour: '6 PM', orders: 25 },
-    { hour: '7 PM', orders: 30 },
-    { hour: '8 PM', orders: 28 },
-  ];
-
+  // Calculate max order count for progress bar scaling
+  const maxOrderCount = useMemo(() => {
+    if (!orderDistribution || orderDistribution.length === 0) return 1;
+    return Math.max(...orderDistribution.map(d => d.orderCount), 1);
+  }, [orderDistribution]);
 
   return (
     <div className="space-y-6">
@@ -56,23 +75,23 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
             </div>
             <div className="flex gap-2">
               <Button
-                variant={timeframe === 'day' ? 'default' : 'outline'}
+                variant={timeframe === 'DAY' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setTimeframe('day')}
+                onClick={() => setTimeframe('DAY')}
               >
                 Today
               </Button>
               <Button
-                variant={timeframe === 'month' ? 'default' : 'outline'}
+                variant={timeframe === 'MONTH' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setTimeframe('month')}
+                onClick={() => setTimeframe('MONTH')}
               >
                 Month
               </Button>
               <Button
-                variant={timeframe === 'year' ? 'default' : 'outline'}
+                variant={timeframe === 'YEAR' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setTimeframe('year')}
+                onClick={() => setTimeframe('YEAR')}
               >
                 Year
               </Button>
@@ -80,48 +99,79 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card className="border-border/50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${data.total.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  <span className="text-green-500">↑ {data.growth}%</span> from last {timeframe}
-                </p>
-              </CardContent>
-            </Card>
+          {analyticsError ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Failed to load analytics data. Please try again later.
+              </AlertDescription>
+            </Alert>
+          ) : analyticsLoading ? (
+            <div className="grid gap-6 md:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="border-border/50">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-4 rounded" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-8 w-32 mb-2" />
+                    <Skeleton className="h-3 w-40" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : analytics ? (
+            <div className="grid gap-6 md:grid-cols-3">
+              <Card className="border-border/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(analytics.totalRevenue)}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <span className="text-green-500">↑ 12.5%</span> from last period
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card className="border-border/50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{data.orders.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  <span className="text-green-500">↑ 8.2%</span> from last {timeframe}
-                </p>
-              </CardContent>
-            </Card>
+              <Card className="border-border/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                  <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{analytics.totalOrders.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {analytics.completedOrders} completed, {analytics.cancelledOrders} cancelled
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card className="border-border/50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Order Value</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  ${(data.total / data.orders).toFixed(2)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  <span className="text-green-500">↑ 3.1%</span> from last {timeframe}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+              <Card className="border-border/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg Order Value</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(analytics.avgOrderValue)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <span className="text-green-500">↑ 3.1%</span> from last period
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No analytics data available for this branch.
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
@@ -135,25 +185,52 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
           <Card>
             <CardHeader>
               <CardTitle>Orders Distribution</CardTitle>
-              <CardDescription>Number of orders by hour of day</CardDescription>
+              <CardDescription>Number of orders by hour of day (today)</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {mockOrdersByHour.map((item) => (
-                  <div key={item.hour} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{item.hour}</span>
-                      <span className="text-muted-foreground">{item.orders} orders</span>
+              {distributionError ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Failed to load order distribution data. Please try again later.
+                  </AlertDescription>
+                </Alert>
+              ) : distributionLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-4 w-20" />
+                      </div>
+                      <Skeleton className="h-2 w-full rounded-full" />
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary"
-                        style={{ width: `${(item.orders / 30) * 100}%` }}
-                      />
+                  ))}
+                </div>
+              ) : orderDistribution && orderDistribution.length > 0 ? (
+                <div className="space-y-4">
+                  {orderDistribution.map((item) => (
+                    <div key={item.hour} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{formatHour(item.hour)}</span>
+                        <span className="text-muted-foreground">
+                          {item.orderCount} {item.orderCount === 1 ? 'order' : 'orders'}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary transition-all"
+                          style={{ width: `${(item.orderCount / maxOrderCount) * 100}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  No orders recorded for today yet.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -165,26 +242,48 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
               <CardDescription>Best performing menu items for this branch by revenue</CardDescription>
             </CardHeader>
             <CardContent>
-              {topItems.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  No sales data available for this branch yet.
+              {topItemsError ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Failed to load top selling items. Please try again later.
+                  </AlertDescription>
+                </Alert>
+              ) : topItemsLoading ? (
+                <div className="space-y-6">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <Skeleton className="w-8 h-8 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                      <Skeleton className="h-5 w-16" />
+                    </div>
+                  ))}
                 </div>
-              ) : (
+              ) : topItems && topItems.length > 0 ? (
                 <div className="space-y-6">
                   {topItems.map((item, index) => (
-                    <div key={item.name} className="flex items-center gap-4">
+                    <div key={item.menuItemId} className="flex items-center gap-4">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary flex-shrink-0">
                         {index + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{item.quantity} orders</p>
+                        <p className="font-medium truncate">{item.menuItemName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {item.quantitySold} {item.quantitySold === 1 ? 'order' : 'orders'}
+                        </p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-bold">${item.revenue.toFixed(2)}</p>
+                        <p className="font-bold">{formatCurrency(item.totalRevenue)}</p>
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  No sales data available for this branch yet.
                 </div>
               )}
             </CardContent>
