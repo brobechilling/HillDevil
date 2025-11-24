@@ -102,7 +102,7 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
 
   const { data: items = [], isLoading: isItemsLoading } = useMenuItems(restaurantId);
   const { data: categories = [] } = useCategories(restaurantId);
-  const deleteMutation = useDeleteMenuItem();
+  const deleteMutation = useDeleteMenuItem(restaurantId);
   const { mutate: toggleActive } = useSetActiveStatus(restaurantId);
   const { mutate: updateBestSeller } = useUpdateBestSeller(restaurantId);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
