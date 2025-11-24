@@ -170,7 +170,7 @@ const MenuItemDialog = ({ open, onOpenChange, menuItem, onAddItem }: MenuItemDia
               <Plus className="w-4 h-4" />
             </Button>
           </div>
-          <div className="text-xl font-bold">{computeTotal().toFixed(2)} VND</div>
+          <div className="text-xl font-bold">{computeTotal().toLocaleString()} VND</div>
         </div>
 
         <Input

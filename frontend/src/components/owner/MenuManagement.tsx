@@ -351,7 +351,7 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
 
                           {/* Price */}
                           <p className="text-2xl font-bold text-primary">
-                            {parseFloat(item.price).toFixed(2)} VND
+                            {parseFloat(item.price).toLocaleString()} VND
                           </p>
 
                           {/* === Toggles: Status + Best Seller === */}
