@@ -41,6 +41,13 @@ public class OrderController {
         return apiResponse;
     }
 
+    @GetMapping("/cancelled/{branchId}")
+    public ApiResponse<List<OrderDTO>> getCancelleddOrder(@PathVariable UUID branchId) {
+        ApiResponse<List<OrderDTO>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(orderService.getOrderByStatusAndBranch(branchId, OrderStatus.CANCELLED));
+        return apiResponse;
+    }
+
     @PutMapping("")
     public ApiResponse<UpdateOrderStatusResponse> setOrderStatus(@RequestBody UpdateOrderStatusRequest request) {
         ApiResponse<UpdateOrderStatusResponse> apiResponse = new ApiResponse<>();

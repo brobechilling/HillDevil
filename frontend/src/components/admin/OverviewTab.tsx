@@ -154,7 +154,7 @@ export const OverviewTab = () => {
                       <TableCell className="font-medium">{user.username}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
                       <TableCell className="text-right font-semibold">
-                        {typeof user.totalSpent === 'number' ? user.totalSpent.toFixed(2) : '0.00'}VND
+                        {typeof user.totalSpent === 'number' ? user.totalSpent.toLocaleString() : '0.00'}VND
                       </TableCell>
                     </TableRow>
                   ))}

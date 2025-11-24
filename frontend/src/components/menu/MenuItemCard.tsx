@@ -113,7 +113,7 @@ export const MenuItemCard = ({
 
           {/* Price */}
           <p className="text-base font-bold text-primary">
-            {Number(item.price).toFixed(2)} VND
+            {Number(item.price).toLocaleString()} VND
           </p>
 
           {/* === Actions === */}

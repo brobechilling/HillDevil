@@ -2,5 +2,6 @@ package com.example.backend.entities;
 
 public enum OrderStatus {
     EATING,
-    COMPLETED
+    COMPLETED,
+    CANCELLED
 }

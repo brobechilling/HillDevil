@@ -14,6 +14,7 @@ export interface OrderDTO {
 export enum OrderStatus {
     EATING = "EATING",
     COMPLETED = "COMPLETED",
+    CANCELLED = "CANCELLED"
 };
 
 export interface UpdateOrderStatusRequest {

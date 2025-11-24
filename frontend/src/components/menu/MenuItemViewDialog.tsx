@@ -178,7 +178,7 @@ export const MenuItemViewDialog = ({
             <div className="flex items-baseline gap-2 pb-4 border-b">
               <span className="text-sm text-muted-foreground font-medium">Price</span>
               <p className="text-4xl font-bold text-primary">
-                {parseFloat(item.price).toFixed(2)} VND
+                {parseFloat(item.price).toLocaleString()} VND
               </p>
             </div>
 
@@ -232,7 +232,7 @@ export const MenuItemViewDialog = ({
                       >
                         <span className="font-medium text-foreground">{cust.name}</span>
                         <Badge className="font-mono">
-                          {cust.price > 0 ? `+${cust.price.toFixed(2)} VND` : 'Free'}
+                          {cust.price > 0 ? `+${cust.price.toLocaleString()} VND` : 'Free'}
                         </Badge>
                       </div>
                     ))}

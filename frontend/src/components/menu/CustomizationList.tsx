@@ -289,7 +289,7 @@ export const CustomizationList = () => {
                           <div className="mt-1 flex items-center gap-2">
                             {customization.price > 0 ? (
                               <Badge variant="default" className="font-mono text-xs">
-                                +{customization.price.toFixed(2)} VND
+                                +{customization.price.toLocaleString()} VND
                               </Badge>
                             ) : (
                               <Badge variant="secondary" className="text-xs">Free</Badge>
