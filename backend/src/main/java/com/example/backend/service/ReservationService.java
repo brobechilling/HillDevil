@@ -126,7 +126,9 @@ public class ReservationService {
 
         r = reservationRepository.save(r);
 
-        return reservationMapper.toDto(r);
+        ReservationResponse resp = reservationMapper.toDto(r);
+
+        return resp;
     }
 
     @Transactional

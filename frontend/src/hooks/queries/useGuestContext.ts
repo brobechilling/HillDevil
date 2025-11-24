@@ -68,6 +68,8 @@ export function useGuestContext({ slug, branchId, tableId }: UseGuestParams) {
       tableContextQuery.isLoading ||
       restaurantQuery.isLoading ||
       menuQuery.isLoading,
+    restaurantError: restaurantQuery.error,
+    menuError: menuQuery.error,
     queries: { tableContextQuery, restaurantQuery, menuQuery },
   };
 }

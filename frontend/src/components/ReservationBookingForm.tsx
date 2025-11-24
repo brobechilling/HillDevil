@@ -32,12 +32,37 @@ const bookingSchema = z.object({
   }
 });
 
+// Factory function to create validation schema with branch times
+const createBookingSchema = (openingTime?: string, closingTime?: string) => {
+  return bookingSchema.superRefine((data, ctx) => {
+    if (!data.bookingDate || !data.bookingTime || !openingTime || !closingTime) return;
+    
+    // Parse times (HH:MM:SS format)
+    const [openHour, openMin] = openingTime.split(':').map(Number);
+    const [closeHour, closeMin] = closingTime.split(':').map(Number);
+    const [bookHour, bookMin] = data.bookingTime.split(':').map(Number);
+    
+    const openTimeInMinutes = openHour * 60 + openMin;
+    const closeTimeInMinutes = closeHour * 60 + closeMin;
+    const bookTimeInMinutes = bookHour * 60 + bookMin;
+    
+    if (bookTimeInMinutes < openTimeInMinutes || bookTimeInMinutes > closeTimeInMinutes) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['bookingTime'],
+        message: `Reservation time must be between ${openingTime.slice(0, 5)} and ${closingTime.slice(0, 5)}`,
+      });
+    }
+  });
+};
+
 type BookingFormData = z.infer<typeof bookingSchema>;
 
 interface ReservationBookingFormProps {
   branchId?: string | null;
   branchName?: string;
   branches?: any[];
+  displayBranch?: any;
   selectedItems?: BookingItem[];
   onBookingComplete?: () => void;
 }
@@ -46,9 +71,14 @@ export function ReservationBookingForm({
   branchId,
   branchName,
   branches,
+  displayBranch,
   selectedItems = [],
   onBookingComplete
 }: ReservationBookingFormProps) {
+  // Get opening and closing times from the selected branch
+  const selectedBranchData = branches?.find((b: any) => (b.branchId ?? b.id) === (branchId ?? displayBranch?.id));
+  const openingTime = selectedBranchData?.openingTime || displayBranch?.openingTime || '07:00:00';
+  const closingTime = selectedBranchData?.closingTime || displayBranch?.closingTime || '22:00:00';
 
 
   const {
@@ -57,7 +87,7 @@ export function ReservationBookingForm({
     formState: { errors },
     reset,
   } = useForm<BookingFormData>({
-    resolver: zodResolver(bookingSchema),
+    resolver: zodResolver(createBookingSchema(openingTime, closingTime)),
   });
 
   const createMutation = useCreateReservationPublic();
@@ -89,7 +119,7 @@ export function ReservationBookingForm({
     (async () => {
       try {
         // Call backend public reservation endpoint (react-query mutation)
-        await createMutation.mutateAsync(payload);
+        const res = await createMutation.mutateAsync(payload);
 
         toast({
           title: 'Reservation Confirmed!',
@@ -98,7 +128,11 @@ export function ReservationBookingForm({
         });
 
         reset();
-        onBookingComplete?.();
+        // Try to extract reservation id from response and pass to parent
+        const reservationId = res && (res.result?.reservationId || res.reservationId || res.id);
+        // Parent can react (e.g., start listening on socket for updates)
+        // If reservationId is undefined, parent will still be notified without id
+        (onBookingComplete as any)?.(reservationId);
       } catch (err: any) {
         console.error('Create reservation failed', err);
         toast({ title: 'Reservation Failed', description: err?.response?.data?.message || 'Please try again later.' });

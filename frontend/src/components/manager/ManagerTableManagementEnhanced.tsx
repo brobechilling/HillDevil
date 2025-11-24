@@ -8,7 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAreas, useCreateArea, useDeleteArea } from '@/hooks/queries/useAreas';
 import { useTables, useDeleteTable, useUpdateTableStatus, useUpdateTable } from '@/hooks/queries/useTables';
 import { useBranches, useBranchesByRestaurant } from '@/hooks/queries/useBranches';
-import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { BranchSelection } from '@/components/common/BranchSelection';
 import { BranchDTO } from '@/dto/branch.dto';
 import { TableDTO } from '@/dto/table.dto';
@@ -35,7 +35,7 @@ import { TableQRDialog } from '@/components/owner/TableQRDialog';
 import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { getReservationsByTable as apiGetReservationsByTable } from '@/api/reservationApi';
+import { useReservationsByTable } from '@/hooks/queries/useReservationsByTable';
 
 interface ManagerTableManagementEnhancedProps {
   branchId?: string;
@@ -106,11 +106,10 @@ export const ManagerTableManagementEnhanced = ({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reservationIndex, setReservationIndex] = useState(0);
 
-  const selectedTableReservationsQuery = useQuery({
-    queryKey: ['reservationsByTable', selectedTable?.id],
-    queryFn: () => apiGetReservationsByTable(selectedTable?.id),
-    enabled: !!selectedTable && !!dialogOpen,
-  });
+  const { data: selectedTableReservations = [], isLoading: selectedTableReservationsLoading } = useReservationsByTable(
+    selectedTable?.id,
+    { enabled: !!selectedTable && !!dialogOpen }
+  );
 
   const [isAddTableOpen, setIsAddTableOpen] = useState(false);
   const [isAreaDialogOpen, setIsAreaDialogOpen] = useState(false);
@@ -437,10 +436,7 @@ export const ManagerTableManagementEnhanced = ({
   const TableCard = ({ table, tableIndex }: { table: any; tableIndex: number }) => {
     const [isHovered, setIsHovered] = useState(false);
 
-    const reservationsQuery = useQuery({
-      queryKey: ['reservationsByTable', table.id],
-      queryFn: () => apiGetReservationsByTable(table.id),
-      // Only fetch when the user hovers the table or opens the details dialog for it
+    const { data: reservations = [] } = useReservationsByTable(table.id, {
       enabled: !!table?.id && (isHovered || (dialogOpen && selectedTable?.id === table.id)),
       staleTime: 60_000,
       // cacheTime: 5 * 60_000,
@@ -449,8 +445,6 @@ export const ManagerTableManagementEnhanced = ({
       refetchOnReconnect: false,
       refetchOnMount: false,
     });
-
-    const reservations = reservationsQuery.data || [];
 
     return (
       <div
@@ -499,25 +493,25 @@ export const ManagerTableManagementEnhanced = ({
                   </Badge>
                 )}
 
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <svg
-                  className="w-4 h-4 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-                <span className="font-medium">
-                  {table.capacity} {table.capacity === 1 ? 'seat' : 'seats'}
-                </span>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <svg
+                    className="w-4 h-4 flex-shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                  </svg>
+                  <span className="font-medium">
+                    {table.capacity} {table.capacity === 1 ? 'seat' : 'seats'}
+                  </span>
+                </div>
               </div>
-            </div>
             </div>
 
             <div
@@ -1065,8 +1059,8 @@ export const ManagerTableManagementEnhanced = ({
               </div>
 
               {(() => {
-                const reservations = selectedTableReservationsQuery.data || [];
-                const isLoading = selectedTableReservationsQuery.isLoading;
+                const reservations = selectedTableReservations || [];
+                const isLoading = selectedTableReservationsLoading;
                 if (isLoading) {
                   return (
                     <div className="border-t pt-6">
@@ -1277,7 +1271,7 @@ export const ManagerTableManagementEnhanced = ({
       </Dialog>
 
       <Dialog open={isQRDialogOpen && !qrTable} onOpenChange={(open) => setIsQRDialogOpen(open)}>
-      <DialogContent className="sm:max-w-md"> 
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Branch QR Code</DialogTitle>
             <DialogDescription>Scan to open the branch page</DialogDescription>
