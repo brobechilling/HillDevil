@@ -16,7 +16,10 @@ const OrderHistoryPage = () => {
   const branchId = isStaffAccountDTO(user) ? user.branchId : "";
 
   const [activeTab, setActiveTab] = useState(OrderStatus.EATING);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState<string>("");
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
+
 
   // dialog state
   const [selectedOrder, setSelectedOrder] = useState<OrderDTO | null>(null);
@@ -28,15 +31,30 @@ const OrderHistoryPage = () => {
 
   const filterList = (orders?: OrderDTO[]) => {
     if (!orders) return [];
-    if (!search.trim()) return orders;
+    let list = orders;
 
-    const keyword = search.toLowerCase();
+    // text search filter
+    if (search.trim()) {
+        const keyword = search.toLowerCase();
+        list = list.filter(
+        (o) =>
+            o.tableTag.toLowerCase().includes(keyword) ||
+            o.areaName.toLowerCase().includes(keyword)
+        );
+    }
 
-    return orders.filter(
-      (o) =>
-        o.tableTag.toLowerCase().includes(keyword) ||
-        o.areaName.toLowerCase().includes(keyword)
-    );
+    // date filter
+    if (fromDate) {
+        const from = new Date(fromDate).getTime();
+        list = list.filter((o) => new Date(o.createdAt).getTime() >= from);
+    }
+
+    if (toDate) {
+        const to = new Date(toDate).getTime() + 24 * 60 * 60 * 1000; // include full day
+        list = list.filter((o) => new Date(o.createdAt).getTime() <= to);
+    }
+
+    return list;
   };
 
   const renderLoading = () => (
@@ -117,6 +135,30 @@ const OrderHistoryPage = () => {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
+
+      <div className="flex gap-4 max-w-md">
+        <div className="flex flex-col w-full">
+            <label className="text-xs text-muted-foreground mb-1">From date</label>
+            <Input
+            type="date"
+            value={fromDate}
+            max={toDate || undefined}
+            onChange={(e) => setFromDate(e.target.value)}
+            />
+        </div>
+
+        <div className="flex flex-col w-full">
+            <label className="text-xs text-muted-foreground mb-1">To date</label>
+            <Input
+            type="date"
+            value={toDate}
+            min={fromDate || undefined}
+            onChange={(e) => setToDate(e.target.value)}
+            />
+        </div>
+      </div>
+
+
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as OrderStatus)}>
         <TabsList>
