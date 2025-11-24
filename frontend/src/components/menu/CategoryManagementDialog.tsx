@@ -264,7 +264,7 @@ export const CategoryManagementDialog = ({
                           </span>
                           {cust.price > 0 && (
                             <Badge variant={isSelected ? "default" : "secondary"} className="text-xs font-mono">
-                              +{cust.price.toFixed(2)} VND
+                              +{cust.price.toLocaleString()} VND
                             </Badge>
                           )}
                           {cust.price === 0 && isSelected && (

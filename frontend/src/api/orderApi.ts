@@ -13,6 +13,11 @@ export const getCompletedOrderByBranch = async (branchId: string) => {
     return res.data.result;
 };
 
+export const getCancelledOrderByBranch = async (branchId: string) => {
+    const res = await axiosClient.get<ApiResponse<OrderDTO[]>>(`/orders/cancelled/${branchId}`);
+    return res.data.result;
+};
+
 export const setOrderStatus = async (updateOrderStatus: UpdateOrderStatusRequest) => {
     const res = await axiosClient.put<ApiResponse<UpdateOrderStatusResponse>>("/orders", updateOrderStatus);
     return res.data.result;

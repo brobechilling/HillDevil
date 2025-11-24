@@ -68,7 +68,7 @@ const GuestLanding = () => {
       await createOrderLineMutation.mutateAsync(payload);
       toast({
         title: 'Order created successfully!',
-        description: `Total: ${totalPrice.toFixed(2)} VND`,
+        description: `Total: ${totalPrice.toLocaleString()} VND`,
       });
       setOrderItems([]);
     } catch {
@@ -127,7 +127,7 @@ const GuestLanding = () => {
                   {item.description}
                 </CardDescription>
                 {!item.available && <Badge variant="destructive">Out of order</Badge>}
-                <div className="text-right font-medium text-primary">{item.price.toFixed(2)} VND</div>
+                <div className="text-right font-medium text-primary">{item.price.toLocaleString()} VND</div>
               </CardContent>
             </Card>
           );
@@ -148,7 +148,7 @@ const GuestLanding = () => {
               <div>
                 <div className="font-medium">{branchMenuItems.find((i) => i.menuItemId === item.menuItemId)?.name}</div>
                 <div className="text-gray-500">
-                  x{item.quantity} — {item.totalPrice.toFixed(2)} VND
+                  x{item.quantity} — {item.totalPrice.toLocaleString()} VND
                 </div>
               </div>
               <Button
@@ -163,7 +163,7 @@ const GuestLanding = () => {
 
           <div className="text-right font-bold text-lg">
             Total:{' '}
-            {orderItems.reduce((sum, i) => sum + i.totalPrice, 0).toFixed(2)} VND
+            {orderItems.reduce((sum, i) => sum + i.totalPrice, 0).toLocaleString()} VND
           </div>
 
           <Button

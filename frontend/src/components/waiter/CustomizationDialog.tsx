@@ -142,7 +142,7 @@ export const CustomizationDialog = ({
             <div className="flex justify-between items-center mb-4">
               <span className="text-lg font-bold">Total</span>
               <span className="text-2xl font-bold text-primary">
-                ${getTotalPrice().toFixed(2)}
+                ${getTotalPrice().toLocaleString()}
               </span>
             </div>
 
