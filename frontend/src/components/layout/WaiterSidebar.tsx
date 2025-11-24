@@ -16,11 +16,11 @@ import { useSessionStore } from '@/store/sessionStore';
 
 const navigationList = [
   { 
-    id: 'orders',
-    path: '/dashboard/waiter/orders',
+    id: 'orderlines',
+    path: '/dashboard/waiter/orderlines',
     icon: ClipboardList,
-    label: 'Orders',
-    description: 'Manage orders'
+    label: 'Orderlines',
+    description: 'Manage orderlines'
   },
   { 
     id: 'tables',
@@ -35,6 +35,13 @@ const navigationList = [
     icon: Menu,
     label: 'Menu',
     description: 'View menu items'
+  },
+  { 
+    id: 'orders',
+    path: '/dashboard/waiter/orders',
+    icon: ClipboardList,
+    label: 'Orders',
+    description: 'Manage orders'
   },
 ];
 

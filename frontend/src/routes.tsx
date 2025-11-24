@@ -45,6 +45,7 @@ import { CategoryCustomizationManagement } from './pages/dashboard/owner/Categor
 import WaiterOrdersPage from './pages/dashboard/waiter/OrdersPage';
 import WaiterTablesPage from './pages/dashboard/waiter/TablesPage';
 import WaiterMenuPage from './pages/dashboard/waiter/MenuPage';
+import OrderHistoryPage from './pages/dashboard/waiter/OrderHistoryPage';
 
 // Admin nested pages
 import AdminOverviewPage from './pages/dashboard/admin/OverviewPage';
@@ -272,7 +273,7 @@ export const routes: RouteObject[] = [
         element: <WaiterOrdersPage />,
       },
       {
-        path: 'orders',
+        path: 'orderlines',
         element: <WaiterOrdersPage />,
       },
       {
@@ -282,6 +283,10 @@ export const routes: RouteObject[] = [
       {
         path: 'menu',
         element: <WaiterMenuPage />,
+      },
+      {
+        path: 'orders',
+        element: <OrderHistoryPage />,
       },
     ],
   },

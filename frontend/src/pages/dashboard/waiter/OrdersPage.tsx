@@ -30,7 +30,6 @@ const OrdersPage = () => {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("PENDING");
 
-  // Fetch data hooks (assume these hooks are imported the same as before)
   const pendingQuery = useGetPendingOrderLine(branchId);
   const preparingQuery = useGetPreparingOrderLine(branchId);
   const completedQuery = useGetCompletedOrderLine(branchId);

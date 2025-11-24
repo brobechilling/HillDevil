@@ -100,6 +100,8 @@ export const useUpdateMenuItem = (restaurantId?: string) => {
 
       queryClient.invalidateQueries({ queryKey: ["menu-items", restaurantId] });
 
+      queryClient.invalidateQueries({ queryKey: ["customization", "menu-item", variables.id] });
+
       toast({
         title: "Updated successfully",
         description: ` "${updatedItem.name}" has been updated.`,
@@ -148,7 +150,7 @@ export const useDeleteMenuItem = (restaurantId?: string) => {
       });
     },
 
-    onSuccess: (_, menuItemId) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["menu-items", restaurantId] });
       queryClient.invalidateQueries({ queryKey: ["menu-items", "can-create", restaurantId] });
 
