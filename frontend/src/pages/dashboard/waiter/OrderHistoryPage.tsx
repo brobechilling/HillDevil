@@ -138,23 +138,26 @@ const OrderHistoryPage = () => {
 
       <div className="flex gap-4 max-w-md">
         <div className="flex flex-col w-full">
-            <label className="text-xs text-muted-foreground mb-1">From date: </label>
+            <label className="text-xs text-muted-foreground mb-1">From date</label>
             <Input
             type="date"
             value={fromDate}
+            max={toDate || undefined}
             onChange={(e) => setFromDate(e.target.value)}
             />
         </div>
 
         <div className="flex flex-col w-full">
-            <label className="text-xs text-muted-foreground mb-1">To date: </label>
+            <label className="text-xs text-muted-foreground mb-1">To date</label>
             <Input
             type="date"
             value={toDate}
+            min={fromDate || undefined}
             onChange={(e) => setToDate(e.target.value)}
             />
         </div>
       </div>
+
 
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as OrderStatus)}>
