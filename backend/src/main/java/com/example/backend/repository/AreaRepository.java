@@ -13,10 +13,10 @@ import com.example.backend.entities.Area;
 public interface AreaRepository extends JpaRepository<Area, UUID> {
     
     // Cách 1: Sử dụng method naming convention
-    List<Area> findByBranchBranchId(UUID branchId);
+    List<Area> findByBranchBranchIdAndStatusTrue(UUID branchId);
     
     // Cách 2: Sử dụng JPQL (tùy chọn - nếu cách 1 không hoạt động)
-    @Query("SELECT a FROM Area a WHERE a.branch.branchId = :branchId ORDER BY a.name ASC")
+    @Query("SELECT a FROM Area a WHERE a.branch.branchId = :branchId AND a.status = true ORDER BY a.name ASC")
     List<Area> findAreasByBranchId(@Param("branchId") UUID branchId);
     
     // Load area with branch (eager loading) to avoid LazyInitializationException

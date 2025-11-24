@@ -33,9 +33,8 @@ public class AreaService {
 
     @Transactional(readOnly = true)
     public List<AreaResponse> getAreasByBranch(UUID branchId) {
-        return areaRepository.findByBranchBranchId(branchId)
+        return areaRepository.findByBranchBranchIdAndStatusTrue(branchId)
                 .stream()
-                .filter(area -> area.isStatus()) // Chỉ lấy area có status = true
                 .map(area -> new AreaResponse(
                         area.getAreaId(),
                         area.getName(),
@@ -96,7 +95,11 @@ public class AreaService {
         // Load area with branch (eager loading) to avoid LazyInitializationException
         Area area = areaRepository.findByIdWithBranch(areaId)
                 .orElseThrow(() -> new AppException(ErrorCode.AREA_NOT_FOUND));
-        
+
+        if (!area.isStatus()) {
+            return;
+        }
+
         // Get branchId from loaded area
         UUID branchId = area.getBranch().getBranchId();
         
@@ -115,8 +118,9 @@ public class AreaService {
             tableRepository.saveAll(tablesInArea);
         }
         
-        // Delete the area (no check for tables - we already moved them)
-        areaRepository.delete(area);
+        // Hide the area (set status to false instead of deleting)
+        area.setStatus(false);
+        areaRepository.save(area);
     }
     
     /**
@@ -125,7 +129,7 @@ public class AreaService {
     private Area findOrCreateUnassignedArea(UUID branchId) {
         String defaultAreaName = "Undefined Area";
         
-        // Try to find existing default area
+        // Try to find existing default area (any status)
         Optional<Area> existingDefaultArea = areaRepository.findByBranchBranchIdAndNameIgnoreCaseAnyStatus(
                 branchId, defaultAreaName);
         
@@ -138,7 +142,7 @@ public class AreaService {
             }
             return area;
         }
-        
+
         // Create new default area if not found
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));

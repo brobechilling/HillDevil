@@ -5,7 +5,7 @@ import { ReservationBookingForm } from '@/components/ReservationBookingForm';
 interface Props {
   displayBranch: any;
   branches: any[];
-  onBookingComplete?: () => void;
+  onBookingComplete?: (reservationId?: string) => void;
 }
 
 export default function ReservationPanel({ displayBranch, branches, onBookingComplete }: Props) {
@@ -22,6 +22,7 @@ export default function ReservationPanel({ displayBranch, branches, onBookingCom
           branchId={displayBranch.id}
           branchName={displayBranch.brandName || displayBranch.name}
           branches={branches}
+          displayBranch={displayBranch}
           onBookingComplete={onBookingComplete}
         />
       </CardContent>

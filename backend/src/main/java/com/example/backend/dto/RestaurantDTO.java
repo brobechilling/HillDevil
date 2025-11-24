@@ -75,5 +75,5 @@ public class RestaurantDTO {
     public void setDescription(String description) {
         this.description = description;
     }
-    
+
 }

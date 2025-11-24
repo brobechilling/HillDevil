@@ -48,11 +48,11 @@ public class Restaurant {
     @Column(name = "created_at")
     @CreationTimestamp
     private Instant createdAt;
-    
+
     @Column(name = "updated_at")
     @UpdateTimestamp
     private Instant updatedAt;
-    
+
     @Column(name = "public_url")
     private String publicUrl;
 
@@ -205,6 +205,5 @@ public class Restaurant {
     public void setRestaurantReports(Set<RestaurantReport> restaurantReports) {
         this.restaurantReports = restaurantReports;
     }
-    
-    
+
 }

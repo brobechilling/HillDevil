@@ -1,41 +1,71 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Table2, Eye, Settings, ChevronLeft, ChevronRight, Plus, QrCode, Trash2, Edit2, Save, X } from 'lucide-react';
-import { TableStatus } from '@/dto/table.dto';
-import { toast } from '@/hooks/use-toast';
-import { useAreas, useCreateArea, useDeleteArea } from '@/hooks/queries/useAreas';
-import { useTables, useDeleteTable, useUpdateTableStatus, useUpdateTable } from '@/hooks/queries/useTables';
-import { useBranches, useBranchesByRestaurant } from '@/hooks/queries/useBranches';
-import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { BranchSelection } from '@/components/common/BranchSelection';
-import { BranchDTO } from '@/dto/branch.dto';
-import { TableDTO } from '@/dto/table.dto';
-import { RestaurantDTO } from '@/dto/restaurant.dto';
-import { getLocalStorageObject } from '@/utils/typeCast';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState, useMemo, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table2,
+  Eye,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  QrCode,
+  Trash2,
+  Edit2,
+  Save,
+  X,
+} from "lucide-react";
+import { TableStatus } from "@/dto/table.dto";
+import { toast } from "@/hooks/use-toast";
+import {
+  useAreas,
+  useCreateArea,
+  useDeleteArea,
+} from "@/hooks/queries/useAreas";
+import {
+  useTables,
+  useDeleteTable,
+  useUpdateTableStatus,
+  useUpdateTable,
+} from "@/hooks/queries/useTables";
+import {
+  useBranches,
+  useBranchesByRestaurant,
+} from "@/hooks/queries/useBranches";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { BranchSelection } from "@/components/common/BranchSelection";
+import { BranchDTO } from "@/dto/branch.dto";
+import { TableDTO } from "@/dto/table.dto";
+import { RestaurantDTO } from "@/dto/restaurant.dto";
+import { getLocalStorageObject } from "@/utils/typeCast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { TableDialog } from '@/components/owner/TableDialog';
-import { TableQRDialog } from '@/components/owner/TableQRDialog';
-import { QRCodeSVG } from 'qrcode.react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { getReservationsByTable as apiGetReservationsByTable } from '@/api/reservationApi';
+} from "@/components/ui/dialog";
+import { TableDialog } from "@/components/owner/TableDialog";
+import { TableQRDialog } from "@/components/owner/TableQRDialog";
+import { QRCodeSVG } from "qrcode.react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useReservationsByTable } from '@/hooks/queries/useReservationsByTable';
 
 interface ManagerTableManagementEnhancedProps {
   branchId?: string;
@@ -56,9 +86,13 @@ export const ManagerTableManagementEnhanced = ({
     return getLocalStorageObject<RestaurantDTO>("selected_restaurant");
   }, []);
 
-  const [selectedBranch, setSelectedBranch] = useState<string | undefined>(initialBranchId);
+  const [selectedBranch, setSelectedBranch] = useState<string | undefined>(
+    initialBranchId
+  );
 
-  const branchesByRestaurantQuery = useBranchesByRestaurant(selectedRestaurant?.restaurantId);
+  const branchesByRestaurantQuery = useBranchesByRestaurant(
+    selectedRestaurant?.restaurantId
+  );
   const allBranchesQuery = useBranches();
 
   const { data: branches = [] } = selectedRestaurant?.restaurantId
@@ -68,10 +102,14 @@ export const ManagerTableManagementEnhanced = ({
   const validBranchId = useMemo(() => {
     if (allowBranchSelection) {
       const branchId = selectedBranch?.trim();
-      return branchId && branchId !== '' && branchId !== 'undefined' ? branchId : undefined;
+      return branchId && branchId !== "" && branchId !== "undefined"
+        ? branchId
+        : undefined;
     }
     const branchId = initialBranchId?.trim();
-    return branchId && branchId !== '' && branchId !== 'undefined' ? branchId : undefined;
+    return branchId && branchId !== "" && branchId !== "undefined"
+      ? branchId
+      : undefined;
   }, [allowBranchSelection, selectedBranch, initialBranchId]);
 
   const { data: areas = [] } = useAreas(validBranchId);
@@ -79,7 +117,12 @@ export const ManagerTableManagementEnhanced = ({
   const deleteAreaMutation = useDeleteArea();
   const queryClient = useQueryClient();
 
-  const { data: tablesData, isLoading: isTablesLoading, error: tablesError, refetch: refetchTables } = useTables(validBranchId);
+  const {
+    data: tablesData,
+    isLoading: isTablesLoading,
+    error: tablesError,
+    refetch: refetchTables,
+  } = useTables(validBranchId);
   const existingTables: TableDTO[] = tablesData?.content || [];
 
   const deleteTableMutation = useDeleteTable();
@@ -106,52 +149,102 @@ export const ManagerTableManagementEnhanced = ({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reservationIndex, setReservationIndex] = useState(0);
 
-  const selectedTableReservationsQuery = useQuery({
-    queryKey: ['reservationsByTable', selectedTable?.id],
-    queryFn: () => apiGetReservationsByTable(selectedTable?.id),
-    enabled: !!selectedTable && !!dialogOpen,
-  });
+  const { data: selectedTableReservations = [], isLoading: selectedTableReservationsLoading } = useReservationsByTable(
+    selectedTable?.id && dialogOpen ? selectedTable?.id : null
+  );
 
   const [isAddTableOpen, setIsAddTableOpen] = useState(false);
   const [isAreaDialogOpen, setIsAreaDialogOpen] = useState(false);
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const [qrTable, setQrTable] = useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [tableToDelete, setTableToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [tableToDelete, setTableToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Area filter state
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [isDeleteAreaDialogOpen, setIsDeleteAreaDialogOpen] = useState(false);
-  const [areaToDelete, setAreaToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [areaToDelete, setAreaToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
-  const [areaName, setAreaName] = useState('');
+  const [areaName, setAreaName] = useState("");
   const [initialTableCount, setInitialTableCount] = useState<number>(0);
 
-  const apiTables = useMemo(() => tablesData?.content || [], [tablesData?.content]);
+  const apiTables = useMemo(
+    () => tablesData?.content || [],
+    [tablesData?.content]
+  );
+
+  const UNASSIGNED_AREA_ID = "unassigned";
+  const UNASSIGNED_AREA_LABEL = "Unassigned tables";
 
   const areaMap = useMemo(() => {
-    const map = new Map<string, { areaName: string; tables: TableDTO[] }>();
+    const map = new Map<
+      string,
+      { areaName: string; tables: TableDTO[]; isFallback?: boolean }
+    >();
+
+    areas.forEach((area) => {
+      map.set(area.areaId, {
+        areaName: area.name,
+        tables: [],
+      });
+    });
+
+    const orphanTables: TableDTO[] = [];
 
     apiTables.forEach((table) => {
-      const areaId = table.areaId || 'unknown';
-      const areaName = table.areaName || areas.find(a => a.areaId === areaId)?.name || 'Unassigned';
+      const areaId = table.areaId;
 
-      if (!map.has(areaId)) {
-        map.set(areaId, { areaName, tables: [] });
+      if (areaId && map.has(areaId)) {
+        map.get(areaId)!.tables.push(table);
+      } else {
+        orphanTables.push(table);
       }
-      map.get(areaId)!.tables.push(table);
     });
+
+    if (orphanTables.length > 0) {
+      map.set(UNASSIGNED_AREA_ID, {
+        areaName: UNASSIGNED_AREA_LABEL,
+        tables: orphanTables,
+        isFallback: true,
+      });
+    }
 
     return map;
   }, [apiTables, areas]);
 
   // Filter areas based on selectedAreaId
   const filteredAreaEntries = useMemo(() => {
-    const entries = Array.from(areaMap.entries()).sort((a, b) =>
-      a[1].areaName.localeCompare(b[1].areaName)
+    // Filter out "Undefined Area" (both virtual and real) if it has no tables
+    const validEntries = Array.from(areaMap.entries()).filter(
+      ([areaId, { areaName, tables }]) => {
+        // Hide virtual "Undefined Area" if no tables
+        if (areaId === UNASSIGNED_AREA_ID) {
+          return tables.length > 0;
+        }
+        // Also hide real areas from backend with "Undefined Area" name if no tables
+        if (
+          areaName.toLowerCase().includes("undefined") ||
+          areaName.toLowerCase().includes("unassigned")
+        ) {
+          return tables.length > 0;
+        }
+        return true;
+      }
     );
 
-    if (selectedAreaId === null || selectedAreaId === 'all') {
+    const entries = validEntries.sort((a, b) => {
+      if (a[0] === UNASSIGNED_AREA_ID) return 1;
+      if (b[0] === UNASSIGNED_AREA_ID) return -1;
+      return a[1].areaName.localeCompare(b[1].areaName);
+    });
+
+    if (selectedAreaId === null || selectedAreaId === "all") {
       return entries;
     }
 
@@ -162,41 +255,60 @@ export const ManagerTableManagementEnhanced = ({
 
   const normalizeStatus = (status: string): string => {
     const upperStatus = status.toUpperCase();
-    if (upperStatus === 'FREE') return 'available';
-    if (upperStatus === 'OCCUPIED') return 'occupied';
-    if (upperStatus === 'INACTIVE' || upperStatus === 'OUT_OF_SERVICE') return 'out_of_service';
+    if (upperStatus === "FREE") return "available";
+    if (upperStatus === "OCCUPIED") return "occupied";
+    if (upperStatus === "INACTIVE" || upperStatus === "OUT_OF_SERVICE")
+      return "out_of_service";
     return status.toLowerCase();
   };
 
   const getStatusDisplayValue = (status: string): string => {
     const normalized = normalizeStatus(status);
-    if (normalized === 'available') return 'available';
-    if (normalized === 'occupied') return 'occupied';
-    if (normalized === 'out_of_service') return 'out_of_service';
-    return 'available'; // default
+    if (normalized === "available") return "available";
+    if (normalized === "occupied") return "occupied";
+    if (normalized === "out_of_service") return "out_of_service";
+    return "available"; // default
   };
 
-  const branchShortCode = validBranchId || '';
+  const branchShortCode = validBranchId || "";
 
-  const availableTables = apiTables.filter(t => normalizeStatus(t.status) === 'available').length;
-  const occupiedTables = apiTables.filter(t => normalizeStatus(t.status) === 'occupied').length;
-  const outOfServiceTables = apiTables.filter(t => normalizeStatus(t.status) === 'out_of_service').length;
+  const availableTables = apiTables.filter(
+    (t) => normalizeStatus(t.status) === "available"
+  ).length;
+  const occupiedTables = apiTables.filter(
+    (t) => normalizeStatus(t.status) === "occupied"
+  ).length;
+  const outOfServiceTables = apiTables.filter(
+    (t) => normalizeStatus(t.status) === "out_of_service"
+  ).length;
 
-  const handleStatusChange = async (tableId: string, newStatus: TableStatus) => {
+  const handleStatusChange = async (
+    tableId: string,
+    newStatus: TableStatus
+  ) => {
     setIsStatusUpdating(tableId);
     try {
-      await updateTableStatusMutation.mutateAsync({ tableId, status: newStatus });
+      await updateTableStatusMutation.mutateAsync({
+        tableId,
+        status: newStatus,
+      });
       toast({
-        title: 'Table status updated',
-        description: `Table status has been changed to ${newStatus.replace('_', ' ')}.`,
+        title: "Table status updated",
+        description: `Table status has been changed to ${newStatus.replace(
+          "_",
+          " "
+        )}.`,
       });
       // Query sẽ tự động invalidate và refetch từ useUpdateTableStatus hook
     } catch (error: any) {
-      console.error('Error updating table status:', error);
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update table status';
+      console.error("Error updating table status:", error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to update table status";
       toast({
-        variant: 'destructive',
-        title: 'Error updating status',
+        variant: "destructive",
+        title: "Error updating status",
         description: errorMessage,
       });
     } finally {
@@ -218,16 +330,19 @@ export const ManagerTableManagementEnhanced = ({
     try {
       await deleteTableMutation.mutateAsync(tableToDelete.id);
       toast({
-        title: 'Table deleted',
+        title: "Table deleted",
         description: `Table "${tableToDelete.name}" has been deleted successfully.`,
       });
       refetchTables();
       setTableToDelete(null);
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to delete table';
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to delete table";
       toast({
-        variant: 'destructive',
-        title: 'Error deleting table',
+        variant: "destructive",
+        title: "Error deleting table",
         description: errorMessage,
       });
     } finally {
@@ -240,8 +355,8 @@ export const ManagerTableManagementEnhanced = ({
     const areaTables = areaMap.get(areaId)?.tables || [];
     if (areaTables.length > 0) {
       toast({
-        title: 'Area has tables',
-        description: `Area "${areaName}" has ${areaTables.length} table(s). These tables will be moved to "Undefined Area" after deletion.`,
+        title: "Area has tables",
+        description: `Area "${areaName}" currently has ${areaTables.length} tables. After deletion, this area will be hidden and the tables will be moved to the "${UNASSIGNED_AREA_LABEL}" group until you reassign them.`,
       });
     }
 
@@ -256,13 +371,13 @@ export const ManagerTableManagementEnhanced = ({
       const areaTables = areaMap.get(areaToDelete.id)?.tables || [];
       await deleteAreaMutation.mutateAsync(areaToDelete.id);
 
-      let description = `Area "${areaToDelete.name}" has been deleted successfully.`;
+      let description = `Area "${areaToDelete.name}" has been successfully deleted.`;
       if (areaTables.length > 0) {
-        description += ` ${areaTables.length} table(s) have been moved to "Undefined Area".`;
+        description += ` ${areaTables.length} tables have been moved to the "${UNASSIGNED_AREA_LABEL}" group.`;
       }
 
       toast({
-        title: 'Area deleted',
+        title: "Area deleted",
         description: description,
       });
       setIsDeleteAreaDialogOpen(false);
@@ -274,10 +389,13 @@ export const ManagerTableManagementEnhanced = ({
       // Refetch tables to show updated area assignments
       refetchTables();
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to delete area';
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to delete area";
       toast({
-        variant: 'destructive',
-        title: 'Error deleting area',
+        variant: "destructive",
+        title: "Error deleting area",
         description: errorMessage,
       });
     }
@@ -296,8 +414,8 @@ export const ManagerTableManagementEnhanced = ({
     setIsEditMode(true);
     setEditFormData({
       capacity: selectedTable.capacity || 0,
-      areaId: selectedTable.areaId || '',
-      status: selectedTable.status || 'FREE',
+      areaId: selectedTable.areaId || "",
+      status: selectedTable.status || "FREE",
     });
   };
 
@@ -313,18 +431,22 @@ export const ManagerTableManagementEnhanced = ({
     try {
       // Convert status to API format if needed
       let apiStatus: TableStatus = editFormData.status;
-      if (editFormData.status === 'ACTIVE' || editFormData.status === 'INACTIVE' || editFormData.status === 'OCCUPIED') {
+      if (
+        editFormData.status === "ACTIVE" ||
+        editFormData.status === "INACTIVE" ||
+        editFormData.status === "OCCUPIED"
+      ) {
         // Status is already in API format
         apiStatus = editFormData.status;
       } else {
         // Normalize status from UI format to API format
         const normalized = normalizeStatus(editFormData.status);
-        if (normalized === 'available') {
-          apiStatus = 'FREE';
-        } else if (normalized === 'occupied') {
-          apiStatus = 'OCCUPIED';
-        } else if (normalized === 'out_of_service') {
-          apiStatus = 'INACTIVE';
+        if (normalized === "available") {
+          apiStatus = "FREE";
+        } else if (normalized === "occupied") {
+          apiStatus = "OCCUPIED";
+        } else if (normalized === "out_of_service") {
+          apiStatus = "INACTIVE";
         } else {
           apiStatus = editFormData.status;
         }
@@ -350,13 +472,14 @@ export const ManagerTableManagementEnhanced = ({
       }
 
       // Find area name for the new areaId
-      const newArea = areas.find(a => a.areaId === editFormData.areaId);
+      const newArea = areas.find((a) => a.areaId === editFormData.areaId);
 
       // Prepare updated table data with area name
       const updatedTableData = {
         ...finalTableData,
         areaId: editFormData.areaId,
-        areaName: newArea?.name || finalTableData.areaName || selectedTable.areaName,
+        areaName:
+          newArea?.name || finalTableData.areaName || selectedTable.areaName,
         capacity: editFormData.capacity,
         status: apiStatus,
       };
@@ -370,7 +493,7 @@ export const ManagerTableManagementEnhanced = ({
       // IMPORTANT: Update cache BEFORE invalidateQueries triggers refetch
       // This ensures the UI shows the new data immediately
       queryClient.setQueriesData(
-        { queryKey: ['tables', validBranchId] },
+        { queryKey: ["tables", validBranchId] },
         (oldData: any) => {
           if (!oldData || !oldData.content) return oldData;
           return {
@@ -383,18 +506,21 @@ export const ManagerTableManagementEnhanced = ({
       );
 
       toast({
-        title: 'Table updated successfully',
-        description: 'Table information has been saved.',
+        title: "Table updated successfully",
+        description: "Table information has been saved.",
       });
 
       setIsEditMode(false);
       setEditFormData(null);
     } catch (error: any) {
-      console.error('Error updating table:', error);
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update table';
+      console.error("Error updating table:", error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to update table";
       toast({
-        variant: 'destructive',
-        title: 'Error updating table',
+        variant: "destructive",
+        title: "Error updating table",
         description: errorMessage,
       });
     } finally {
@@ -405,26 +531,26 @@ export const ManagerTableManagementEnhanced = ({
   const getStatusColor = (status: string) => {
     const normalized = normalizeStatus(status);
     switch (normalized) {
-      case 'available':
-        return 'bg-green-500';
-      case 'occupied':
-        return 'bg-blue-500';
-      case 'out_of_service':
-        return 'bg-gray-500';
+      case "available":
+        return "bg-green-500";
+      case "occupied":
+        return "bg-blue-500";
+      case "out_of_service":
+        return "bg-gray-500";
       default:
-        return 'bg-gray-500';
+        return "bg-gray-500";
     }
   };
 
   const getStatusLabel = (status: string) => {
     const normalized = normalizeStatus(status);
     switch (normalized) {
-      case 'available':
-        return 'Available';
-      case 'occupied':
-        return 'Occupied';
-      case 'out_of_service':
-        return 'Out of Service';
+      case "available":
+        return "Available";
+      case "occupied":
+        return "Occupied";
+      case "out_of_service":
+        return "Out of Service";
       default:
         return status;
     }
@@ -434,23 +560,18 @@ export const ManagerTableManagementEnhanced = ({
 
   // Child component to render a single table card and fetch its reservations.
   // Use local hover state inside the card so hovering one card doesn't re-render the whole list.
-  const TableCard = ({ table, tableIndex }: { table: any; tableIndex: number }) => {
+  const TableCard = ({
+    table,
+    tableIndex,
+  }: {
+    table: any;
+    tableIndex: number;
+  }) => {
     const [isHovered, setIsHovered] = useState(false);
 
-    const reservationsQuery = useQuery({
-      queryKey: ['reservationsByTable', table.id],
-      queryFn: () => apiGetReservationsByTable(table.id),
-      // Only fetch when the user hovers the table or opens the details dialog for it
-      enabled: !!table?.id && (isHovered || (dialogOpen && selectedTable?.id === table.id)),
-      staleTime: 60_000,
-      // cacheTime: 5 * 60_000,
-      // Avoid refetch storms from focus/reconnect/mount
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
-    });
-
-    const reservations = reservationsQuery.data || [];
+    const { data: reservations = [] } = useReservationsByTable(
+      isHovered || (dialogOpen && selectedTable?.id === table.id) ? table.id : null
+    );
 
     return (
       <div
@@ -465,19 +586,23 @@ export const ManagerTableManagementEnhanced = ({
         <Card
           className={cn(
             "border-2 transition-all duration-500 cursor-pointer overflow-hidden",
-            isHovered ? 'border-primary shadow-2xl' : 'border-border/50 hover:shadow-lg',
-            normalizeStatus(table.status) === 'out_of_service' && 'opacity-60',
-            normalizeStatus(table.status) === 'occupied' && 'bg-destructive/5'
+            isHovered
+              ? "border-primary shadow-2xl"
+              : "border-border/50 hover:shadow-lg",
+            normalizeStatus(table.status) === "out_of_service" && "opacity-60",
+            normalizeStatus(table.status) === "occupied" && "bg-destructive/5"
           )}
           style={{
-            transition: 'transform 0.3s ease-out, box-shadow 0.3s ease-out',
-            transform: isHovered ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)',
+            transition: "transform 0.3s ease-out, box-shadow 0.3s ease-out",
+            transform: isHovered
+              ? "translateY(-4px) scale(1.02)"
+              : "translateY(0) scale(1)",
           }}
         >
           <CardContent
             className="relative pt-5 h-full flex flex-col"
             style={{
-              transition: 'padding-bottom 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: "padding-bottom 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           >
             <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-3xl pointer-events-none" />
@@ -490,44 +615,54 @@ export const ManagerTableManagementEnhanced = ({
               </div>
 
               <div className="flex items-center flex-wrap gap-2">
-                <Badge className={cn(getStatusColor(table.status), "transition-all duration-300 text-white font-semibold")}>
+                <Badge
+                  className={cn(
+                    getStatusColor(table.status),
+                    "transition-all duration-300 text-white font-semibold"
+                  )}
+                >
                   {getStatusLabel(table.status)}
                 </Badge>
                 {Array.isArray(reservations) && reservations.length > 0 && (
-                  <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100 animate-pulse font-semibold">
-                    {reservations.length} {reservations.length === 1 ? 'Booking' : 'Bookings'}
+                  <Badge
+                    variant="secondary"
+                    className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100 animate-pulse font-semibold"
+                  >
+                    {reservations.length}{" "}
+                    {reservations.length === 1 ? "Booking" : "Bookings"}
                   </Badge>
                 )}
 
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <svg
-                  className="w-4 h-4 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-                <span className="font-medium">
-                  {table.capacity} {table.capacity === 1 ? 'seat' : 'seats'}
-                </span>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <svg
+                    className="w-4 h-4 flex-shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                  </svg>
+                  <span className="font-medium">
+                    {table.capacity} {table.capacity === 1 ? "seat" : "seats"}
+                  </span>
+                </div>
               </div>
-            </div>
             </div>
 
             <div
               className={cn(
                 "mt-4 pt-4 border-t-2 transition-all duration-500 overflow-hidden",
-                isHovered ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0',
+                isHovered ? "max-h-20 opacity-100" : "max-h-0 opacity-0",
                 "bg-muted/50 dark:bg-muted/30 rounded-b-lg"
               )}
               style={{
-                transition: 'max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease-out',
+                transition:
+                  "max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease-out",
               }}
             >
               <div className="flex gap-2 justify-center items-center px-2 py-3">
@@ -547,11 +682,16 @@ export const ManagerTableManagementEnhanced = ({
                   className="h-10 w-10 p-0 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 rounded-lg shadow-sm hover:shadow-md border-2"
                   onClick={() => {
                     const currentBranchId = validBranchId;
-                    if (!currentBranchId || currentBranchId.trim() === '' || currentBranchId === 'undefined') {
+                    if (
+                      !currentBranchId ||
+                      currentBranchId.trim() === "" ||
+                      currentBranchId === "undefined"
+                    ) {
                       toast({
-                        variant: 'destructive',
-                        title: 'Error',
-                        description: 'Please select a branch first to view QR code.',
+                        variant: "destructive",
+                        title: "Error",
+                        description:
+                          "Please select a branch first to view QR code.",
                       });
                       return;
                     }
@@ -590,12 +730,18 @@ export const ManagerTableManagementEnhanced = ({
   useEffect(() => {
     // Only auto-select first branch if no branchId was provided initially
     // and no branch is currently selected
-    if (allowBranchSelection && !selectedBranch && !initialBranchId && branches.length > 0) {
+    if (
+      allowBranchSelection &&
+      !selectedBranch &&
+      !initialBranchId &&
+      branches.length > 0
+    ) {
       const firstBranch = branches[0];
       if (firstBranch && firstBranch.branchId) {
         const branchIdStr = String(firstBranch.branchId);
         const isValidUUID = (str: string): boolean => {
-          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          const uuidRegex =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
           return uuidRegex.test(str);
         };
         if (isValidUUID(branchIdStr)) {
@@ -607,7 +753,8 @@ export const ManagerTableManagementEnhanced = ({
     else if (allowBranchSelection && initialBranchId && !selectedBranch) {
       const branchIdStr = String(initialBranchId);
       const isValidUUID = (str: string): boolean => {
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         return uuidRegex.test(str);
       };
       if (isValidUUID(branchIdStr)) {
@@ -664,14 +811,18 @@ export const ManagerTableManagementEnhanced = ({
             onSelectBranch={(branch: BranchDTO) => {
               const branchIdStr = String(branch.branchId);
               const isValidUUID = (str: string): boolean => {
-                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                const uuidRegex =
+                  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                 return uuidRegex.test(str);
               };
               if (isValidUUID(branchIdStr)) {
                 setSelectedBranch(branchIdStr);
                 // Save to sessionStorage for persistence (for owner role)
                 if (allowBranchSelection) {
-                  sessionStorage.setItem('owner_selected_branch_id', branchIdStr);
+                  sessionStorage.setItem(
+                    "owner_selected_branch_id",
+                    branchIdStr
+                  );
                 }
               }
             }}
@@ -685,7 +836,9 @@ export const ManagerTableManagementEnhanced = ({
         {!validBranchId ? (
           <div className="flex items-center justify-center min-h-[40vh]">
             <p className="text-muted-foreground">
-              {allowBranchSelection ? 'Please select a branch to view tables' : 'Loading branch information...'}
+              {allowBranchSelection
+                ? "Please select a branch to view tables"
+                : "Loading branch information..."}
             </p>
           </div>
         ) : (
@@ -702,7 +855,20 @@ export const ManagerTableManagementEnhanced = ({
                     Add Area
                   </Button>
                   <Button
-                    onClick={() => { setInitialTableCount(apiTables.length); setIsAddTableOpen(true); }}
+                    onClick={() => {
+                      if (!areas || areas.length === 0) {
+                        toast({
+                          variant: "destructive",
+                          title: "No area found",
+                          description:
+                            "Please add an area before creating tables.",
+                        });
+                        setIsAreaDialogOpen(true);
+                        return;
+                      }
+                      setInitialTableCount(apiTables.length);
+                      setIsAddTableOpen(true);
+                    }}
                     className="transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -735,7 +901,9 @@ export const ManagerTableManagementEnhanced = ({
             <div className="grid gap-4 md:grid-cols-3">
               <Card className="transition-all duration-300 hover:shadow-xl hover:scale-105">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Available</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Available
+                  </CardTitle>
                   <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
                 </CardHeader>
                 <CardContent>
@@ -745,7 +913,9 @@ export const ManagerTableManagementEnhanced = ({
 
               <Card className="transition-all duration-300 hover:shadow-xl hover:scale-105">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Occupied</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Occupied
+                  </CardTitle>
                   <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse" />
                 </CardHeader>
                 <CardContent>
@@ -755,7 +925,9 @@ export const ManagerTableManagementEnhanced = ({
 
               <Card className="transition-all duration-300 hover:shadow-xl hover:scale-105">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Out of Service</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Out of Service
+                  </CardTitle>
                   <div className="h-3 w-3 rounded-full bg-gray-500" />
                 </CardHeader>
                 <CardContent>
@@ -778,11 +950,13 @@ export const ManagerTableManagementEnhanced = ({
                   </div>
                 </div>
                 <div className="mt-4 flex items-center gap-3">
-                  <Label className="text-sm font-medium whitespace-nowrap">Filter by Area:</Label>
+                  <Label className="text-sm font-medium whitespace-nowrap">
+                    Filter by Area:
+                  </Label>
                   <Select
-                    value={selectedAreaId || 'all'}
+                    value={selectedAreaId || "all"}
                     onValueChange={(value) => {
-                      setSelectedAreaId(value === 'all' ? null : value);
+                      setSelectedAreaId(value === "all" ? null : value);
                     }}
                   >
                     <SelectTrigger className="w-[200px]">
@@ -795,6 +969,12 @@ export const ManagerTableManagementEnhanced = ({
                           {area.name}
                         </SelectItem>
                       ))}
+                      {areaMap.has(UNASSIGNED_AREA_ID) &&
+                        areaMap.get(UNASSIGNED_AREA_ID)?.tables.length > 0 && (
+                          <SelectItem value={UNASSIGNED_AREA_ID}>
+                            {UNASSIGNED_AREA_LABEL}
+                          </SelectItem>
+                        )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -807,57 +987,92 @@ export const ManagerTableManagementEnhanced = ({
                   </div>
                 ) : (
                   <div className="space-y-8">
-                    {sortedAreaEntries.map(([areaId, { areaName, tables: areaTables }], areaIndex) => {
-                      const sortedTables = [...areaTables].sort((a, b) => {
-                        const numA = parseInt(a.tag.match(/\d+/)?.[0] || '0');
-                        const numB = parseInt(b.tag.match(/\d+/)?.[0] || '0');
-                        if (numA && numB) return numA - numB;
-                        return a.tag.localeCompare(b.tag);
-                      });
+                    {sortedAreaEntries
+                      .filter(([areaId, { areaName, tables: areaTables }]) => {
+                        // Hide "Undefined Area" (virtual or real) if no tables
+                        if (
+                          areaId === UNASSIGNED_AREA_ID ||
+                          areaName.toLowerCase().includes("undefined") ||
+                          areaName.toLowerCase().includes("unassigned")
+                        ) {
+                          return areaTables.length > 0;
+                        }
+                        return true;
+                      })
+                      .map(
+                        (
+                          [areaId, { areaName, tables: areaTables }],
+                          areaIndex
+                        ) => {
+                          const sortedTables = [...areaTables].sort((a, b) => {
+                            const numA = parseInt(
+                              a.tag.match(/\d+/)?.[0] || "0"
+                            );
+                            const numB = parseInt(
+                              b.tag.match(/\d+/)?.[0] || "0"
+                            );
+                            if (numA && numB) return numA - numB;
+                            return a.tag.localeCompare(b.tag);
+                          });
 
-                      return (
-                        <div
-                          key={areaId}
-                          className="space-y-4"
-                          style={{
-                            animation: `fadeInScale 0.5s ease-out ${areaIndex * 0.1}s both`
-                          }}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg px-5 py-2.5 shadow-sm">
-                              <h3 className="text-lg font-semibold text-primary">{areaName}</h3>
-                            </div>
-                            <div className="flex-1 h-px bg-gradient-to-r from-border via-border/50 to-transparent" />
-                            <Badge variant="secondary" className="text-sm">
-                              {areaTables.length} table{areaTables.length !== 1 ? 's' : ''}
-                            </Badge>
-                            {!hideAddButtons && (
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                className="h-9 px-3 gap-2 hover:bg-destructive/90 transition-all duration-200 rounded-lg shadow-sm hover:shadow-md border border-destructive/20"
-                                onClick={() => handleDeleteAreaClick(areaId, areaName)}
-                                title="Delete Area"
+                          return (
+                            <div
+                              key={areaId}
+                              className="space-y-4"
+                              style={{
+                                animation: `fadeInScale 0.5s ease-out ${
+                                  areaIndex * 0.1
+                                }s both`,
+                              }}
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg px-5 py-2.5 shadow-sm">
+                                  <h3 className="text-lg font-semibold text-primary">
+                                    {areaName}
+                                  </h3>
+                                </div>
+                                <div className="flex-1 h-px bg-gradient-to-r from-border via-border/50 to-transparent" />
+                                <Badge variant="secondary" className="text-sm">
+                                  {areaTables.length} table
+                                  {areaTables.length !== 1 ? "s" : ""}
+                                </Badge>
+                                {!hideAddButtons && (
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="h-9 px-3 gap-2 hover:bg-destructive/90 transition-all duration-200 rounded-lg shadow-sm hover:shadow-md border border-destructive/20"
+                                    onClick={() =>
+                                      handleDeleteAreaClick(areaId, areaName)
+                                    }
+                                    title="Delete Area"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span className="text-xs font-semibold">
+                                      Delete Area
+                                    </span>
+                                  </Button>
+                                )}
+                              </div>
+
+                              <div
+                                className="grid gap-5"
+                                style={{
+                                  gridTemplateColumns:
+                                    "repeat(auto-fill, minmax(200px, 1fr))",
+                                }}
                               >
-                                <Trash2 className="w-4 h-4" />
-                                <span className="text-xs font-semibold">Delete Area</span>
-                              </Button>
-                            )}
-                          </div>
-
-                          <div
-                            className="grid gap-5"
-                            style={{
-                              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                            }}
-                          >
-                            {sortedTables.map((table, tableIndex) => (
-                              <TableCard key={table.id} table={table} tableIndex={tableIndex} />
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
+                                {sortedTables.map((table, tableIndex) => (
+                                  <TableCard
+                                    key={table.id}
+                                    table={table}
+                                    tableIndex={tableIndex}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                      )}
                   </div>
                 )}
               </CardContent>
@@ -866,20 +1081,25 @@ export const ManagerTableManagementEnhanced = ({
         )}
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => {
-        setDialogOpen(open);
-        if (!open) {
-          setIsEditMode(false);
-          setEditFormData(null);
-        }
-      }}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setIsEditMode(false);
+            setEditFormData(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader className="space-y-3">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1.5">
                 <DialogTitle>Table Details</DialogTitle>
                 <DialogDescription>
-                  {isEditMode ? 'Edit table information' : 'View complete table information and reservations'}
+                  {isEditMode
+                    ? "Edit table information"
+                    : "View complete table information and reservations"}
                 </DialogDescription>
               </div>
               <div className="flex-shrink-0">
@@ -909,7 +1129,9 @@ export const ManagerTableManagementEnhanced = ({
                     <Button
                       size="sm"
                       onClick={handleSaveChanges}
-                      disabled={isStatusUpdating === selectedTable?.id || !editFormData}
+                      disabled={
+                        isStatusUpdating === selectedTable?.id || !editFormData
+                      }
                       className="gap-2"
                     >
                       {isStatusUpdating === selectedTable?.id ? (
@@ -934,19 +1156,34 @@ export const ManagerTableManagementEnhanced = ({
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm text-muted-foreground">Table Name</Label>
-                  <p className="font-semibold mt-1">{selectedTable.tag || (selectedTable as any).number || 'Unknown'}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Cannot be changed</p>
+                  <Label className="text-sm text-muted-foreground">
+                    Table Name
+                  </Label>
+                  <p className="font-semibold mt-1">
+                    {selectedTable.tag ||
+                      (selectedTable as any).number ||
+                      "Unknown"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Cannot be changed
+                  </p>
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">Area</Label>
                   {!isEditMode ? (
-                    <p className="font-semibold mt-1">{selectedTable.areaName || areas.find(a => a.areaId === selectedTable.areaId)?.name || 'Unknown'}</p>
+                    <p className="font-semibold mt-1">
+                      {selectedTable.areaName ||
+                        areas.find((a) => a.areaId === selectedTable.areaId)
+                          ?.name ||
+                        "Unknown"}
+                    </p>
                   ) : (
                     <Select
-                      value={editFormData?.areaId || ''}
+                      value={editFormData?.areaId || ""}
                       onValueChange={(value) => {
-                        setEditFormData(prev => prev ? { ...prev, areaId: value } : null);
+                        setEditFormData((prev) =>
+                          prev ? { ...prev, areaId: value } : null
+                        );
                       }}
                     >
                       <SelectTrigger className="mt-1">
@@ -963,9 +1200,13 @@ export const ManagerTableManagementEnhanced = ({
                   )}
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground">Capacity</Label>
+                  <Label className="text-sm text-muted-foreground">
+                    Capacity
+                  </Label>
                   {!isEditMode ? (
-                    <p className="font-semibold mt-1">{selectedTable.capacity} guests</p>
+                    <p className="font-semibold mt-1">
+                      {selectedTable.capacity} guests
+                    </p>
                   ) : (
                     <Input
                       type="number"
@@ -974,14 +1215,18 @@ export const ManagerTableManagementEnhanced = ({
                       value={editFormData?.capacity || 0}
                       onChange={(e) => {
                         const value = parseInt(e.target.value) || 0;
-                        setEditFormData(prev => prev ? { ...prev, capacity: value } : null);
+                        setEditFormData((prev) =>
+                          prev ? { ...prev, capacity: value } : null
+                        );
                       }}
                       className="mt-1"
                     />
                   )}
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground">Status</Label>
+                  <Label className="text-sm text-muted-foreground">
+                    Status
+                  </Label>
                   {!isEditMode ? (
                     <div className="mt-1">
                       <Badge className={getStatusColor(selectedTable.status)}>
@@ -990,19 +1235,23 @@ export const ManagerTableManagementEnhanced = ({
                     </div>
                   ) : (
                     <Select
-                      value={getStatusDisplayValue(editFormData?.status || selectedTable.status)}
+                      value={getStatusDisplayValue(
+                        editFormData?.status || selectedTable.status
+                      )}
                       onValueChange={(value) => {
                         let apiStatus: TableStatus;
-                        if (value === 'available') {
-                          apiStatus = 'FREE';
-                        } else if (value === 'occupied') {
-                          apiStatus = 'OCCUPIED';
-                        } else if (value === 'out_of_service') {
-                          apiStatus = 'INACTIVE';
+                        if (value === "available") {
+                          apiStatus = "FREE";
+                        } else if (value === "occupied") {
+                          apiStatus = "OCCUPIED";
+                        } else if (value === "out_of_service") {
+                          apiStatus = "INACTIVE";
                         } else {
-                          apiStatus = editFormData?.status || 'FREE';
+                          apiStatus = editFormData?.status || "FREE";
                         }
-                        setEditFormData(prev => prev ? { ...prev, status: apiStatus } : null);
+                        setEditFormData((prev) =>
+                          prev ? { ...prev, status: apiStatus } : null
+                        );
                       }}
                     >
                       <SelectTrigger className="mt-1">
@@ -1032,14 +1281,20 @@ export const ManagerTableManagementEnhanced = ({
                   )}
                 </div>
                 <div className="col-span-2">
-                  <p className="text-sm text-muted-foreground mb-2">QR Code URL</p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    QR Code URL
+                  </p>
                   <div className="flex gap-2">
                     <Input
                       value={(() => {
                         // Use new URL format: /t/{branchId}/{tableId}
                         // This format is unique and prevents conflicts
-                        const tableId = selectedTable.id || selectedTable.areaTableId || 'unknown';
-                        const branchId = validBranchId || selectedTable.branchId || 'unknown';
+                        const tableId =
+                          selectedTable.id ||
+                          selectedTable.areaTableId ||
+                          "unknown";
+                        const branchId =
+                          validBranchId || selectedTable.branchId || "unknown";
                         return `${window.location.origin}/t/${branchId}/${tableId}`;
                       })()}
                       readOnly
@@ -1050,12 +1305,19 @@ export const ManagerTableManagementEnhanced = ({
                       variant="outline"
                       onClick={() => {
                         // Use new URL format: /t/{branchId}/{tableId}
-                        const tableId = selectedTable.id || selectedTable.areaTableId || 'unknown';
-                        const branchId = validBranchId || selectedTable.branchId || 'unknown';
+                        const tableId =
+                          selectedTable.id ||
+                          selectedTable.areaTableId ||
+                          "unknown";
+                        const branchId =
+                          validBranchId || selectedTable.branchId || "unknown";
                         const tableUrl = `${window.location.origin}/t/${branchId}/${tableId}`;
 
                         navigator.clipboard.writeText(tableUrl);
-                        toast({ title: 'Copied!', description: 'URL copied to clipboard' });
+                        toast({
+                          title: "Copied!",
+                          description: "URL copied to clipboard",
+                        });
                       }}
                     >
                       Copy
@@ -1065,12 +1327,14 @@ export const ManagerTableManagementEnhanced = ({
               </div>
 
               {(() => {
-                const reservations = selectedTableReservationsQuery.data || [];
-                const isLoading = selectedTableReservationsQuery.isLoading;
+                const reservations = selectedTableReservations || [];
+                const isLoading = selectedTableReservationsLoading;
                 if (isLoading) {
                   return (
                     <div className="border-t pt-6">
-                      <p className="text-sm text-muted-foreground">Loading reservations...</p>
+                      <p className="text-sm text-muted-foreground">
+                        Loading reservations...
+                      </p>
                     </div>
                   );
                 }
@@ -1083,8 +1347,12 @@ export const ManagerTableManagementEnhanced = ({
                   <div className="border-t pt-6">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-semibold flex items-center gap-2">
-                        <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
-                          {reservations.length} Reservation{reservations.length > 1 ? 's' : ''}
+                        <Badge
+                          variant="secondary"
+                          className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100"
+                        >
+                          {reservations.length} Reservation
+                          {reservations.length > 1 ? "s" : ""}
                         </Badge>
                       </h4>
                       {reservations.length > 1 && (
@@ -1092,7 +1360,11 @@ export const ManagerTableManagementEnhanced = ({
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setReservationIndex(Math.max(0, reservationIndex - 1))}
+                            onClick={() =>
+                              setReservationIndex(
+                                Math.max(0, reservationIndex - 1)
+                              )
+                            }
                             disabled={reservationIndex === 0}
                           >
                             <ChevronLeft className="h-4 w-4" />
@@ -1103,8 +1375,17 @@ export const ManagerTableManagementEnhanced = ({
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setReservationIndex(Math.min(reservations.length - 1, reservationIndex + 1))}
-                            disabled={reservationIndex === reservations.length - 1}
+                            onClick={() =>
+                              setReservationIndex(
+                                Math.min(
+                                  reservations.length - 1,
+                                  reservationIndex + 1
+                                )
+                              )
+                            }
+                            disabled={
+                              reservationIndex === reservations.length - 1
+                            }
                           >
                             <ChevronRight className="h-4 w-4" />
                           </Button>
@@ -1116,27 +1397,51 @@ export const ManagerTableManagementEnhanced = ({
                       <div className="bg-muted/30 rounded-lg p-4 space-y-3">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-sm text-muted-foreground">Guest Name</p>
-                            <p className="font-semibold">{current.customerName || current.customerEmail || 'Unknown'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Guests</p>
-                            <p className="font-semibold">{current.guestNumber ?? current.guestNumber === 0 ? current.guestNumber : current.guestNumber ?? '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Start Time</p>
+                            <p className="text-sm text-muted-foreground">
+                              Guest Name
+                            </p>
                             <p className="font-semibold">
-                              {current.startTime ? format(new Date(current.startTime), 'PPp') : '-'}
+                              {current.customerName ||
+                                current.customerEmail ||
+                                "Unknown"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Guests
+                            </p>
+                            <p className="font-semibold">
+                              {current.guestNumber ?? current.guestNumber === 0
+                                ? current.guestNumber
+                                : current.guestNumber ?? "-"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Start Time
+                            </p>
+                            <p className="font-semibold">
+                              {current.startTime
+                                ? format(new Date(current.startTime), "PPp")
+                                : "-"}
                             </p>
                           </div>
                           <div className="col-span-2">
-                            <p className="text-sm text-muted-foreground">Contact</p>
-                            <p className="text-sm">{current.customerEmail || '-'}</p>
-                            <p className="text-sm">{current.customerPhone || '-'}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Contact
+                            </p>
+                            <p className="text-sm">
+                              {current.customerEmail || "-"}
+                            </p>
+                            <p className="text-sm">
+                              {current.customerPhone || "-"}
+                            </p>
                           </div>
                           {current.note && (
                             <div className="col-span-2">
-                              <p className="text-sm text-muted-foreground">Notes</p>
+                              <p className="text-sm text-muted-foreground">
+                                Notes
+                              </p>
                               <p className="text-sm">{current.note}</p>
                             </div>
                           )}
@@ -1155,24 +1460,33 @@ export const ManagerTableManagementEnhanced = ({
         open={isAddTableOpen}
         onOpenChange={(open) => {
           if (!open) {
-            if (tablesData && tablesData.content && tablesData.content.length > initialTableCount) {
+            if (
+              tablesData &&
+              tablesData.content &&
+              tablesData.content.length > initialTableCount
+            ) {
               const latest = tablesData.content[tablesData.content.length - 1];
               const currentBranchId = validBranchId;
-              if (currentBranchId && currentBranchId.trim() !== '' && currentBranchId !== 'undefined') {
+              if (
+                currentBranchId &&
+                currentBranchId.trim() !== "" &&
+                currentBranchId !== "undefined"
+              ) {
                 setQrTable(latest);
                 setIsQRDialogOpen(true);
               } else {
                 toast({
-                  variant: 'destructive',
-                  title: 'Warning',
-                  description: 'Table created successfully, but QR code cannot be generated without a selected branch.',
+                  variant: "destructive",
+                  title: "Warning",
+                  description:
+                    "Table created successfully, but QR code cannot be generated without a selected branch.",
                 });
               }
             }
           }
           setIsAddTableOpen(open);
         }}
-        branchId={validBranchId || ''}
+        branchId={validBranchId || ""}
         existingTables={existingTables}
       />
 
@@ -1189,7 +1503,9 @@ export const ManagerTableManagementEnhanced = ({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Area</DialogTitle>
-            <DialogDescription>Create a new area/floor for this branch</DialogDescription>
+            <DialogDescription>
+              Create a new area/floor for this branch
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -1202,30 +1518,36 @@ export const ManagerTableManagementEnhanced = ({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => {
-                setIsAreaDialogOpen(false);
-                setAreaName('');
-              }}>Cancel</Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAreaDialogOpen(false);
+                  setAreaName("");
+                }}
+              >
+                Cancel
+              </Button>
               <Button
                 onClick={async () => {
                   if (!areaName.trim()) {
                     toast({
-                      variant: 'destructive',
-                      title: 'Error',
-                      description: 'Area name is required',
+                      variant: "destructive",
+                      title: "Error",
+                      description: "Area name is required",
                     });
                     return;
                   }
                   try {
                     const isValidUUID = (str: string): boolean => {
-                      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                      const uuidRegex =
+                        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                       return uuidRegex.test(str);
                     };
 
                     if (!validBranchId || !isValidUUID(validBranchId)) {
                       toast({
-                        variant: 'destructive',
-                        title: 'Error',
+                        variant: "destructive",
+                        title: "Error",
                         description: `Invalid branchId format: ${validBranchId}. Please select a valid branch.`,
                       });
                       return;
@@ -1233,14 +1555,16 @@ export const ManagerTableManagementEnhanced = ({
 
                     // Check for duplicate area name before creating
                     const trimmedAreaName = areaName.trim();
-                    const existingArea = areas.find(a =>
-                      a.name.toLowerCase().trim() === trimmedAreaName.toLowerCase()
+                    const existingArea = areas.find(
+                      (a) =>
+                        a.name.toLowerCase().trim() ===
+                        trimmedAreaName.toLowerCase()
                     );
 
                     if (existingArea) {
                       toast({
-                        variant: 'destructive',
-                        title: 'Area already exists',
+                        variant: "destructive",
+                        title: "Area already exists",
                         description: `An area with the name "${trimmedAreaName}" already exists. Please choose a different name.`,
                       });
                       return;
@@ -1251,33 +1575,37 @@ export const ManagerTableManagementEnhanced = ({
                       name: trimmedAreaName,
                     });
                     toast({
-                      title: 'Area added',
-                      description: 'New area has been created successfully.'
+                      title: "Area added",
+                      description: "New area has been created successfully.",
                     });
-                    setAreaName('');
+                    setAreaName("");
                     setIsAreaDialogOpen(false);
                   } catch (error: any) {
-                    const errorMessage = error?.response?.data?.message
-                      || error?.message
-                      || 'Failed to create area. Please check if branchId is valid.';
+                    const errorMessage =
+                      error?.response?.data?.message ||
+                      error?.message ||
+                      "Failed to create area. Please check if branchId is valid.";
                     toast({
-                      variant: 'destructive',
-                      title: 'Error',
+                      variant: "destructive",
+                      title: "Error",
                       description: errorMessage,
                     });
                   }
                 }}
                 disabled={createAreaMutation.isPending || !areaName.trim()}
               >
-                {createAreaMutation.isPending ? 'Creating...' : 'Add Area'}
+                {createAreaMutation.isPending ? "Creating..." : "Add Area"}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isQRDialogOpen && !qrTable} onOpenChange={(open) => setIsQRDialogOpen(open)}>
-      <DialogContent className="sm:max-w-md"> 
+      <Dialog
+        open={isQRDialogOpen && !qrTable}
+        onOpenChange={(open) => setIsQRDialogOpen(open)}
+      >
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Branch QR Code</DialogTitle>
             <DialogDescription>Scan to open the branch page</DialogDescription>
@@ -1286,7 +1614,10 @@ export const ManagerTableManagementEnhanced = ({
             {validBranchId ? (
               <>
                 <div className="bg-white p-6 rounded-lg border-2 border-border mx-auto">
-                  <QRCodeSVG value={`${window.location.origin}/branch/${validBranchId}`} size={200} />
+                  <QRCodeSVG
+                    value={`${window.location.origin}/branch/${validBranchId}`}
+                    size={200}
+                  />
                 </div>
                 <div className="text-sm font-mono select-all break-all text-center w-full px-4">
                   {`${window.location.origin}/branch/${validBranchId}`}
@@ -1303,7 +1634,11 @@ export const ManagerTableManagementEnhanced = ({
 
       {(() => {
         const hasTable = !!qrTable;
-        const hasBranchId = !!validBranchId && typeof validBranchId === 'string' && validBranchId.trim() !== '' && validBranchId !== 'undefined';
+        const hasBranchId =
+          !!validBranchId &&
+          typeof validBranchId === "string" &&
+          validBranchId.trim() !== "" &&
+          validBranchId !== "undefined";
         const isDialogOpen = isQRDialogOpen;
 
         if (!isDialogOpen || !hasTable || !hasBranchId) {
@@ -1311,7 +1646,11 @@ export const ManagerTableManagementEnhanced = ({
         }
 
         const branchIdValue = validBranchId;
-        if (!branchIdValue || branchIdValue.trim() === '' || branchIdValue === 'undefined') {
+        if (
+          !branchIdValue ||
+          branchIdValue.trim() === "" ||
+          branchIdValue === "undefined"
+        ) {
           return null;
         }
 
@@ -1325,11 +1664,16 @@ export const ManagerTableManagementEnhanced = ({
                 setQrTable(null);
               } else {
                 const currentBranchId = validBranchId;
-                if (!currentBranchId || currentBranchId.trim() === '' || currentBranchId === 'undefined') {
+                if (
+                  !currentBranchId ||
+                  currentBranchId.trim() === "" ||
+                  currentBranchId === "undefined"
+                ) {
                   toast({
-                    variant: 'destructive',
-                    title: 'Error',
-                    description: 'Please select a branch first to view QR code.',
+                    variant: "destructive",
+                    title: "Error",
+                    description:
+                      "Please select a branch first to view QR code.",
                   });
                   setIsQRDialogOpen(false);
                   setQrTable(null);
@@ -1352,7 +1696,9 @@ export const ManagerTableManagementEnhanced = ({
               Delete Table
             </DialogTitle>
             <DialogDescription className="pt-2">
-              Are you sure you want to delete <strong>"{tableToDelete?.name}"</strong>? This action cannot be undone and all associated data will be permanently removed.
+              Are you sure you want to delete{" "}
+              <strong>"{tableToDelete?.name}"</strong>? This action cannot be
+              undone and all associated data will be permanently removed.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-3 pt-4">
@@ -1386,7 +1732,10 @@ export const ManagerTableManagementEnhanced = ({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDeleteAreaDialogOpen} onOpenChange={setIsDeleteAreaDialogOpen}>
+      <Dialog
+        open={isDeleteAreaDialogOpen}
+        onOpenChange={setIsDeleteAreaDialogOpen}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
@@ -1394,13 +1743,16 @@ export const ManagerTableManagementEnhanced = ({
               Delete Area
             </DialogTitle>
             <DialogDescription className="pt-2">
-              Are you sure you want to delete area <strong>"{areaToDelete?.name}"</strong>?
+              Are you sure you want to delete area{" "}
+              <strong>"{areaToDelete?.name}"</strong>?
               {(() => {
-                const areaTables = areaToDelete ? areaMap.get(areaToDelete.id)?.tables || [] : [];
+                const areaTables = areaToDelete
+                  ? areaMap.get(areaToDelete.id)?.tables || []
+                  : [];
                 if (areaTables.length > 0) {
                   return ` This area has ${areaTables.length} table(s) that will be moved to "Undefined Area" after deletion.`;
                 }
-                return ' This action cannot be undone and the area will be permanently removed.';
+                return " This action cannot be undone and the area will be permanently removed.";
               })()}
             </DialogDescription>
           </DialogHeader>

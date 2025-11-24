@@ -27,6 +27,10 @@ export const BranchManagementDialog = ({ open, onOpenChange, branch, onSave }: B
   });
 
   useEffect(() => {
+    // Initialize form when dialog opens or branch changes.
+    // When creating a new branch (branch === undefined) we must present an empty form.
+    if (!open) return;
+
     if (branch) {
       const parseTime = (time: string | undefined) => {
         if (!time) return { hour: '', minute: '' };
@@ -47,6 +51,7 @@ export const BranchManagementDialog = ({ open, onOpenChange, branch, onSave }: B
         closingMinute: close.minute,
       });
     } else {
+      // Create mode: ensure form is cleared whenever dialog opens for a new branch
       setFormData({
         address: '',
         branchPhone: '',
@@ -57,7 +62,7 @@ export const BranchManagementDialog = ({ open, onOpenChange, branch, onSave }: B
         closingMinute: '',
       });
     }
-  }, [branch]);
+  }, [branch, open]);
 
   const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
   const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
@@ -191,7 +196,7 @@ export const BranchManagementDialog = ({ open, onOpenChange, branch, onSave }: B
             </div>
           </div>
 
-          {/* Opening & Closing Time – CÙNG 1 DÒNG, GỌN GÀNG */}
+          {/* Business Hours */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Clock className="h-4 w-4 text-muted-foreground" />

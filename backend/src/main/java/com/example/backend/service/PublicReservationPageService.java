@@ -52,8 +52,19 @@ public class PublicReservationPageService {
                                         .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
                 }
 
+                // Check if restaurant is active
+                if (!restaurant.isStatus()) {
+                        throw new AppException(ErrorCode.RESTAURANT_NOTEXISTED);
+                }
+
                 List<Branch> branches = branchRepository
                                 .findByRestaurant_RestaurantIdAndIsActiveTrue(restaurant.getRestaurantId());
+                
+                // Ensure at least one active branch exists
+                if (branches.isEmpty()) {
+                        throw new AppException(ErrorCode.RESTAURANT_NOTEXISTED);
+                }
+                
                 List<RestaurantPublicResponse.BranchInfo> branchInfos = branches.stream()
                                 .map(mapper::branchToBranchInfo)
                                 .collect(Collectors.toList());
@@ -76,6 +87,18 @@ public class PublicReservationPageService {
                         restaurant = restaurantRepository.findByPublicUrlEndingWith(suffix)
                                         .stream().findFirst()
                                         .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
+                }
+
+                // Check if restaurant is active
+                if (!restaurant.isStatus()) {
+                        throw new AppException(ErrorCode.RESTAURANT_NOTEXISTED);
+                }
+
+                // Ensure at least one active branch exists
+                List<Branch> activeBranches = branchRepository
+                                .findByRestaurant_RestaurantIdAndIsActiveTrue(restaurant.getRestaurantId());
+                if (activeBranches.isEmpty()) {
+                        throw new AppException(ErrorCode.RESTAURANT_NOTEXISTED);
                 }
 
                 List<MenuItem> items = menuItemRepository
