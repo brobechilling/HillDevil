@@ -18,7 +18,7 @@ const BrandSelection = () => {
   const navigate = useNavigate();
   const { user } = useSessionStore();
 
-  const ownerId = isUserDTO(user) ? user.userId : ""; 
+  const ownerId = isUserDTO(user) ? user.userId : "";
 
   // Fetch restaurants owned by this user
   const { data: restaurants = [], isLoading, isError } = useRestaurantsByOwner(
@@ -31,6 +31,10 @@ const BrandSelection = () => {
       localStorage.setItem("user_restaurants", JSON.stringify(restaurants));
     }
   }, [restaurants]);
+
+  // Route protection ensures user exists and is a restaurant owner
+  // Staff accounts should not access this page
+  if (!user || !('userId' in user)) return null;
 
   // Handle selecting a restaurant
   const handleRestaurantSelect = (restaurantId: string) => {
@@ -121,7 +125,7 @@ const BrandSelection = () => {
               {restaurants.filter(restaurant => restaurant.status).map((restaurant) => (
                 <Card
                   key={restaurant.restaurantId}
-                  className="cursor-pointer transition-smooth hover:shadow-medium hover:border-primary border-border/50"
+                  className="cursor-pointer transition-smooth hover:shadow-medium hover:border-primary border-border/50 flex flex-col"
                   onClick={() => handleRestaurantSelect(restaurant.restaurantId)}
                 >
                   <CardHeader>
@@ -143,7 +147,7 @@ const BrandSelection = () => {
                       {restaurant.description || "No description available"}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-1 flex flex-col justify-end">
                     <div className="space-y-3 mb-6">
                       {restaurant.email && (
                         <p className="text-sm text-muted-foreground">{restaurant.email}</p>
