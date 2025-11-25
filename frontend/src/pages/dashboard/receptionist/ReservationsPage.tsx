@@ -4,6 +4,7 @@ import { useTables } from '@/hooks/queries/useTables';
 import { useSessionStore } from '@/store/sessionStore';
 import { isStaffAccountDTO } from '@/utils/typeCast';
 import { Search, Plus } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { BookingCard } from '@/components/receptionist/BookingCard';
 import { NewReservationModal } from '@/components/receptionist/NewReservationModal';
 import { TableSelectorModal } from '@/components/receptionist/TableSelectorModal';
@@ -76,10 +77,8 @@ const ReservationsPage = () => {
     const tblRes = tablesQuery.data;
     const tbls = tblRes && (tblRes.content || tblRes) ? (tblRes.content || tblRes) : [];
     const normalizedTables = (Array.isArray(tbls) ? tbls : []).map((t: any) => {
-      // Backend uses enum values like 'FREE' / 'OCCUPIED'.
-      // Normalize to UI-friendly values: treat 'FREE' as 'available'.
-      const rawStatus = (t.status || 'ACTIVE').toString().toLowerCase();
-      const status = rawStatus === 'free' ? 'available' : rawStatus;
+      // Keep backend enum values (FREE, OCCUPIED, ACTIVE, INACTIVE) for proper validation
+      const status = (t.status || 'ACTIVE').toString().toUpperCase();
       return {
         id: t.id,
         number: t.tag || t.id,
@@ -109,9 +108,9 @@ const ReservationsPage = () => {
 
   const getTabColor = (isActive: boolean) => {
     if (isActive) {
-      return 'bg-orange-600 text-white border-orange-600';
+      return 'bg-primary text-primary-foreground border-primary';
     }
-    return 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 hover:border-orange-600';
+    return 'bg-background text-foreground border-border hover:border-primary';
   };
 
   const branchBookings = useMemo(() => {
@@ -140,18 +139,22 @@ const ReservationsPage = () => {
   }, [searchedBookings]);
 
   const getAvailableTables = (booking) => {
-    // Only check capacity and branch — receptionist may assign multiple bookings to same table.
+    // Check capacity, branch, and table must be FREE
     return tables.filter(
       t =>
         t.branchId === branchId &&
-        t.capacity >= booking.numberOfGuests
+        t.capacity >= booking.numberOfGuests &&
+        t.status === 'FREE'
     );
   };
 
-  const hasTimeConflict = (newBooking, excludeBookingId = null) => {
+  const hasTimeConflict = (newBooking, tableId, excludeBookingId = null) => {
     return branchBookings.some(b => {
       if (b.id === excludeBookingId || b.status === 'cancelled') return false;
-      if (!b.tableId) return false;
+      // Only check conflicts for this specific table
+      if (!b.tableId || b.tableId !== tableId) return false;
+      // Only confirmed reservations count as conflicts
+      if (b.status !== 'confirmed') return false;
 
       const newStart = new Date(newBooking.startTime);
       const newEnd = new Date(newBooking.endTime);
@@ -330,11 +333,32 @@ const ReservationsPage = () => {
 
   const handleAssignTable = (bookingId, tableId) => {
     const booking = bookings.find(b => b.id === bookingId);
+    const table = tables.find(t => t.id === tableId);
 
-    if (!booking) return;
+    if (!booking) {
+      toast({
+        title: '✗ Error',
+        description: 'Booking not found',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!table) {
+      toast({
+        title: '✗ Error',
+        description: 'Table not found',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    if (hasTimeConflict(booking, bookingId)) {
-      alert('This booking has time conflict with another booking!');
+    // Check for time conflicts on this specific table
+    if (hasTimeConflict(booking, tableId, bookingId)) {
+      toast({
+        title: '✗ Time Conflict',
+        description: `Table ${table.number} has a time conflict with another confirmed booking during this time slot.`,
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -355,9 +379,18 @@ const ReservationsPage = () => {
               : b
           )
         );
-      } catch (err) {
+        
+        toast({
+          title: '✓ Success',
+          description: `Table ${table.number} assigned successfully`,
+        });
+      } catch (err: any) {
         console.error('Failed to assign table', err);
-        alert('Failed to assign table. Please try again.');
+        toast({
+          title: '✗ Error',
+          description: err?.response?.data?.message || 'Failed to assign table. Please try again.',
+          variant: 'destructive',
+        });
       }
     })();
   };
@@ -406,7 +439,7 @@ const ReservationsPage = () => {
           </div>
           <button
             onClick={() => setShowNewReservationModal(true)}
-            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-md flex items-center gap-2 transition-all duration-200 transform hover:scale-105"
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md flex items-center gap-2 transition-all duration-200"
           >
             <Plus className="h-4 w-4" />
             New Reservation
@@ -421,7 +454,7 @@ const ReservationsPage = () => {
             placeholder="Search by guest name or phone number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
 
@@ -462,7 +495,7 @@ const ReservationsPage = () => {
             </div>
           ) : (
             <div
-              className="flex flex-col items-center justify-center p-16 bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600"
+              className="flex flex-col items-center justify-center p-16 bg-card rounded-lg border border-border"
               style={{ animation: 'fadeIn 0.5s ease-out' }}
             >
               <div className="text-6xl mb-4">📋</div>
@@ -485,6 +518,7 @@ const ReservationsPage = () => {
         branchInfo={branchInfo}
         validationError={validationError}
         branchId={branchId}
+        hasTimeConflict={hasTimeConflict}
       />
 
       <TableSelectorModal

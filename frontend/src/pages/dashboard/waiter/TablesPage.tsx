@@ -36,9 +36,7 @@ const TablesPage = () => {
     (source || []).forEach((t: any) => {
       const areaId = t.areaId || t.area || 'unknown';
       const arr = map.get(areaId) || [];
-      const rawStatus = (t.status || 'ACTIVE').toString().toLowerCase();
-      const status = rawStatus === 'free' ? 'available' : rawStatus;
-      arr.push({ ...t, status });
+      arr.push(t);
       map.set(areaId, arr);
     });
 
@@ -92,64 +90,100 @@ const TablesPage = () => {
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    const normalizedStatus = status?.toUpperCase();
+    switch (normalizedStatus) {
+      case 'FREE':
+        return '✓';
+      case 'OCCUPIED':
+        return '👥';
+      case 'ACTIVE':
+        return '●';
+      case 'INACTIVE':
+        return '⊗';
+      default:
+        return '●';
+    }
+  };
+
   const TableCard = ({ table }: { table: any }) => {
     const { data: tableReservations = [] } = useReservationsByTable(table.id);
+    const normalizedStatus = table.status?.toUpperCase();
+    const isAvailable = normalizedStatus === 'FREE';
+    const isOccupied = normalizedStatus === 'OCCUPIED';
+    const isInactive = normalizedStatus === 'INACTIVE';
 
     return (
-      <Card className="flex flex-col justify-between w-full max-w-[320px] h-full min-h-[150px] bg-card border border-border rounded-2xl shadow-md hover:shadow-lg hover:border-primary/40 transition-all duration-200 ease-in-out overflow-hidden">
-        {/* Header */}
-        <CardHeader className="p-3 pb-1">
+      <Card
+        className={`relative flex flex-col justify-between w-full max-w-[320px] h-full min-h-[200px] rounded-lg overflow-hidden cursor-pointer group border ${isAvailable
+            ? 'border-primary/20'
+            : isOccupied
+              ? 'border-destructive/20'
+              : 'border-secondary/20'
+          }`}
+      >
+        {/* Status Indicator Badge */}
+        <div className="absolute top-3 right-3 z-10">
+          <Badge
+            className={`uppercase px-3 py-1 rounded-full text-xs font-bold shadow-md text-white ${isAvailable
+                ? 'bg-primary hover:bg-primary/90'
+                : isOccupied
+                  ? 'bg-destructive hover:bg-destructive/90'
+                  : 'bg-secondary hover:bg-secondary/90'
+              }`}
+          >
+            {getStatusIcon(table.status)} {table.status}
+          </Badge>
+        </div>
 
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-lg font-semibold">
-                {table.tag || (table.number ? `Table ${table.number}` : 'Table')}
-              </CardTitle>
-              <div className="mt-1 text-sm text-muted-foreground flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>
-                    Capacity: <span className="font-medium">{table.capacity}</span> guests
-                  </span>
-                </div>
-                {tableReservations.length > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100"
-                  >
-                    <Calendar className="h-3 w-3 mr-1 inline-block" />
-                    {tableReservations.length}{' '}
-                    {tableReservations.length === 1 ? 'Reservation' : 'Reservations'}
-                  </Badge>
-                )}
-              </div>
+        {/* Header */}
+        <CardHeader className="p-4 pb-2">
+          <div className="space-y-3">
+            <CardTitle className="text-2xl font-bold text-foreground">
+              {table.tag || (table.number ? `Table ${table.number}` : 'Table')}
+            </CardTitle>
+
+            {/* Capacity Info */}
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Users className="h-4 w-4 text-primary" />
+              <span>Capacity:</span>
+              <span className="font-bold text-lg text-primary">{table.capacity}</span>
+              <span>guests</span>
             </div>
 
-            <Badge
-              variant={getStatusColor(table.status)}
-              className="uppercase px-3 py-1 rounded-md text-xs font-semibold"
-            >
-              {table.status}
-            </Badge>
+            {/* Reservations Badge */}
+            {tableReservations.length > 0 && (
+              <Badge className="w-fit bg-accent/20 text-accent hover:bg-accent/30 border border-accent/50 text-xs font-semibold px-3 py-1 rounded-full">
+                <Calendar className="h-3 w-3 mr-1 inline-block" />
+                {tableReservations.length} {tableReservations.length === 1 ? 'Reservation' : 'Reservations'}
+              </Badge>
+            )}
           </div>
         </CardHeader>
 
         {/* Buttons (always at bottom) */}
-        <CardContent className="mt-auto p-3 pt-1">
-          <div className="flex justify-between gap-3">
+        <CardContent className="mt-auto p-4 pt-2">
+          <div className="flex gap-2 flex-col sm:flex-row">
             <Button
               variant="outline"
-              className="flex-1 basis-1/2 flex items-center justify-center gap-2"
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-primary/20"
               onClick={() => handleViewDetails(table)}
             >
               <Eye className="h-4 w-4" />
-              Details
+              <span className="hidden sm:inline">Details</span>
+              <span className="sm:hidden">Info</span>
             </Button>
             <Button
-              className="flex-1 basis-1/2 flex items-center justify-center gap-2"
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg font-semibold text-white ${isAvailable
+                  ? 'bg-primary hover:bg-primary/90'
+                  : isOccupied
+                    ? 'bg-destructive hover:bg-destructive/90'
+                    : 'bg-secondary hover:bg-secondary/90'
+                }`}
               onClick={() => handleChangeStatus(table)}
             >
-              Change Status
+              <span className="hidden sm:inline">Status</span>
+              <span className="sm:hidden">Change</span>
             </Button>
           </div>
         </CardContent>
@@ -159,11 +193,18 @@ const TablesPage = () => {
 
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold">Table Management</h2>
+    <div className="space-y-8 p-2 md:p-0">
+      {/* Header Section */}
+      <div className="space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Table Management</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">Monitor and manage all restaurant tables</p>
+          </div>
+        </div>
       </div>
 
+      {/* Tables by Area */}
       <div className="space-y-6">
         {Array.from(areaMap.entries())
           .sort((a: any, b: any) => {
@@ -186,19 +227,39 @@ const TablesPage = () => {
             if (filtered.length === 0) return null;
 
             const areaName = (filtered[0] && filtered[0].areaName) || 'Area';
+            const areaAvailable = filtered.filter((t: any) => t.status?.toUpperCase() === 'FREE').length;
+            const areaOccupied = filtered.filter((t: any) => t.status?.toUpperCase() === 'OCCUPIED').length;
 
             return (
-              <div key={String(areaId)} className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="inline-flex items-center gap-3 bg-primary/10 hover:bg-primary/20 transition-colors rounded-full px-3 py-1">
-                    <span className="text-sm font-semibold text-primary">{areaName}</span>
-                    <span className="text-xs text-muted-foreground px-2 py-0.5 bg-primary/5 rounded-md">
-                      {filtered.length} tables
-                    </span>
+              <div key={String(areaId)} className="space-y-4">
+                {/* Area Header */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="inline-flex items-center gap-3 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/15 hover:to-primary/10 transition-all rounded-full px-4 py-2 border border-primary/20">
+                      <span className="text-sm font-bold text-primary">{areaName}</span>
+                      <span className="text-xs font-semibold text-muted-foreground bg-primary/10 dark:bg-primary/20 px-3 py-1 rounded-full">
+                        {filtered.length} tables
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Area Stats */}
+                  <div className="hidden sm:flex items-center gap-3 text-xs">
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 dark:bg-primary/20 text-primary">
+                      <span className="font-bold">{areaAvailable}</span>
+                      <span>free</span>
+                    </div>
+                    {areaOccupied > 0 && (
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-destructive/10 dark:bg-destructive/20 text-destructive">
+                        <span className="font-bold">{areaOccupied}</span>
+                        <span>in use</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="grid gap-x-0 gap-y-6 grid-cols-[repeat(auto-fit,minmax(360px,1fr))] items-stretch justify-items-center">
+                {/* Table Cards Grid */}
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {filtered.map((table) => (
                     <TableCard key={table.id} table={table} />
                   ))}
@@ -208,10 +269,23 @@ const TablesPage = () => {
           })}
       </div>
 
+      {/* Empty State */}
+      {tablesDataArr.length === 0 && (
+        <Card className="border-2 border-dashed border-gray-300 dark:border-gray-600">
+          <CardContent className="p-12 text-center">
+            <div className="h-12 w-12 mx-auto text-gray-400 mb-4 opacity-50 text-2xl">📭</div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">No tables available</h3>
+            <p className="text-gray-500 dark:text-gray-400">Tables will appear here once they are added to your branch.</p>
+          </CardContent>
+        </Card>
+      )}
+
       {selectedTable && (
         <>
           <TableStatusDialog
             tableId={selectedTable?.id}
+            tableName={selectedTable?.tag || `Table ${selectedTable?.number}`}
+            currentStatus={selectedTable?.status}
             open={statusDialogOpen}
             onOpenChange={setStatusDialogOpen}
           />

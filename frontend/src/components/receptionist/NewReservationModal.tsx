@@ -12,6 +12,7 @@ interface NewReservationModalProps {
     validationError: string;
     onValidationErrorChange: (error: string) => void;
     branchId: string | null;
+    hasTimeConflict?: (booking: any, tableId: any, excludeId?: any) => boolean;
 }
 
 export const NewReservationModal = ({
@@ -25,6 +26,7 @@ export const NewReservationModal = ({
     validationError,
     onValidationErrorChange,
     branchId,
+    hasTimeConflict,
 }: NewReservationModalProps) => {
     const handleInputChange = useCallback((field: string, value: any) => {
         onReservationChange(field, value);
@@ -159,23 +161,36 @@ export const NewReservationModal = ({
                             </label>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 {availableTables
-                                    .filter(t => t.branchId === branchId && t.capacity >= reservation.guest_number && t.status === 'available')
-                                    .map(table => (
-                                        <button
-                                            key={table.id}
-                                            type="button"
-                                            onClick={() => handleInputChange('table_id', table.id === reservation.table_id ? '' : table.id)}
-                                            className={`p-3 rounded-lg border-2 transition-all duration-200 transform hover:scale-105 ${reservation.table_id === table.id
-                                                ? 'border-orange-600 bg-orange-50 dark:bg-orange-900/20 shadow-md'
-                                                : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-orange-400'
-                                                }`}
-                                        >
-                                            <div className="text-lg font-bold text-gray-900 dark:text-white">{table.number}</div>
-                                            <div className="text-xs text-gray-600 dark:text-gray-400">{table.capacity} seats</div>
-                                        </button>
-                                    ))}
+                                    .filter(t => t.branchId === branchId && t.capacity >= reservation.guest_number && t.status === 'FREE')
+                                    .map(table => {
+                                        // Check if table has time conflict
+                                        const hasConflict = hasTimeConflict && hasTimeConflict({
+                                            startTime: reservation.start_time,
+                                            endTime: reservation.start_time ? new Date(new Date(reservation.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString() : null,
+                                        }, table.id);
+
+                                        return (
+                                            <button
+                                                key={table.id}
+                                                type="button"
+                                                onClick={() => handleInputChange('table_id', table.id === reservation.table_id ? '' : table.id)}
+                                                disabled={hasConflict}
+                                                className={`p-3 rounded-lg border-2 transition-all duration-200 ${hasConflict
+                                                        ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 opacity-60 cursor-not-allowed'
+                                                        : reservation.table_id === table.id
+                                                            ? 'border-orange-600 bg-orange-50 dark:bg-orange-900/20'
+                                                            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-orange-400'
+                                                    }`}
+                                                title={hasConflict ? 'Time conflict with existing booking' : ''}
+                                            >
+                                                <div className="text-lg font-bold text-gray-900 dark:text-white">{table.number}</div>
+                                                <div className="text-xs text-gray-600 dark:text-gray-400">{table.capacity} seats</div>
+                                                {hasConflict && <div className="text-xs text-red-600 dark:text-red-400 mt-1">⚠️ Conflict</div>}
+                                            </button>
+                                        );
+                                    })}
                             </div>
-                            {availableTables.filter(t => t.branchId === branchId && t.capacity >= reservation.guest_number && t.status === 'available').length === 0 && (
+                            {availableTables.filter(t => t.branchId === branchId && t.capacity >= reservation.guest_number && t.status === 'FREE').length === 0 && (
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">No available tables for {reservation.guest_number} guests</p>
                             )}
                         </div>
