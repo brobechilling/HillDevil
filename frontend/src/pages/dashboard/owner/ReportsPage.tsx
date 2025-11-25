@@ -9,6 +9,11 @@ const OwnerReportsPage = () => {
   const navigate = useNavigate();
   const [activeBranch, setActiveBranch] = useState<BranchDTO | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Get selected restaurant from localStorage
+  const selectedRestaurantRaw = localStorage.getItem('selected_restaurant');
+  const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
+  
   const { data: branches, isLoading: isBranchesLoading } = useBranches();
 
   useEffect(() => {
@@ -16,32 +21,35 @@ const OwnerReportsPage = () => {
       return;
     }
 
-    const selectedBrand = localStorage.getItem('selected_brand');
-    if (!selectedBrand) {
+    // Check if restaurant is selected
+    if (!selectedRestaurant) {
       toast({
         variant: 'destructive',
-        title: 'No brand selected',
-        description: 'Please select a brand first.',
+        title: 'No restaurant selected',
+        description: 'Please select a restaurant first.',
       });
-      navigate('/brand-selection');
+      navigate('/dashboard/owner');
       return;
     }
 
-    const brandBranches = branches || [];
+    // Filter branches by selected restaurant
+    const restaurantBranches = (branches || []).filter(
+      (branch) => branch.restaurantId === selectedRestaurant.restaurantId
+    );
 
-    if (brandBranches.length === 0) {
+    if (restaurantBranches.length === 0) {
       toast({
         variant: 'destructive',
         title: 'No branches found',
-        description: 'This brand has no branches yet.',
+        description: 'This restaurant has no branches yet. Please create a branch first.',
       });
-      navigate('/brand-selection');
+      navigate('/dashboard/owner');
       return;
     }
 
-    setActiveBranch(brandBranches[0]);
+    setActiveBranch(restaurantBranches[0]);
     setLoading(false);
-  }, [navigate, branches, isBranchesLoading]);
+  }, [navigate, branches, isBranchesLoading, selectedRestaurant]);
 
   if (loading || isBranchesLoading) {
     return (

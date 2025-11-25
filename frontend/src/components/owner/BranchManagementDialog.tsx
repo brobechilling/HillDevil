@@ -87,19 +87,28 @@ export const BranchManagementDialog = ({ open, onOpenChange, branch, onSave }: B
       ? `${formData.closingHour}:${formData.closingMinute}`
       : undefined;
 
-    if (openingTime && closingTime) {
-      const toMinutes = (t: string) => {
-        const [h, m] = t.split(':').map(Number);
-        return h * 60 + m;
-      };
-      if (toMinutes(closingTime) <= toMinutes(openingTime)) {
-        toast({
-          variant: 'destructive',
-          title: 'Invalid hours',
-          description: 'Closing time must be after opening time.',
-        });
-        return;
-      }
+    // Validate opening and closing times are required
+    if (!openingTime || !closingTime) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing hours',
+        description: 'Opening time and closing time are required.',
+      });
+      return;
+    }
+
+    // Validate closing time is after opening time
+    const toMinutes = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+    if (toMinutes(closingTime) <= toMinutes(openingTime)) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid hours',
+        description: 'Closing time must be after opening time.',
+      });
+      return;
     }
 
     const selectedRestaurantRaw = localStorage.getItem('selected_restaurant');

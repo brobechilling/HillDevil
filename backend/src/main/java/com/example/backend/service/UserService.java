@@ -41,12 +41,19 @@ public class UserService {
 
     public List<UserDTO> getAll() {
         List<User> users = userRepository.findAll();
-        return users.stream().filter(user -> user.isStatus()).map(user -> userMapper.toUserDto(user)).toList();
+        return users.stream()
+                .filter(user -> user.isStatus())
+                .filter(user -> user.getRole().getName() != RoleName.ADMIN)
+                .map(user -> userMapper.toUserDto(user))
+                .toList();
     }
 
     public List<UserDTO> getAllIncludeDeleted() {
         List<User> users = userRepository.findAll();
-        return users.stream().map(user -> userMapper.toUserDto(user)).toList();
+        return users.stream()
+                .filter(user -> user.getRole().getName() != RoleName.ADMIN)
+                .map(user -> userMapper.toUserDto(user))
+                .toList();
     }
 
     public List<UserDTO> hashSeedPassword() {
