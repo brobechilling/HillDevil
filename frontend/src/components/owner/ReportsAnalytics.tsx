@@ -40,15 +40,6 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
   } = useOrderDistribution(branchId, currentDate);
 
 
-  // Format currency with thousand separators
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
 
   // Format hour for display (0-23 to 12-hour format)
   const formatHour = (hour: number) => {
@@ -129,7 +120,7 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(analytics.totalRevenue)}</div>
+                  <div className="text-2xl font-bold">{analytics.totalRevenue.toLocaleString()} VND </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     <span className="text-green-500">↑ 12.5%</span> from last period
                   </p>
@@ -156,7 +147,7 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {formatCurrency(analytics.avgOrderValue)}
+                    {analytics.avgOrderValue.toLocaleString()} VND
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     <span className="text-green-500">↑ 3.1%</span> from last period
@@ -238,8 +229,8 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
         <TabsContent value="items">
           <Card>
             <CardHeader>
-              <CardTitle>Top Selling Items (Branch Specific)</CardTitle>
-              <CardDescription>Best performing menu items for this branch by revenue</CardDescription>
+              <CardTitle>Top Selling Items</CardTitle>
+              <CardDescription>Best performing menu items by revenue</CardDescription>
             </CardHeader>
             <CardContent>
               {topItemsError ? (
@@ -276,7 +267,7 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-bold">{formatCurrency(item.totalRevenue)}</p>
+                        <p className="font-bold">{item.totalRevenue.toLocaleString()} VND</p>
                       </div>
                     </div>
                   ))}
