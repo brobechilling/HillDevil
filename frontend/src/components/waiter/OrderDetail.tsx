@@ -25,14 +25,16 @@ export const OrderDetail = ({ open, onOpenChange, order, branchId }: Props) => {
       orderId: order.orderId,
       orderStatus: newStatus,
     });
+    onOpenChange(false);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
         <DialogHeader>
           <DialogTitle>
-            Order {order.orderId} — {order.tableTag} ({order.areaName})
+            Order - {order.tableTag} ({order.areaName})
           </DialogTitle>
         </DialogHeader>
 
@@ -40,7 +42,7 @@ export const OrderDetail = ({ open, onOpenChange, order, branchId }: Props) => {
           {order.orderLines.map((line) => (
             <Card key={line.orderLineId} className="p-4 space-y-2 border">
               <div className="flex justify-between font-medium">
-                <span>OrderLine: {line.orderLineId}</span>
+                <span>OrderLine:</span>
                 <span>{line.orderLineStatus}</span>
               </div>
 

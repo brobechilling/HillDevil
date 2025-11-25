@@ -127,6 +127,13 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
               {branch.branchPhone && (
                 <p className="text-sm text-muted-foreground">{branch.branchPhone}</p>
               )}
+              {(branch.openingTime || branch.closingTime) && (
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant="secondary" className="text-xs">
+                    🕐 {branch.openingTime || 'N/A'} - {branch.closingTime || 'N/A'}
+                  </Badge>
+                </div>
+              )}
               {branch.shortCode && (
                 <a
                   href={`/branch/${branch.shortCode}`}

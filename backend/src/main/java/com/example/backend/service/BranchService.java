@@ -49,6 +49,11 @@ public class BranchService {
 
     @Transactional
     public BranchDTO create(BranchDTO dto) {
+        // Validate required fields
+        if (dto.getOpeningTime() == null || dto.getClosingTime() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+        
         Restaurant restaurant = restaurantRepository.findById(dto.getRestaurantId())
                 .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOTEXISTED));
 
@@ -62,6 +67,11 @@ public class BranchService {
 
     @Transactional
     public BranchDTO update(UUID id, BranchDTO dto) {
+        // Validate required fields
+        if (dto.getOpeningTime() == null || dto.getClosingTime() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+        
         Branch exist = branchRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
 
