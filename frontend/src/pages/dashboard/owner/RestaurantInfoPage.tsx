@@ -263,7 +263,7 @@ export default function RestaurantInfoPage() {
                     <DollarSign className="h-4 w-4 text-primary" />
                     <span className="text-sm text-muted-foreground">Amount</span>
                   </div>
-                  <p className="font-medium">{activeSubscription.amount?.toFixed(2) || '0.00'} VND</p>
+                  <p className="font-medium">{activeSubscription.amount?.toLocaleString() || '0.00'} VND</p>
 
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-primary" />

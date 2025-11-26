@@ -233,7 +233,7 @@ export const OrderLineEditDialog = ({
 
           <div className="border-t pt-2 flex justify-between font-semibold">
             <div>Base price</div>
-            <div>{basePrice.toFixed(2)} VND</div>
+            <div>{basePrice.toLocaleString()} VND</div>
           </div>
 
           <div className="flex justify-between font-semibold">
