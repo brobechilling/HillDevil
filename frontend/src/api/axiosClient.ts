@@ -25,8 +25,23 @@ const PUBLIC_ENDPOINTS = [
     "/menu-items/customization/",
 ];
 
-const isPublicEndpoint = (url: string = "") =>
-    PUBLIC_ENDPOINTS.some(endpoint => url.includes(endpoint));
+const PUBLIC_DYNAMIC_PATTERNS = [
+  /^\/restaurants\/[^\/]+$/,  // matches `/restaurants/:id` only
+];
+
+
+const isPublicEndpoint = (url: string = "") => {
+  // exact or prefix match for static endpoints
+  const isStaticPublic = PUBLIC_ENDPOINTS.some(endpoint =>
+    url === endpoint || url.startsWith(endpoint + "/")
+  );
+
+  if (isStaticPublic) return true;
+
+  // regex match for dynamic patterns
+  return PUBLIC_DYNAMIC_PATTERNS.some(pattern => pattern.test(url));
+};
+
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
 
