@@ -929,7 +929,7 @@ useEffect(() => {
                 <CardDescription>
                   Manage all branches across your restaurants
                 </CardDescription>
-              </CardHeader>s
+              </CardHeader>
               <CardContent>
                 {branches.length > 0 ? (
                   <div className="space-y-8">

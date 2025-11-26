@@ -121,9 +121,9 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{analytics.totalRevenue.toLocaleString()} VND </div>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  {/* <p className="text-xs text-muted-foreground mt-1">
                     <span className="text-green-500">↑ 12.5%</span> from last period
-                  </p>
+                  </p> */}
                 </CardContent>
               </Card>
 
@@ -149,9 +149,9 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
                   <div className="text-2xl font-bold">
                     {analytics.avgOrderValue.toLocaleString()} VND
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  {/* <p className="text-xs text-muted-foreground mt-1">
                     <span className="text-green-500">↑ 3.1%</span> from last period
-                  </p>
+                  </p> */}
                 </CardContent>
               </Card>
             </div>
