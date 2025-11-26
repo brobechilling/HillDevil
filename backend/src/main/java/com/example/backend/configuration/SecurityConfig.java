@@ -24,7 +24,6 @@ public class SecurityConfig {
 
 
     private final String[] PUBLIC_ENDPOINTS = {"/api/auth/token", "/api/auth/logout", "/api/auth/refresh", "/api/users/signup", "/api/payments/**", "/api/subscriptions/**", "/api/restaurants/paginated", "/api/staff/**",  "/api/packages/**", "/api/branches/**", "/api/public/**", "/api/public/tables/**", "/api/users/mail/**", "/api/users/forgetpass", "/api/orderlines/**", "/api/branch-menu-items/branch/**", "/api/branch-menu-items/guest/branch/**", "/api/menu-items/customization/**", "/api/order-items/**", "/api/orders/**", "/api/restaurants/{id}"};
-    private final String[] ADMIN_ENDPOINTS = {"/api/users/**", "/api/roles/**"};
 
 
     @Value("${jwt.signer-key}")

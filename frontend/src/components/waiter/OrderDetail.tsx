@@ -46,7 +46,7 @@ export const OrderDetail = ({ open, onOpenChange, order, branchId }: Props) => {
                 <span>{line.orderLineStatus}</span>
               </div>
 
-              {line.orderItems.map((item) => (
+              {line.orderItems.filter(item => item.status).map((item) => (
                 <div key={item.orderItemId} className="ml-3 border-l pl-3 py-1">
                   <div className="flex justify-between">
                     <span>
