@@ -27,6 +27,7 @@ const PUBLIC_ENDPOINTS = [
 
 const PUBLIC_DYNAMIC_PATTERNS = [
   /^\/restaurants\/[^\/]+$/,  // matches `/restaurants/:id` only
+  /^\/branch-menu-items\/guest\/branch\/[^\/]+$/,
 ];
 
 
