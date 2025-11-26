@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 // import { OrderDTO } from '@/dto/order.dto';
-import { Receipt, Mail, Phone, Clock, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Receipt, Mail, Phone, Clock, Users, ChevronLeft, ChevronRight, MapPin, AlertCircle } from 'lucide-react';
 import { BillCreationDialog } from './BillCreationDialog';
 import { useReservationsByTable } from '@/hooks/queries/useReservationsByTable';
 import { useTable } from '@/hooks/queries/useTables';
@@ -93,136 +93,244 @@ export const TableDetailsDialog = ({ tableId, table, branchId, open, onOpenChang
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" aria-describedby="table-details-dialog">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {effectiveTable.number || effectiveTable.tag} - Details
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0 gap-0 rounded-2xl">
+          {/* Header with Table Info */}
+          <div className="bg-primary text-white p-6 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-12 h-12 bg-white/20 rounded-lg backdrop-blur">
+                  <MapPin className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">{effectiveTable.number || effectiveTable.tag}</h2>
+                  <p className="text-orange-100 text-sm">{effectiveTable.areaName || 'Table Area'}</p>
+                </div>
+              </div>
               {effectiveTable.reservationStart && (
-                <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
-                  Reserved
+                <Badge className="bg-accent hover:bg-accent/90 text-white px-3 py-1 text-xs font-semibold">
+                  🔖 Reserved
                 </Badge>
               )}
-            </DialogTitle>
-          </DialogHeader>
+            </div>
 
-          {effectiveTable.reservationStart && (
-            <Card className="bg-muted/50">
-              <CardContent className="pt-6">
-                <h4 className="font-semibold mb-3 text-sm">Reservation Details</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {effectiveTable.reservationName && (
+            {/* Quick Stats */}
+            <div className="flex gap-6 mt-4 pt-4 border-t border-white/20">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-orange-100" />
+                <span className="text-sm">{effectiveTable.capacity} seats</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-white/10 border-white/30 text-white text-xs">
+                  {effectiveTable.status || 'Available'}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="p-6 space-y-6">
+            {/* Reserved Table Info */}
+            {effectiveTable.reservationStart && (
+              <Card className="border border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex gap-3 mb-4">
+                    <Clock className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-muted-foreground">Guest Name</p>
-                      <p className="font-semibold">{effectiveTable.reservationName}</p>
+                      <h3 className="font-semibold text-foreground mb-3">Current Reservation</h3>
                     </div>
-                  )}
-                  <div>
-                    <p className="text-muted-foreground">Start Time</p>
-                    <p className="font-semibold">{new Date(effectiveTable.reservationStart).toLocaleString()}</p>
                   </div>
-                  {effectiveTable.reservationEnd && (
-                    <div>
-                      <p className="text-muted-foreground">End Time</p>
-                      <p className="font-semibold">{new Date(effectiveTable.reservationEnd).toLocaleString()}</p>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm ml-8">
+                    {effectiveTable.reservationName && (
+                      <div className="col-span-2 sm:col-span-1">
+                        <p className="text-muted-foreground text-xs font-medium uppercase">Guest Name</p>
+                        <p className="font-bold text-foreground mt-1">{effectiveTable.reservationName}</p>
+                      </div>
+                    )}
+                    <div className="col-span-2 sm:col-span-1">
+                      <p className="text-muted-foreground text-xs font-medium uppercase">Start Time</p>
+                      <p className="font-bold text-foreground mt-1">
+                        {new Date(effectiveTable.reservationStart).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
                     </div>
-                  )}
-                  <div>
-                    <p className="text-muted-foreground">Table Capacity</p>
-                    <p className="font-semibold">{effectiveTable.capacity} guests</p>
+                    {effectiveTable.reservationEnd && (
+                      <div className="col-span-2 sm:col-span-1">
+                        <p className="text-muted-foreground text-xs font-medium uppercase">End Time</p>
+                        <p className="font-bold text-foreground mt-1">
+                          {new Date(effectiveTable.reservationEnd).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    )}
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Assigned Reservations */}
+            {Array.isArray(reservationsQuery.data) && (reservationsQuery.data as any[]).length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <Users className="w-5 h-5 text-primary" />
+                    Guest Reservations
+                  </h3>
+                  <Badge variant="outline" className="text-xs">
+                    {reservationsQuery.data.length} total
+                  </Badge>
                 </div>
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Assigned reservations (from public API) */}
-          {Array.isArray(reservationsQuery.data) && (reservationsQuery.data as any[]).length > 0 && (
-            <Card className="mt-4">
-              <CardContent>
-                <h4 className="font-semibold mb-3 text-sm">Assigned Reservations</h4>
-
-                {/* Carousel: show one reservation at a time and auto-advance when multiple */}
-                <div
-                  className="relative"
-                  onMouseEnter={() => setIsPaused(true)}
-                  onMouseLeave={() => setIsPaused(false)}
-                >
-                  {/** Controls and slide container **/}
-                  <div className="p-3 border rounded-md bg-background/50">
-                    {/** slide content below **/}
-                    {(() => {
-                      const reservations = (reservationsQuery.data as any[]) || [];
-                      if (reservations.length === 0) return <div className="text-sm text-muted-foreground">No reservations</div>;
-                      const current = reservations[reservationIndex % reservations.length];
-                      const start = current.startTime || current.reservationStart || current.createdAt;
-                      return (
-                        <div key={current.reservationId || current.id} className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <Users className="w-4 h-4 text-muted-foreground" />
-                              <div className="font-semibold">{current.customerName || current.reservationName || current.customerFullName || 'Guest'}</div>
+                {/* Carousel Container */}
+                <div className="relative">
+                  <Card className="border border-primary/20 overflow-hidden">
+                    <CardContent
+                      className="p-0"
+                      onMouseEnter={() => setIsPaused(true)}
+                      onMouseLeave={() => setIsPaused(false)}
+                    >
+                      {/* Carousel Slide */}
+                      {(() => {
+                        const reservations = (reservationsQuery.data as any[]) || [];
+                        if (reservations.length === 0) {
+                          return (
+                            <div className="p-6 text-center text-muted-foreground">
+                              <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                              <p>No reservations</p>
                             </div>
+                          );
+                        }
 
-                            <div className="mt-2 text-xs text-muted-foreground space-y-1">
-                              <div className="flex items-center gap-2">
-                                <Mail className="w-3 h-3" />
-                                <span className="font-medium">mail:</span>
-                                <span className="truncate">{current.customerEmail || '-'}</span>
+                        const current = reservations[reservationIndex % reservations.length];
+                        const start = current.startTime || current.reservationStart || current.createdAt;
+
+                        return (
+                          <div key={current.reservationId || current.id} className="p-6">
+                            {/* Guest Info Section */}
+                            <div className="mb-6 pb-6 border-b border-primary/20">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-4">
+                                    <div className="flex items-center justify-center w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-full">
+                                      <Users className="w-5 h-5 text-primary" />
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-medium text-muted-foreground uppercase">Guest Name</p>
+                                      <p className="font-bold text-lg">
+                                        {current.customerName || current.reservationName || current.customerFullName || 'Guest'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <Badge className="flex-shrink-0 bg-secondary/20 text-secondary hover:bg-secondary/30">
+                                  {current.guestNumber ?? current.guest ?? current.partySize ?? '-'} guests
+                                </Badge>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Phone className="w-3 h-3" />
-                                <span className="font-medium">phone:</span>
-                                <span>{current.customerPhone || '-'}</span>
+                            </div>
+
+                            {/* Contact Info Grid */}
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Mail className="w-4 h-4 flex-shrink-0" />
+                                  <span className="text-xs font-medium uppercase">Email</span>
+                                </div>
+                                <p className="font-medium text-sm ml-6 break-all">{current.customerEmail || 'N/A'}</p>
                               </div>
-                              {current.note && (
-                                <div className="pt-1 text-xs italic text-muted-foreground">Note: {current.note}</div>
-                              )}
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Phone className="w-4 h-4 flex-shrink-0" />
+                                  <span className="text-xs font-medium uppercase">Phone</span>
+                                </div>
+                                <p className="font-medium text-sm ml-6">{current.customerPhone || 'N/A'}</p>
+                              </div>
                             </div>
-                          </div>
 
-                          <div className="flex-shrink-0 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Clock className="w-4 h-4 text-muted-foreground" />
-                              <div className="font-medium">{start ? new Date(start).toLocaleString() : '-'}</div>
+                            {/* Time & Status Section */}
+                            <div className="grid grid-cols-2 gap-4 pb-6 border-b border-primary/20">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Clock className="w-4 h-4 flex-shrink-0" />
+                                  <span className="text-xs font-medium uppercase">Start Time</span>
+                                </div>
+                                <p className="font-bold text-sm ml-6">{start ? new Date(start).toLocaleString() : '-'}</p>
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Receipt className="w-4 h-4 flex-shrink-0" />
+                                  <span className="text-xs font-medium uppercase">Status</span>
+                                </div>
+                                <div className="ml-6">
+                                  <Badge
+                                    className={`text-white font-semibold ${
+                                      (current.status || '').toLowerCase() === 'confirmed'
+                                        ? 'bg-primary'
+                                        : (current.status || '').toLowerCase() === 'approved'
+                                          ? 'bg-secondary'
+                                          : 'bg-muted'
+                                    }`}
+                                  >
+                                    {(current.status || 'Pending').charAt(0).toUpperCase() + (current.status || 'Pending').slice(1).toLowerCase()}
+                                  </Badge>
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-xs text-muted-foreground">start</div>
-                            <div className="mt-2">
-                              <Badge variant="secondary">{(current.status || '').toString()}</Badge>
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">Guests: {current.guestNumber ?? current.guest ?? current.partySize ?? '-'}</div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
 
-                  {/** Nav controls when multiple reservations exist **/}
+                            {/* Special Notes */}
+                            {current.note && (
+                              <div className="mt-6 p-3 bg-accent/10 dark:bg-accent/20 border border-accent/30 dark:border-accent/40 rounded-lg">
+                                <p className="text-xs font-semibold text-primary uppercase mb-1">Special Notes</p>
+                                <p className="text-sm text-foreground">{current.note}</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+
+                  {/* Navigation Controls */}
                   {reservationsQuery.data.length > 1 && (
                     <>
                       <button
                         aria-label="Previous reservation"
-                        onClick={() => setReservationIndex(i => Math.max(0, (i - 1 + reservationsQuery.data.length) % reservationsQuery.data.length))}
-                        className="absolute -left-3 top-1/2 -translate-y-1/2 bg-white/80 dark:bg-black/70 rounded-full p-2 hover:scale-105 shadow-md"
+                        onClick={() =>
+                          setReservationIndex(i => (i - 1 + reservationsQuery.data.length) % reservationsQuery.data.length)
+                        }
+                        className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 border-2 border-primary/30 hover:border-primary rounded-full p-2 hover:scale-110 hover:shadow-lg shadow-md transition-all duration-200"
                         type="button"
                       >
-                        <ChevronLeft className="w-4 h-4" />
+                        <ChevronLeft className="w-5 h-5 text-primary" />
                       </button>
 
                       <button
                         aria-label="Next reservation"
                         onClick={() => setReservationIndex(i => (i + 1) % reservationsQuery.data.length)}
-                        className="absolute -right-3 top-1/2 -translate-y-1/2 bg-white/80 dark:bg-black/70 rounded-full p-2 hover:scale-105 shadow-md"
+                        className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 border-2 border-primary/30 hover:border-primary rounded-full p-2 hover:scale-110 hover:shadow-lg shadow-md transition-all duration-200"
                         type="button"
                       >
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className="w-5 h-5 text-primary" />
                       </button>
 
-                      <div className="flex gap-2 justify-center mt-3">
+                      {/* Pagination Dots */}
+                      <div className="flex gap-2 justify-center mt-4 pb-2">
                         {Array.from({ length: reservationsQuery.data.length }).map((_, idx) => (
                           <button
                             key={idx}
                             onClick={() => setReservationIndex(idx)}
-                            className={reservationIndex % reservationsQuery.data.length === idx ? 'w-2 h-2 rounded-full bg-primary' : 'w-2 h-2 rounded-full bg-border'}
+                            className={`transition-all duration-300 rounded-full ${
+                              reservationIndex % reservationsQuery.data.length === idx
+                                ? 'w-3 h-3 bg-primary shadow-md'
+                                : 'w-2 h-2 bg-muted hover:bg-muted-foreground/40'
+                            }`}
                             aria-label={`Show reservation ${idx + 1}`}
                           />
                         ))}
@@ -230,136 +338,18 @@ export const TableDetailsDialog = ({ tableId, table, branchId, open, onOpenChang
                     </>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
 
-          <Tabs defaultValue="current" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="current">Current Orders</TabsTrigger>
-              <TabsTrigger value="history">Past Order History</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="current" className="space-y-4">
-              {/* {currentOrders.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No current orders</p>
-              ) : (
-                <>
-                  {currentOrders.map((order) => (
-                    <Card key={(order as any).orderId || (order as any).id} className="border-border/50">
-                      <CardContent className="pt-6">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-bold">Order #{(order as any).orderId || (order as any).id}</h4>
-                              {getStatusBadge((order as any).status || (order as any).orderStatus || '')}
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(order.createdAt).toLocaleString()}
-                            </p>
-                          </div>
-                          <p className="font-bold text-lg">${((order as any).totalPrice ?? 0).toFixed(2)}</p>
-                        </div>
-
-                        <div className="space-y-3">
-                          {order.orderLines.map((line, lineIdx) => (
-                            <div key={(line as any).orderLineId || (line as any).id} className="space-y-2 p-2 bg-muted/30 rounded">
-                              <div className="text-xs text-muted-foreground">
-                                Line {lineIdx + 1} - {new Date((line as any).createdAt).toLocaleTimeString()}
-                              </div>
-                              {((line as any).orderItems || (line as any).items || []).map((item: any, idx: number) => (
-                                <div key={idx} className="flex justify-between text-sm flex-col">
-                                  <div className="flex justify-between w-full">
-                                    <span>{(item.quantity ?? 1)}x {item.name || item.menuItemName || item.menuItemId || 'Item'}</span>
-                                    <span className="text-muted-foreground">${((item.totalPrice ?? 0)).toFixed(2)}</span>
-                                  </div>
-                                  {item.note && (
-                                    <span className="text-xs italic text-muted-foreground mt-0.5">
-                                      Note: {item.note}
-                                    </span>
-                                  )}
-                                  {item.customizations?.length > 0 && (
-                                    <div className="ml-4 mt-1 space-y-1">
-                                      {item.customizations.map((cust: any) => (
-                                        <div key={cust.id || cust.customizationId} className="flex justify-between text-xs text-muted-foreground">
-                                          <span>{cust.quantity ?? 1}x {cust.name || cust.label || cust.customizationName}</span>
-                                          <span>${((cust.totalPrice ?? 0)).toFixed(2)}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-
-                  {completedUnbilledOrders.length > 0 && (
-                    <div className="pt-4 border-t">
-                      <Button
-                        onClick={() => {
-                          setSelectedOrders(completedUnbilledOrders.map(o => (o as any).orderId || (o as any).id));
-                          setBillDialogOpen(true);
-                        }}
-                        className="w-full"
-                      >
-                        <Receipt className="mr-2 h-4 w-4" />
-                        Create Bill for Completed Orders
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )} */}
-            </TabsContent>
-
-            {/* <TabsContent value="history" className="space-y-4">
-              {pastOrders.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No past orders</p>
-              ) : (
-                pastOrders.map((order) => (
-                  <Card key={(order as any).orderId || (order as any).id} className="border-border/50">
-                    <CardContent className="pt-6">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h4 className="font-bold">Order #{(order as any).orderId || (order as any).id}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date((order as any).createdAt).toLocaleString()}
-                          </p>
-                          {((order as any).updatedAt) && (
-                            <p className="text-xs text-muted-foreground">
-                              Last Updated: {new Date((order as any).updatedAt).toLocaleString()}
-                            </p>
-                          )}
-                        </div>
-                        <p className="font-bold text-lg">${(((order as any).totalPrice ?? 0)).toFixed(2)}</p>
-                      </div>
-
-                      <div className="space-y-3">
-                        {(order.orderLines || []).map((line: any, lineIdx: number) => (
-                          <div key={(line as any).orderLineId || (line as any).id} className="space-y-2 p-2 bg-muted/30 rounded">
-                            <div className="text-xs text-muted-foreground">
-                              Line {lineIdx + 1} - {new Date((line as any).createdAt).toLocaleTimeString()}
-                            </div>
-                            {(((line as any).orderItems || (line as any).items) || []).map((item: any, idx: number) => (
-                              <div key={idx} className="flex justify-between text-sm">
-                                <span>{(item.quantity ?? 1)}x {item.name || item.menuItemName || item.menuItemId || 'Item'}</span>
-                                <span className="text-muted-foreground">
-                                  ${((item.totalPrice ?? 0)).toFixed(2)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </TabsContent> */}
-          </Tabs>
+            {/* No Reservations Message */}
+            {(!Array.isArray(reservationsQuery.data) || (reservationsQuery.data as any[]).length === 0) && !effectiveTable.reservationStart && (
+              <div className="text-center py-8">
+                <AlertCircle className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">No reservations for this table</p>
+                <p className="text-xs text-muted-foreground mt-1">This table is currently available</p>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
