@@ -80,7 +80,7 @@ export const TableSelectorModal = ({
                                         }}
                                         className="p-4 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all duration-200 transform hover:scale-105"
                                     >
-                                        <div className="text-2xl font-bold text-gray-900 dark:text-white">Table {table.number}</div>
+                                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{table.number}</div>
                                         <div className="text-sm text-gray-600 dark:text-gray-400">{table.capacity} seats</div>
                                     </button>
                                 ))}
