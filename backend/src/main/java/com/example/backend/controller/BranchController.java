@@ -69,6 +69,13 @@ public class BranchController {
         return res;
     }
 
+    @GetMapping("/restaurant/{restaurantId}/active")
+    public ApiResponse<List<BranchDTO>> getActiveByRestaurant(@PathVariable UUID restaurantId) {
+        ApiResponse<List<BranchDTO>> res = new ApiResponse<>();
+        res.setResult(branchService.getActiveByRestaurant(restaurantId));
+        return res;
+    }
+
     @GetMapping("/{branchId}/restaurant")
     public ApiResponse<UUID> getRestaurantByBranchId(@PathVariable UUID branchId) {
         ApiResponse<UUID> res = new ApiResponse<>();

@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BranchDTO } from "@/dto/branch.dto";
 import { RestaurantDTO } from "@/dto/restaurant.dto";
-import { useBranchesByRestaurant } from "@/hooks/queries/useBranches";
+import { useActiveBranchesByRestaurant } from "@/hooks/queries/useBranches";
 import { getLocalStorageObject } from "@/utils/typeCast";
 import { Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +13,7 @@ export default function BranchSelectionPage() {
     if (!selectedRestaurant) {
         navigate('/brand-selection');
     }
-    const { data: branches, isLoading: isBranchesLoading } = useBranchesByRestaurant(selectedRestaurant?.restaurantId);
+    const { data: branches, isLoading: isBranchesLoading } = useActiveBranchesByRestaurant(selectedRestaurant?.restaurantId);
 
     const handleAccessManagerDashboard = (selectedBranch: BranchDTO) => {
         // Save selected branchId to sessionStorage for persistence across navigation
