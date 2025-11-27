@@ -41,6 +41,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
         JOIN at.area a
         JOIN a.branch b
         WHERE b.branchId = :branchId
+        AND b.isActive = true
+        AND a.status = true
         AND o.status = :status
         AND o.createdAt >= :startDate
         AND o.createdAt < :endDate
@@ -62,6 +64,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
         JOIN at.area a
         JOIN a.branch b
         WHERE b.branchId = :branchId
+        AND b.isActive = true
+        AND a.status = true
         AND o.status = :status
         AND o.createdAt >= :startDate
         AND o.createdAt < :endDate
@@ -92,6 +96,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
         JOIN at.area a
         JOIN a.branch b
         WHERE b.branchId = :branchId
+        AND b.isActive = true
+        AND a.status = true
         AND o.status = :status
         AND o.createdAt >= :startDate
         AND o.createdAt < :endDate
@@ -119,6 +125,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
         JOIN at.area a
         JOIN a.branch b
         WHERE b.branchId = :branchId
+        AND b.isActive = true
+        AND a.status = true
         AND o.createdAt >= :startDate
         AND o.createdAt < :endDate
         GROUP BY HOUR(o.createdAt)
@@ -126,6 +134,66 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     """)
     List<OrderDistributionDTO> findOrderDistributionByBranchAndDate(
             @Param("branchId") UUID branchId,
+            @Param("startDate") Instant startDate,
+            @Param("endDate") Instant endDate
+    );
+
+    /**
+     * Find top selling items by restaurant and timeframe (aggregated from all branches)
+     */
+    @Query("""
+        SELECT new com.example.backend.dto.TopSellingItemDTO(
+            mi.menuItemId,
+            mi.name,
+            CAST(SUM(oi.quantity) AS int),
+            SUM(oi.totalPrice)
+        )
+        FROM OrderItem oi
+        JOIN oi.menuItem mi
+        JOIN oi.orderLine ol
+        JOIN ol.order o
+        JOIN o.areaTable at
+        JOIN at.area a
+        JOIN a.branch b
+        WHERE b.restaurant.restaurantId = :restaurantId
+        AND b.isActive = true
+        AND a.status = true
+        AND o.status = :status
+        AND o.createdAt >= :startDate
+        AND o.createdAt < :endDate
+        AND oi.status = true
+        GROUP BY mi.menuItemId, mi.name
+        ORDER BY SUM(oi.totalPrice) DESC
+    """)
+    List<TopSellingItemDTO> findTopSellingItemsByRestaurant(
+            @Param("restaurantId") UUID restaurantId,
+            @Param("status") OrderStatus status,
+            @Param("startDate") Instant startDate,
+            @Param("endDate") Instant endDate
+    );
+
+    /**
+     * Get order distribution by hour for a restaurant (aggregated from all branches)
+     */
+    @Query("""
+        SELECT new com.example.backend.dto.OrderDistributionDTO(
+            HOUR(o.createdAt),
+            COUNT(o)
+        )
+        FROM Order o
+        JOIN o.areaTable at
+        JOIN at.area a
+        JOIN a.branch b
+        WHERE b.restaurant.restaurantId = :restaurantId
+        AND b.isActive = true
+        AND a.status = true
+        AND o.createdAt >= :startDate
+        AND o.createdAt < :endDate
+        GROUP BY HOUR(o.createdAt)
+        ORDER BY HOUR(o.createdAt)
+    """)
+    List<OrderDistributionDTO> findOrderDistributionByRestaurantAndDate(
+            @Param("restaurantId") UUID restaurantId,
             @Param("startDate") Instant startDate,
             @Param("endDate") Instant endDate
     );

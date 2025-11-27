@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { createBranch, updateBranch } from '@/api/branchApi';
+import { useCreateBranch, useUpdateBranch } from '@/hooks/queries/useBranches';
 import { Clock } from 'lucide-react';
 
 interface BranchManagementDialogProps {
@@ -16,6 +16,13 @@ interface BranchManagementDialogProps {
 }
 
 export const BranchManagementDialog = ({ open, onOpenChange, branch, onSave }: BranchManagementDialogProps) => {
+  const selectedRestaurantRaw = localStorage.getItem('selected_restaurant');
+  const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
+  const restaurantId = selectedRestaurant?.restaurantId;
+
+  const createBranchMutation = useCreateBranch(restaurantId);
+  const updateBranchMutation = useUpdateBranch();
+
   const [formData, setFormData] = useState({
     address: '',
     branchPhone: '',
@@ -111,10 +118,6 @@ export const BranchManagementDialog = ({ open, onOpenChange, branch, onSave }: B
       return;
     }
 
-    const selectedRestaurantRaw = localStorage.getItem('selected_restaurant');
-    const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
-    const restaurantId = selectedRestaurant?.restaurantId;
-
     if (!restaurantId) {
       toast({ variant: 'destructive', title: 'No restaurant selected', description: 'Please select a restaurant first.' });
       return;
@@ -130,30 +133,42 @@ export const BranchManagementDialog = ({ open, onOpenChange, branch, onSave }: B
       isActive: true,
     };
 
-    (async () => {
-      try {
-        if (branch) {
-          const updatePayload = {
-            restaurantId,
-            address: formData.address,
-            branchPhone: formData.branchPhone || undefined,
-            mail: formData.mail,
-            openingTime,
-            closingTime,
-          };
-          await updateBranch(branch.branchId, updatePayload);
-          toast({ title: 'Branch updated', description: 'Branch information has been updated successfully.' });
-        } else {
-          await createBranch(payload);
-          toast({ title: 'Branch created', description: 'Branch has been added successfully.' });
+    if (branch) {
+      const updatePayload = {
+        restaurantId,
+        address: formData.address,
+        branchPhone: formData.branchPhone || undefined,
+        mail: formData.mail,
+        openingTime,
+        closingTime,
+      };
+      updateBranchMutation.mutate(
+        { id: branch.branchId, data: updatePayload },
+        {
+          onSuccess: () => {
+            toast({ title: 'Branch updated', description: 'Branch information has been updated successfully.' });
+            onSave();
+            onOpenChange(false);
+          },
+          onError: (err: any) => {
+            console.error('Branch update error', err);
+            toast({ variant: 'destructive', title: 'Error', description: err?.response?.data?.message || 'Failed to update branch.' });
+          },
         }
-        onSave();
-        onOpenChange(false);
-      } catch (err: any) {
-        console.error('Branch save error', err);
-        toast({ variant: 'destructive', title: 'Error', description: err?.response?.data?.message || 'Failed to save branch.' });
-      }
-    })();
+      );
+    } else {
+      createBranchMutation.mutate(payload, {
+        onSuccess: () => {
+          toast({ title: 'Branch created', description: 'Branch has been added successfully.' });
+          onSave();
+          onOpenChange(false);
+        },
+        onError: (err: any) => {
+          console.error('Branch create error', err);
+          toast({ variant: 'destructive', title: 'Error', description: err?.response?.data?.message || 'Failed to create branch.' });
+        },
+      });
+    }
   };
 
   return (
@@ -283,8 +298,14 @@ export const BranchManagementDialog = ({ open, onOpenChange, branch, onSave }: B
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="min-w-32">
-              {branch ? 'Update' : 'Create'} Branch
+            <Button 
+              type="submit" 
+              className="min-w-32"
+              disabled={createBranchMutation.isPending || updateBranchMutation.isPending}
+            >
+              {(createBranchMutation.isPending || updateBranchMutation.isPending) 
+                ? 'Saving...' 
+                : branch ? 'Update' : 'Create'} Branch
             </Button>
           </div>
         </form>

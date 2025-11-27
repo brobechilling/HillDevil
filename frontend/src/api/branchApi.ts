@@ -19,6 +19,13 @@ export const getBranchesByRestaurant = async (restaurantId: string) => {
     return res.data.result;
 };
 
+export const getActiveBranchesByRestaurant = async (restaurantId: string) => {
+    const res = await axiosClient.get<ApiResponse<BranchDTO[]>>(
+        `/branches/restaurant/${restaurantId}/active`
+    );
+    return res.data.result;
+};
+
 export const createBranch = async (data: CreateBranchDTO) => {
     const res = await axiosClient.post<ApiResponse<BranchDTO>>("/branches", data);
     return res.data.result;

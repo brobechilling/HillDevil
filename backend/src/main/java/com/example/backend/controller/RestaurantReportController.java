@@ -30,6 +30,64 @@ public class RestaurantReportController {
         this.branchService = branchService;
     }
 
+    @GetMapping("/restaurant/{restaurantId}/analytics")
+    public ApiResponse<BranchAnalyticsDTO> getRestaurantAnalytics(
+            @PathVariable UUID restaurantId,
+            @RequestParam(defaultValue = "MONTH") ReportType timeframe
+    ) {
+        ApiResponse<BranchAnalyticsDTO> response = new ApiResponse<>();
+        
+        try {
+            BranchAnalyticsDTO analytics = restaurantReportService.getRestaurantAnalytics(restaurantId, timeframe);
+            response.setResult(analytics);
+        } catch (AppException e) {
+            response.setCode(e.getErrorCode().getCode());
+            response.setMessage(e.getMessage());
+        }
+        
+        return response;
+    }
+
+    @GetMapping("/restaurant/{restaurantId}/top-items")
+    public ApiResponse<List<TopSellingItemDTO>> getRestaurantTopSellingItems(
+            @PathVariable UUID restaurantId,
+            @RequestParam(defaultValue = "DAY") ReportType timeframe,
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+        ApiResponse<List<TopSellingItemDTO>> response = new ApiResponse<>();
+        
+        try {
+            List<TopSellingItemDTO> topItems = restaurantReportService.getRestaurantTopSellingItems(restaurantId, timeframe, limit);
+            response.setResult(topItems);
+        } catch (AppException e) {
+            response.setCode(e.getErrorCode().getCode());
+            response.setMessage(e.getMessage());
+        }
+        
+        return response;
+    }
+
+    @GetMapping("/restaurant/{restaurantId}/order-distribution")
+    public ApiResponse<List<OrderDistributionDTO>> getRestaurantOrderDistribution(
+            @PathVariable UUID restaurantId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        ApiResponse<List<OrderDistributionDTO>> response = new ApiResponse<>();
+        
+        try {
+            // Use current date if not provided
+            LocalDate targetDate = (date != null) ? date : LocalDate.now();
+            
+            List<OrderDistributionDTO> distribution = restaurantReportService.getRestaurantOrderDistribution(restaurantId, targetDate);
+            response.setResult(distribution);
+        } catch (AppException e) {
+            response.setCode(e.getErrorCode().getCode());
+            response.setMessage(e.getMessage());
+        }
+        
+        return response;
+    }
+
     @GetMapping("/branch/{branchId}/analytics")
     public ApiResponse<BranchAnalyticsDTO> getBranchAnalytics(
             @PathVariable UUID branchId,

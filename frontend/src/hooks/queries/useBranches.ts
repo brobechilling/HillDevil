@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAllBranches, getBranchesByRestaurant, getRestaurantByBranchId, getBranchById, updateBranch as apiUpdateBranch, canCreateBranch } from '@/api/branchApi';
+import { getAllBranches, getBranchesByRestaurant, getActiveBranchesByRestaurant, getRestaurantByBranchId, getBranchById, updateBranch as apiUpdateBranch, canCreateBranch } from '@/api/branchApi';
 import { BranchDTO } from '@/dto/branch.dto';
 import { createBranch, deleteBranch, getBranchesByOwner } from '@/api/branchApi';
 
@@ -14,6 +14,14 @@ export const useBranchesByRestaurant = (restaurantId: string | undefined) => {
     return useQuery<BranchDTO[]>({
         queryKey: ['branches', 'restaurant', restaurantId],
         queryFn: () => getBranchesByRestaurant(restaurantId!),
+        enabled: !!restaurantId,
+    });
+};
+
+export const useActiveBranchesByRestaurant = (restaurantId: string | undefined) => {
+    return useQuery<BranchDTO[]>({
+        queryKey: ['branches', 'restaurant', restaurantId, 'active'],
+        queryFn: () => getActiveBranchesByRestaurant(restaurantId!),
         enabled: !!restaurantId,
     });
 };
