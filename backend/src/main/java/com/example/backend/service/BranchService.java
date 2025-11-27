@@ -67,13 +67,17 @@ public class BranchService {
 
     @Transactional
     public BranchDTO update(UUID id, BranchDTO dto) {
-        // Validate required fields
-        if (dto.getOpeningTime() == null || dto.getClosingTime() == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-        
         Branch exist = branchRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
+
+        // Only validate opening/closing time if they are being updated
+        // This allows partial updates (e.g., just updating isActive status)
+        if (dto.getOpeningTime() != null && dto.getClosingTime() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+        if (dto.getOpeningTime() == null && dto.getClosingTime() != null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
 
         branchMapper.updateEntityFromDto(dto, exist);
         Branch saved = branchRepository.save(exist);

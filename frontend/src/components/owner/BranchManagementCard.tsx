@@ -81,7 +81,7 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
       await Promise.all(updates);
       toast({
         title: 'Success',
-        description: `All branches ${isActivating ? 'activated' : 'deactivated'}.`,
+        description: `All branches ${isActivating ? 'activated' : 'inactivated'}.`,
       });
     } else if (branchId) {
       setProcessingIds(s => ({ ...s, [branchId]: true }));
@@ -89,7 +89,7 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
         await updateBranchMutation.mutateAsync({ id: branchId, data: { isActive: isActivating! } });
         toast({
           title: 'Success',
-          description: `Branch ${isActivating ? 'activated' : 'deactivated'}.`,
+          description: `Branch ${isActivating ? 'activated' : 'inactivated'}.`,
         });
       } catch (err: any) {
         toast({
@@ -225,7 +225,7 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
                   <div className="flex items-center gap-3 p-4 border rounded-lg bg-destructive/5">
                     <AlertCircle className="h-5 w-5 text-destructive" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium">Deactivate All Branches</p>
+                      <p className="text-sm font-medium">Inactivate All Branches</p>
                       <p className="text-xs text-muted-foreground">
                         This will make all branches unavailable for orders.
                       </p>
@@ -293,16 +293,16 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
               {confirmDialog.type === 'all'
                 ? confirmDialog.isActivating
                   ? 'Activate All Branches?'
-                  : 'Deactivate All Branches?'
+                  : 'Inactivate All Branches?'
                 : confirmDialog.isActivating
                   ? 'Activate Branch?'
-                  : 'Deactivate Branch?'}
+                  : 'Inactivate Branch?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmDialog.type === 'all'
                 ? confirmDialog.isActivating
                   ? 'All inactive branches will become active and accept orders.'
-                  : 'All active branches will be deactivated. Customers will not be able to place orders.'
+                  : 'All active branches will be inactivated. Customers will not be able to place orders.'
                 : confirmDialog.isActivating
                   ? 'This branch will become active and accept orders again.'
                   : 'This branch will be inactive. Are you sure you want to proceed?'}
@@ -311,7 +311,7 @@ export const BranchManagementCard = ({ branches, onUpdate }: BranchManagementCar
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmAction}>
-              {confirmDialog.isActivating ? 'Activate' : 'Deactivate'}
+              {confirmDialog.isActivating ? 'Activate' : 'Inactivate'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
