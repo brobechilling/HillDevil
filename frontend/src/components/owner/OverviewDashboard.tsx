@@ -196,10 +196,12 @@ export const OverviewDashboard = ({ userBranches, onBranchUpdate }: OverviewDash
       </Card>
 
       {/* Branch Performance */}
-      <BranchManagementCard
-        branches={userBranches}
-        onUpdate={() => onBranchUpdate?.()}
-      />
+      <div id="branch-management">
+        <BranchManagementCard
+          branches={userBranches}
+          onUpdate={() => onBranchUpdate?.()}
+        />
+      </div>
 
       <Card>
         <CardHeader>

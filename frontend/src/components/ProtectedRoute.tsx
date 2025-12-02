@@ -21,7 +21,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
 
     // need implmenting sth here
     if (!hasPermission) {
-      return <Navigate to="/*" replace />;
+      return <Navigate to="/not-found" replace />;
     }
   }
 
