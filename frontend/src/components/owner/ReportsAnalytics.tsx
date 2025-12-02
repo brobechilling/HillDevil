@@ -3,15 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DollarSign, TrendingUp, ShoppingCart, AlertCircle } from 'lucide-react';
-import { useBranchAnalytics, useTopSellingItems, useOrderDistribution } from '@/hooks/queries/useReports';
+import { useRestaurantAnalytics, useRestaurantTopSellingItems, useRestaurantOrderDistribution } from '@/hooks/queries/useReports';
 import LoadingSkeleton, { Skeleton } from '@/components/common/LoadingSkeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ReportsAnalyticsProps {
-  branchId: string;
+  restaurantId: string;
 }
 
-export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
+export const ReportsAnalytics = ({ restaurantId }: ReportsAnalyticsProps) => {
   const [timeframe, setTimeframe] = useState<'DAY' | 'MONTH' | 'YEAR'>('DAY');
   
   // Get current date for order distribution
@@ -25,19 +25,19 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
     data: analytics, 
     isLoading: analyticsLoading, 
     error: analyticsError 
-  } = useBranchAnalytics(branchId, timeframe);
+  } = useRestaurantAnalytics(restaurantId, timeframe);
   
   const { 
     data: topItems, 
     isLoading: topItemsLoading, 
     error: topItemsError 
-  } = useTopSellingItems(branchId, timeframe, 10);
+  } = useRestaurantTopSellingItems(restaurantId, timeframe, 10);
   
   const { 
     data: orderDistribution, 
     isLoading: distributionLoading, 
     error: distributionError 
-  } = useOrderDistribution(branchId, currentDate);
+  } = useRestaurantOrderDistribution(restaurantId, currentDate);
 
 
 
@@ -62,7 +62,7 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Reports & Analytics</CardTitle>
-              <CardDescription>Track your branch performance and insights</CardDescription>
+              <CardDescription>Track your restaurant performance across all branches</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button
@@ -159,7 +159,7 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                No analytics data available for this branch.
+                No analytics data available for this restaurant.
               </AlertDescription>
             </Alert>
           )}
@@ -274,7 +274,7 @@ export const ReportsAnalytics = ({ branchId }: ReportsAnalyticsProps) => {
                 </div>
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
-                  No sales data available for this branch yet.
+                  No sales data available for this restaurant yet.
                 </div>
               )}
             </CardContent>
