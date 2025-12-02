@@ -46,7 +46,7 @@ public class OrderItem {
     @Column(name = "status")
     private boolean status;
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "orderItem")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "orderItem", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
     private Set<OrderItemCustomization> orderItemCustomizations = new LinkedHashSet<>();
 
     public UUID getOrderItemId() {

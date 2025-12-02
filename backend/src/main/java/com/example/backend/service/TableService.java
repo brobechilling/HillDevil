@@ -306,6 +306,9 @@ public class TableService {
     public void deleteTable(UUID tableId) {
         AreaTable table = tableRepository.findById(tableId)
                 .orElseThrow(() -> new NoSuchElementException("Table not found"));
+        
+        // With cascade = ALL and orphanRemoval = true on relationships,
+        // orders and reservations will be automatically deleted
         tableRepository.delete(table);
     }
 
