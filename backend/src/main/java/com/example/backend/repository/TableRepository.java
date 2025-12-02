@@ -66,6 +66,17 @@ public interface TableRepository extends JpaRepository<AreaTable, UUID> {
                 ORDER BY t.tag ASC
             """)
     List<AreaTable> findAllByAreaId(@Param("areaId") UUID areaId);
+    
+    /**
+     * Đếm số lượng tables trong area (không filter theo area status)
+     * Dùng để validate khi delete area
+     */
+    @Query("""
+                SELECT COUNT(t)
+                FROM AreaTable t
+                WHERE t.area.areaId = :areaId
+            """)
+    long countTablesByAreaId(@Param("areaId") UUID areaId);
 
     /**
      * Lấy table với eager loading (tránh N+1 query)

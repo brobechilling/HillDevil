@@ -220,7 +220,7 @@ export default function OverviewPage() {
                         <CardContent className="p-4 text-center">
                           <div className="font-bold text-lg">#{table.tag}</div>
                           <div className="text-xs text-muted-foreground">
-                            {table.areaName || 'Unassigned'} • {table.capacity} seats
+                            {table.areaName || 'No Area'} • {table.capacity} seats
                           </div>
                           <Badge variant="outline" className="mt-2 text-xs">
                             {table.status}
