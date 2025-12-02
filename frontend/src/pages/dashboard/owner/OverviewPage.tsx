@@ -3,9 +3,12 @@ import { RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useBranchesByRestaurant } from '@/hooks/queries/useBranches';
 import { useSessionStore } from '@/store/sessionStore';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const OwnerOverviewPage = () => {
   const { user } = useSessionStore();
+  const location = useLocation();
   const selectedRestaurantRaw = localStorage.getItem('selected_restaurant');
   const selectedRestaurant = selectedRestaurantRaw ? JSON.parse(selectedRestaurantRaw) : null;
   const restaurantId = selectedRestaurant?.restaurantId;
@@ -18,6 +21,19 @@ const OwnerOverviewPage = () => {
     localStorage.removeItem('selected_restaurant');
     window.location.href = '/brand-selection';
   };
+
+  // Handle scroll to section
+  useEffect(() => {
+    const scrollTarget = (location.state as any)?.scrollTo;
+    if (scrollTarget) {
+      setTimeout(() => {
+        const element = document.getElementById(scrollTarget);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [location.state]);
 
   if (!selectedRestaurant) {
     return (

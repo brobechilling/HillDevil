@@ -48,9 +48,9 @@ const OwnerMenuPage = () => {
       toast({
         variant: 'destructive',
         title: 'No branches found',
-        description: 'This restaurant has no branches yet. Create a branch',
+        description: 'This restaurant has no branches yet. Create a branch first',
       });
-      navigate('/overview');
+      navigate('/dashboard/owner/overview', { state: { scrollTo: 'branch-management' } });
       return;
     }
 
