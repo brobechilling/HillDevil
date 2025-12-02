@@ -23,7 +23,7 @@ public class OrderLine {
     @JoinColumn(nullable = false,name = "order_id")
     private Order order;
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "orderLine", cascade = CascadeType.ALL)
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "orderLine", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OrderItem> orderItems = new LinkedHashSet<>();
 
     @Column(name = "total_price", precision = 10, scale = 2)
