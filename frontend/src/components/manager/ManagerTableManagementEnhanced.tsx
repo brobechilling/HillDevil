@@ -179,9 +179,6 @@ export const ManagerTableManagementEnhanced = ({
     [tablesData?.content]
   );
 
-  const UNASSIGNED_AREA_ID = "unassigned";
-  const UNASSIGNED_AREA_LABEL = "Unassigned tables";
-
   const areaMap = useMemo(() => {
     const map = new Map<
       string,
@@ -195,52 +192,21 @@ export const ManagerTableManagementEnhanced = ({
       });
     });
 
-    const orphanTables: TableDTO[] = [];
-
     apiTables.forEach((table) => {
       const areaId = table.areaId;
 
       if (areaId && map.has(areaId)) {
         map.get(areaId)!.tables.push(table);
-      } else {
-        orphanTables.push(table);
       }
+      // Note: Tables without valid areaId are ignored (should not happen with new backend logic)
     });
-
-    if (orphanTables.length > 0) {
-      map.set(UNASSIGNED_AREA_ID, {
-        areaName: UNASSIGNED_AREA_LABEL,
-        tables: orphanTables,
-        isFallback: true,
-      });
-    }
 
     return map;
   }, [apiTables, areas]);
 
   // Filter areas based on selectedAreaId
   const filteredAreaEntries = useMemo(() => {
-    // Filter out "Undefined Area" (both virtual and real) if it has no tables
-    const validEntries = Array.from(areaMap.entries()).filter(
-      ([areaId, { areaName, tables }]) => {
-        // Hide virtual "Undefined Area" if no tables
-        if (areaId === UNASSIGNED_AREA_ID) {
-          return tables.length > 0;
-        }
-        // Also hide real areas from backend with "Undefined Area" name if no tables
-        if (
-          areaName.toLowerCase().includes("undefined") ||
-          areaName.toLowerCase().includes("unassigned")
-        ) {
-          return tables.length > 0;
-        }
-        return true;
-      }
-    );
-
-    const entries = validEntries.sort((a, b) => {
-      if (a[0] === UNASSIGNED_AREA_ID) return 1;
-      if (b[0] === UNASSIGNED_AREA_ID) return -1;
+    const entries = Array.from(areaMap.entries()).sort((a, b) => {
       return a[1].areaName.localeCompare(b[1].areaName);
     });
 
@@ -351,13 +317,15 @@ export const ManagerTableManagementEnhanced = ({
   };
 
   const handleDeleteAreaClick = (areaId: string, areaName: string) => {
-    // Check if area has tables - show warning but allow deletion
+    // Check if area has tables - prevent deletion
     const areaTables = areaMap.get(areaId)?.tables || [];
     if (areaTables.length > 0) {
       toast({
-        title: "Area has tables",
-        description: `Area "${areaName}" currently has ${areaTables.length} tables. After deletion, this area will be hidden and the tables will be moved to the "${UNASSIGNED_AREA_LABEL}" group until you reassign them.`,
+        title: "Cannot delete area",
+        description: `Area "${areaName}" has ${areaTables.length} table(s). Please delete or move all tables to another area first.`,
+        variant: "destructive",
       });
+      return;
     }
 
     setAreaToDelete({ id: areaId, name: areaName });
@@ -368,17 +336,11 @@ export const ManagerTableManagementEnhanced = ({
     if (!areaToDelete) return;
 
     try {
-      const areaTables = areaMap.get(areaToDelete.id)?.tables || [];
       await deleteAreaMutation.mutateAsync(areaToDelete.id);
-
-      let description = `Area "${areaToDelete.name}" has been successfully deleted.`;
-      if (areaTables.length > 0) {
-        description += ` ${areaTables.length} tables have been moved to the "${UNASSIGNED_AREA_LABEL}" group.`;
-      }
 
       toast({
         title: "Area deleted",
-        description: description,
+        description: `Area "${areaToDelete.name}" has been successfully deleted.`,
       });
       setIsDeleteAreaDialogOpen(false);
       setAreaToDelete(null);
@@ -969,12 +931,6 @@ export const ManagerTableManagementEnhanced = ({
                           {area.name}
                         </SelectItem>
                       ))}
-                      {areaMap.has(UNASSIGNED_AREA_ID) &&
-                        areaMap.get(UNASSIGNED_AREA_ID)?.tables.length > 0 && (
-                          <SelectItem value={UNASSIGNED_AREA_ID}>
-                            {UNASSIGNED_AREA_LABEL}
-                          </SelectItem>
-                        )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -987,19 +943,7 @@ export const ManagerTableManagementEnhanced = ({
                   </div>
                 ) : (
                   <div className="space-y-8">
-                    {sortedAreaEntries
-                      .filter(([areaId, { areaName, tables: areaTables }]) => {
-                        // Hide "Undefined Area" (virtual or real) if no tables
-                        if (
-                          areaId === UNASSIGNED_AREA_ID ||
-                          areaName.toLowerCase().includes("undefined") ||
-                          areaName.toLowerCase().includes("unassigned")
-                        ) {
-                          return areaTables.length > 0;
-                        }
-                        return true;
-                      })
-                      .map(
+                    {sortedAreaEntries.map(
                         (
                           [areaId, { areaName, tables: areaTables }],
                           areaIndex
@@ -1750,7 +1694,7 @@ export const ManagerTableManagementEnhanced = ({
                   ? areaMap.get(areaToDelete.id)?.tables || []
                   : [];
                 if (areaTables.length > 0) {
-                  return ` This area has ${areaTables.length} table(s) that will be moved to "Undefined Area" after deletion.`;
+                  return ` This area has ${areaTables.length} table(s). You must delete or move all tables to another area before deleting this area.`;
                 }
                 return " This action cannot be undone and the area will be permanently removed.";
               })()}

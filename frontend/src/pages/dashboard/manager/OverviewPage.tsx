@@ -7,6 +7,7 @@ import { useBranch } from '@/hooks/queries/useBranches';
 import { useManagerOverview } from '@/hooks/queries/useManagerOverview';
 import { useAreas } from '@/hooks/queries/useAreas';
 import { useTables } from '@/hooks/queries/useTables';
+import { useBranchTodayStats } from '@/hooks/queries/useBranchReports';
 import { useSessionStore } from '@/store/sessionStore';
 import { isStaffAccountDTO } from '@/utils/typeCast';
 import { TableDTO } from '@/dto/table.dto';
@@ -20,12 +21,13 @@ export default function OverviewPage() {
   
   const { data: branch, isLoading: isLoadingBranch } = useBranch(branchId);
   const { data: stats, isLoading: isLoadingStats } = useManagerOverview(branchId);
+  const { data: todayStats, isLoading: isLoadingTodayStats } = useBranchTodayStats(branchId);
   const { data: areas, isLoading: isLoadingAreas } = useAreas(branchId);
   const { data: tablesData, isLoading: isLoadingTables } = useTables(branchId, 0, 1000);
 
   const [selectedAreaId, setSelectedAreaId] = useState<string>('all');
 
-  const isLoading = isLoadingBranch || isLoadingStats || isLoadingAreas || isLoadingTables;
+  const isLoading = isLoadingBranch || isLoadingStats || isLoadingAreas || isLoadingTables || isLoadingTodayStats;
 
   // Filter tables by selected area
   const filteredTables = useMemo(() => {
@@ -75,19 +77,19 @@ export default function OverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${stats?.todayRevenue.toFixed(2) || '0.00'}
+              ${todayStats?.todayRevenue.toFixed(2) || '0.00'}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats && stats.revenueChangePercent !== 0 && (
-                <span className={stats.revenueChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
-                  {stats.revenueChangePercent >= 0 ? '+' : ''}
-                  {stats.revenueChangePercent.toFixed(1)}%
+              {todayStats && todayStats.revenueChangePercent !== 0 && (
+                <span className={todayStats.revenueChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
+                  {todayStats.revenueChangePercent >= 0 ? '+' : ''}
+                  {todayStats.revenueChangePercent.toFixed(1)}%
                 </span>
               )}
-              {stats && stats.revenueChangePercent === 0 && (
+              {todayStats && todayStats.revenueChangePercent === 0 && (
                 <span className="text-muted-foreground">No change</span>
               )}
-              {!stats && <span className="text-muted-foreground">Loading...</span>}
+              {!todayStats && <span className="text-muted-foreground">Loading...</span>}
               {' vs yesterday'}
             </p>
           </CardContent>
@@ -218,7 +220,7 @@ export default function OverviewPage() {
                         <CardContent className="p-4 text-center">
                           <div className="font-bold text-lg">#{table.tag}</div>
                           <div className="text-xs text-muted-foreground">
-                            {table.areaName || 'Unassigned'} • {table.capacity} seats
+                            {table.areaName || 'No Area'} • {table.capacity} seats
                           </div>
                           <Badge variant="outline" className="mt-2 text-xs">
                             {table.status}
@@ -241,17 +243,17 @@ export default function OverviewPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <span className="text-sm font-medium">Total Orders</span>
-              <span className="text-lg font-bold">{stats?.totalOrders || 0}</span>
+              <span className="text-lg font-bold">{todayStats?.totalOrders || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <span className="text-sm font-medium">Average Order Value</span>
               <span className="text-lg font-bold">
-                ${stats?.averageOrderValue.toFixed(2) || '0.00'}
+                ${todayStats?.averageOrderValue.toFixed(2) || '0.00'}
               </span>
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <span className="text-sm font-medium">Total Menu Items Sold</span>
-              <span className="text-lg font-bold">{stats?.totalMenuItemsSold || 0}</span>
+              <span className="text-lg font-bold">{todayStats?.totalMenuItemsSold || 0}</span>
             </div>
           </CardContent>
         </Card>

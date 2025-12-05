@@ -105,15 +105,6 @@ export const routes: RouteObject[] = [
     ),
   },
   {
-
-    path: '/:restaurantSlug',
-    element: <ReservationGuestLanding />,
-  },
-  // {
-  //   path: '/:restaurantSlug/branch/:branchId',
-  //   element: <GuestLanding />,
-  // },
-  {
     path: '/t/:branchId/:tableId',
     element: <GuestLanding />,
   },
@@ -357,6 +348,18 @@ export const routes: RouteObject[] = [
         <Settings />
       </ProtectedRoute>
     ),
+  },
+  {
+    path: '/*',
+    element: <NotFound />,
+  },
+  {
+    path: '/not-found',
+    element: <NotFound />,
+  },
+  {
+    path: '/:restaurantSlug',
+    element: <ReservationGuestLanding />,
   },
   {
     path: '*',

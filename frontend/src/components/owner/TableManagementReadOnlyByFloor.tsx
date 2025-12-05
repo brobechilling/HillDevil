@@ -294,7 +294,7 @@ export const TableManagementReadOnlyByFloor = ({
   if (tablesData?.content) {
     tablesData.content.forEach((table) => {
       const areaId = table.areaId || 'unknown';
-      const areaName = table.areaName || 'Unassigned';
+      const areaName = table.areaName || 'No Area';
       
       if (!areaMap.has(areaId)) {
         areaMap.set(areaId, { areaName, tables: [] });

@@ -99,59 +99,17 @@ public class AreaService {
         if (!area.isStatus()) {
             return;
         }
-
-        // Get branchId from loaded area
-        UUID branchId = area.getBranch().getBranchId();
         
-        // Get all tables in this area
-        List<com.example.backend.entities.AreaTable> tablesInArea = tableRepository.findAllByAreaId(areaId);
+        // Check if area has any tables (regardless of area status)
+        long tableCount = tableRepository.countTablesByAreaId(areaId);
         
-        // If area has tables, move them to "Undefined Area" (Unassigned Area)
-        if (!tablesInArea.isEmpty()) {
-            // Find or create default "Undefined Area" area
-            Area defaultArea = findOrCreateUnassignedArea(branchId);
-            
-            // Move all tables to default area
-            for (com.example.backend.entities.AreaTable table : tablesInArea) {
-                table.setArea(defaultArea);
-            }
-            tableRepository.saveAll(tablesInArea);
+        // If area has tables, throw error - user must delete or move tables first
+        if (tableCount > 0) {
+            throw new AppException(ErrorCode.AREA_HAS_TABLES);
         }
         
-        // Hide the area (set status to false instead of deleting)
+        // Area is empty, safe to delete (set status to false)
         area.setStatus(false);
         areaRepository.save(area);
-    }
-    
-    /**
-     * Find or create the default "Undefined Area" (Unassigned Area) for a branch
-     */
-    private Area findOrCreateUnassignedArea(UUID branchId) {
-        String defaultAreaName = "Undefined Area";
-        
-        // Try to find existing default area (any status)
-        Optional<Area> existingDefaultArea = areaRepository.findByBranchBranchIdAndNameIgnoreCaseAnyStatus(
-                branchId, defaultAreaName);
-        
-        if (existingDefaultArea.isPresent()) {
-            Area area = existingDefaultArea.get();
-            // Ensure it's active
-            if (!area.isStatus()) {
-                area.setStatus(true);
-                area = areaRepository.save(area);
-            }
-            return area;
-        }
-
-        // Create new default area if not found
-        Branch branch = branchRepository.findById(branchId)
-                .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOTEXISTED));
-        
-        Area defaultArea = new Area();
-        defaultArea.setBranch(branch);
-        defaultArea.setName(defaultAreaName);
-        defaultArea.setStatus(true);
-        
-        return areaRepository.save(defaultArea);
     }
 }

@@ -39,7 +39,7 @@ public enum ErrorCode {
     TABLE_NOT_FOUND(2001, "Table not found", HttpStatus.NOT_FOUND),
     AREA_NOT_FOUND(2002, "Area not found", HttpStatus.NOT_FOUND),
     AREA_NOT_OWNED_BY_USER(2003, "Area does not belong to this owner", HttpStatus.FORBIDDEN),
-    AREA_HAS_TABLES(2006, "Cannot delete area that has tables", HttpStatus.BAD_REQUEST),
+    AREA_HAS_TABLES(2006, "Cannot delete area that contains tables. Please delete or move all tables to another area first.", HttpStatus.BAD_REQUEST),
     AREA_NAME_EXISTS(2007, "Area name already exists in this branch", HttpStatus.BAD_REQUEST),
     TABLE_TAG_EXISTED_IN_AREA(2004, "Table tag already exists in this area", HttpStatus.BAD_REQUEST),
     INVALID_TABLE_STATUS(2005, "Invalid table status", HttpStatus.BAD_REQUEST),

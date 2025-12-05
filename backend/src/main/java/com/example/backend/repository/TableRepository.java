@@ -33,6 +33,7 @@ public interface TableRepository extends JpaRepository<AreaTable, UUID> {
                 JOIN t.area a
                 JOIN a.branch b
             WHERE b.branchId = :branchId
+                AND a.status = true
             ORDER BY t.tag ASC
             """)
     Page<TableResponse> findTablesByBranch(@Param("branchId") UUID branchId, Pageable pageable);
@@ -46,6 +47,7 @@ public interface TableRepository extends JpaRepository<AreaTable, UUID> {
                  JOIN FETCH t.area a
                  JOIN FETCH a.branch b
                WHERE b.branchId = :branchId
+                 AND a.status = true
                  AND (:areaId IS NULL OR a.areaId = :areaId)
                ORDER BY a.name ASC, t.tag ASC
             """)
@@ -60,9 +62,21 @@ public interface TableRepository extends JpaRepository<AreaTable, UUID> {
                 FROM AreaTable t
                 JOIN FETCH t.area a
                 WHERE a.areaId = :areaId
+                    AND a.status = true
                 ORDER BY t.tag ASC
             """)
     List<AreaTable> findAllByAreaId(@Param("areaId") UUID areaId);
+    
+    /**
+     * Đếm số lượng tables trong area (không filter theo area status)
+     * Dùng để validate khi delete area
+     */
+    @Query("""
+                SELECT COUNT(t)
+                FROM AreaTable t
+                WHERE t.area.areaId = :areaId
+            """)
+    long countTablesByAreaId(@Param("areaId") UUID areaId);
 
     /**
      * Lấy table với eager loading (tránh N+1 query)
@@ -76,6 +90,19 @@ public interface TableRepository extends JpaRepository<AreaTable, UUID> {
                 WHERE t.areaTableId = :tableId
             """)
     Optional<AreaTable> findByIdWithDetails(@Param("tableId") UUID tableId);
+    
+    /**
+     * Lấy table với eager loading bao gồm orders và reservations (cho delete)
+     */
+    @Query("""
+                SELECT DISTINCT t
+                FROM AreaTable t
+                LEFT JOIN FETCH t.area a
+                LEFT JOIN FETCH t.orders o
+                LEFT JOIN FETCH t.reservations r
+                WHERE t.areaTableId = :tableId
+            """)
+    Optional<AreaTable> findByIdWithOrdersAndReservations(@Param("tableId") UUID tableId);
     
     /**
      * Lấy table với eager loading và filter theo cả branchId và tableId
@@ -135,6 +162,7 @@ public interface TableRepository extends JpaRepository<AreaTable, UUID> {
                 LEFT JOIN FETCH t.reservations r
                 WHERE LOWER(TRIM(a.name)) = LOWER(TRIM(:areaName))
                   AND LOWER(TRIM(t.tag)) = LOWER(TRIM(:tag))
+                  AND a.status = true
             """)
     Optional<AreaTable> findByAreaNameAndTagIgnoreCase(@Param("areaName") String areaName, @Param("tag") String tag);
 }
