@@ -55,10 +55,10 @@ public class AreaTable {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "areaTable", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "areaTable")
     private Set<Reservation> reservations = new LinkedHashSet<>();
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "areaTable", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "areaTable")
     private Set<Order> orders = new LinkedHashSet<>();
 
     public UUID getAreaTableId() {
