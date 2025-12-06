@@ -38,10 +38,10 @@ public class Order {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "order", cascade = CascadeType.ALL)
     private Set<OrderLine> orderLines = new LinkedHashSet<>();
 
-    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL)
     private Bill bill;
 
     public UUID getOrderId() {

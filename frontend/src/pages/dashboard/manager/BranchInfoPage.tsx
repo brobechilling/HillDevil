@@ -28,6 +28,7 @@ export default function BranchInfoPage() {
     }
   }, [branch]);
 
+
   const handleSave = async () => {
     try {
       await updateBranchMutation.mutateAsync({ id: branchId, data: { branchPhone: phone, mail: email } });
@@ -70,7 +71,7 @@ export default function BranchInfoPage() {
                   id="phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+1 234 567 8900"
+                  // placeholder={branch?.branchPhone}
                   className="pl-10"
                 />
               </div>
@@ -85,7 +86,7 @@ export default function BranchInfoPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="branch@restaurant.com"
+                  // placeholder={branch?.mail}
                   className="pl-10"
                 />
               </div>
@@ -99,7 +100,7 @@ export default function BranchInfoPage() {
                   id="address"
                   value={address}
                   disabled
-                  placeholder="123 Main Street, City"
+                  // placeholder={branch?.address}
                   className="pl-10 bg-muted"
                 />
               </div>

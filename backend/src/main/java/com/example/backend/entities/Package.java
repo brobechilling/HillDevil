@@ -51,7 +51,7 @@ public class Package {
     @Column(name = "billing_period", nullable = false)
     private int billingPeriod;
 
-    @OneToMany(mappedBy = "aPackage", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "aPackage", cascade = CascadeType.ALL)
     private Set<PackageFeature> packageFeatures = new LinkedHashSet<>();
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "aPackage")
