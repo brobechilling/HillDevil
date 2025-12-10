@@ -105,7 +105,7 @@ const MenuItemDialog = ({ open, onOpenChange, menuItem, onAddItem }: MenuItemDia
                 <Loader2 className="w-6 h-6 animate-spin" />
               </div>
             ) : customizations && customizations.length > 0 ? (
-              <ul className="space-y-2 max-h-48 sm:max-h-64 overflow-y-auto pr-1">
+              <ul className="space-y-2 max-h-40 sm:max-h-56 overflow-y-auto pr-1">
                 {customizations.map((c) => {
                   const selected = selectedCustoms[c.customizationId];
                   return (
