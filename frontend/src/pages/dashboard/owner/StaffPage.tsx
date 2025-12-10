@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, Plus, Search } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { getLocalStorageObject } from '@/utils/typeCast';
 import { RestaurantDTO } from '@/dto/restaurant.dto';
 import { useSetStaffAccountStatusMutation, useStaffAccountByRestaurantPaginatedQuery } from '@/hooks/queries/useStaff';
@@ -79,7 +80,12 @@ const OwnerStaffPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className="space-y-6"
+    >
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold">Staff Management</h2>
@@ -262,7 +268,7 @@ const OwnerStaffPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </motion.div>
   );
 };
 

@@ -5,6 +5,7 @@ import { RestaurantDTO } from "@/dto/restaurant.dto";
 import { useActiveBranchesByRestaurant } from "@/hooks/queries/useBranches";
 import { getLocalStorageObject } from "@/utils/typeCast";
 import { Building2 } from "lucide-react";
+import { motion } from 'framer-motion';
 import { useNavigate } from "react-router-dom";
 
 export default function BranchSelectionPage() {
@@ -29,7 +30,12 @@ export default function BranchSelectionPage() {
     };
 
     return (
-        <div className="space-y-6">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="space-y-6"
+        >
             <div>
                 <h2 className="text-3xl font-bold mb-2">Branch Selection</h2>
                 <p className="text-muted-foreground">Select a branch to access manager dashboard of the branch</p>
@@ -69,7 +75,7 @@ export default function BranchSelectionPage() {
                 </Card>
             ))}
             </div>
-        </div>
+        </motion.div>
     );
 
     

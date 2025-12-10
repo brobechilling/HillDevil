@@ -114,7 +114,7 @@ const Profile = () => {
 
   // React Query hooks
   const { data: packages = [] } = usePackages();
-  const { data: overviewData = [] } = useOverviewForOwner();
+  const { data: overviewData = [], isLoading: isOverviewLoading } = useOverviewForOwner();
   const cancelMutation = useCancelSubscription();
   const updateUserProfileMutation = useUpdateUserProfile();
   const updatePasswordMutatation = useChangePasswordd();
@@ -538,7 +538,17 @@ useEffect(() => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <TooltipProvider>
+                  {isOverviewLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      >
+                        <Loader2 className="h-8 w-8 text-primary" />
+                      </motion.div>
+                    </div>
+                  ) : (
+                    <TooltipProvider>
                     {overviewData.length > 0 ? (
                       <div className="rounded-md border">
                         <Table>
@@ -782,7 +792,8 @@ useEffect(() => {
                         <p className="text-xl font-medium mb-2">No restaurants available</p>
                       </motion.div>
                     )}
-                  </TooltipProvider>
+                    </TooltipProvider>
+                  )}
                 </CardContent>
               </Card>
 

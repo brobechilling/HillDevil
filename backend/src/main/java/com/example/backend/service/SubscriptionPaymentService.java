@@ -265,22 +265,16 @@ public class SubscriptionPaymentService {
 
         Subscription subscription = payment.getSubscription();
 
-        if (payment.getPurpose() == SubscriptionPaymentPurpose.UPGRADE) {
-            subscription.setStatus(SubscriptionStatus.ACTIVE);
-            subscriptionRepository.save(subscription);
-
-            Restaurant restaurant = subscription.getRestaurant();
-            if (restaurant != null) {
-                restaurant.setStatus(true);
-                restaurantRepository.save(restaurant);
-            }
-        }
-
-        else if (payment.getPurpose() == SubscriptionPaymentPurpose.NEW_SUBSCRIPTION
+        // Only cancel subscription for NEW_SUBSCRIPTION if it hasn't been activated yet
+        if (payment.getPurpose() == SubscriptionPaymentPurpose.NEW_SUBSCRIPTION
                 && subscription.getStartDate() == null) {
             subscription.setStatus(SubscriptionStatus.CANCELED);
             subscriptionRepository.save(subscription);
         }
+        
+        // For UPGRADE and RENEW: Keep subscription ACTIVE, don't change anything
+        // The subscription stays on its current package and terms
+        // Only the payment is marked as CANCELED
 
         return subscriptionPaymentMapper.toSubscriptionPaymentResponse(payment);
     }

@@ -24,17 +24,13 @@ const PaymentCancelPage = () => {
               Payment Failed or Canceled ❌
             </CardTitle>
             <CardDescription className="text-muted-foreground mt-2">
-              It seems the transaction was canceled or an error occurred. Please try again later.
+              It seems the transaction was canceled. No changes were made to your subscription. You can try again or return to the dashboard.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-6 space-y-3">
-            <Button className="w-full" onClick={() => navigate(-1)}>
-              Go Back
-            </Button>
             <Button
-              variant="outline"
               className="w-full"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/profile/subscription")}
             >
               Back to Dashboard
             </Button>

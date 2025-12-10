@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { useRestaurant, useUpdateRestaurant, useDeleteRestaurant } from '@/hooks/queries/useRestaurants';
 import { useActiveSubscriptionByRestaurant, usePaymentHistory } from '@/hooks/queries/useSubscription';
 import { usePackages } from '@/hooks/queries/usePackages';
+import { motion } from 'framer-motion';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -184,7 +185,12 @@ export default function RestaurantInfoPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className="space-y-6"
+    >
       {/* Restaurant Info */}
       <Card>
         <CardHeader>
@@ -404,6 +410,6 @@ export default function RestaurantInfoPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </motion.div>
   );
 }

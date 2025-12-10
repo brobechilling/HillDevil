@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { UtensilsCrossed, Mail, Lock, User, Phone } from 'lucide-react';
+import { UtensilsCrossed, Mail, Lock, User, Phone, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SignupRequest } from '@/dto/user.dto';
 import { useMutation } from '@tanstack/react-query';
@@ -12,6 +12,31 @@ import { register } from '@/api/userApi';
 import { ApiResponse } from '@/dto/apiResponse';
 import { AxiosError } from 'axios';
 import { useValidateOTP, useVerifyMail } from '@/hooks/queries/useUsers';
+import { z } from 'zod';
+
+const RegisterSchema = z.object({
+  username: z.string().min(1, 'Full name is required').min(2, 'Full name must be at least 2 characters'),
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
+  phone: z.string()
+    .optional()
+    .refine(
+      (val) => !val || /^\d{10,}$/.test(val),
+      'Phone number must contain at least 10 digits'
+    ),
+  password: z.string().min(1, 'Password is required').min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string().min(1, 'Confirm password is required'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+});
+
+interface FormErrors {
+  username?: string;
+  email?: string;
+  phone?: string;
+  password?: string;
+  confirmPassword?: string;
+}
 
 const Register = () => {
   const [formData, setFormData] = useState<SignupRequest>({
@@ -25,6 +50,7 @@ const Register = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [otp, setOtp] = useState<string>('');
+  const [errors, setErrors] = useState<FormErrors>({});
   const verifyMailMutation = useVerifyMail();
   const validateOTPMutation = useValidateOTP();
   const [timer, setTimer] = useState<number>(0);
@@ -52,14 +78,27 @@ const Register = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.password !== confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Passwords do not match.",
+    // Validate with Zod
+    const validationResult = RegisterSchema.safeParse({
+      username: formData.username.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone,
+      password: formData.password,
+      confirmPassword: confirmPassword,
+    });
+
+    if (!validationResult.success) {
+      const fieldErrors: FormErrors = {};
+      validationResult.error.errors.forEach((err) => {
+        fieldErrors[err.path[0] as keyof FormErrors] = err.message;
       });
+      setErrors(fieldErrors);
       return;
     }
+
+    // Clear errors on successful validation
+    setErrors({});
+
     if (emailVerified) {
       registerMutation.mutate(formData);
     }
@@ -77,6 +116,11 @@ const Register = () => {
 
     if (id === 'email') {
       setEmailVerified(false);
+    }
+
+    // Clear error for this field when user starts typing
+    if (errors[id as keyof FormErrors]) {
+      setErrors({ ...errors, [id]: undefined });
     }
 
     setFormData((prev) => ({
@@ -209,10 +253,16 @@ const Register = () => {
                   value={formData.username}
                   placeholder='pizza pho mai'
                   onChange={handleChange}
-                  className="pl-10"
+                  className={`pl-10 ${errors.username && "border-destructive ring-2 ring-destructive/20"}`}
                   required
                 />
               </div>
+              {errors.username && (
+                <div className="flex items-center gap-1.5 text-xs text-destructive animate-in fade-in slide-in-from-top-2">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.username}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -225,10 +275,16 @@ const Register = () => {
                   value={formData.email}
                   placeholder='sushicahoi@gmail.com'
                   onChange={handleChange}
-                  className="pl-10"
+                  className={`pl-10 ${errors.email && "border-destructive ring-2 ring-destructive/20"}`}
                   required
                 />
               </div>
+              {errors.email && (
+                <div className="flex items-center gap-1.5 text-xs text-destructive animate-in fade-in slide-in-from-top-2">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.email}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -278,10 +334,20 @@ const Register = () => {
                   type="tel"
                   placeholder="0909123456"
                   value={formData.phone}
-                  onChange={handleChange}
-                  className="pl-10"
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    handleChange({ ...e, target: { ...e.target, id: 'phone', value } } as React.ChangeEvent<HTMLInputElement>);
+                  }}
+                  className={`pl-10 ${errors.phone && "border-destructive ring-2 ring-destructive/20"}`}
+                  inputMode="numeric"
                 />
               </div>
+              {errors.phone && (
+                <div className="flex items-center gap-1.5 text-xs text-destructive animate-in fade-in slide-in-from-top-2">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.phone}
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
@@ -294,10 +360,16 @@ const Register = () => {
                   placeholder='password'
                   value={formData.password}
                   onChange={handleChange}
-                  className="pl-10"
+                  className={`pl-10 ${errors.password && "border-destructive ring-2 ring-destructive/20"}`}
                   required
                 />
               </div>
+              {errors.password && (
+                <div className="flex items-center gap-1.5 text-xs text-destructive animate-in fade-in slide-in-from-top-2">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.password}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -309,11 +381,20 @@ const Register = () => {
                   type="password"
                   placeholder='password'
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-10"
+                  onChange={(e) => { 
+                    setConfirmPassword(e.target.value); 
+                    if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: undefined }); 
+                  }}
+                  className={`pl-10 ${errors.confirmPassword && "border-destructive ring-2 ring-destructive/20"}`}
                   required
                 />
               </div>
+              {errors.confirmPassword && (
+                <div className="flex items-center gap-1.5 text-xs text-destructive animate-in fade-in slide-in-from-top-2">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.confirmPassword}
+                </div>
+              )}
             </div>
 
             <Button type="submit" className="w-full" variant="hero" disabled={registerMutation.isPending}>

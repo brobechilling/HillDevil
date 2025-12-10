@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
@@ -25,6 +26,7 @@ export const CategoryManagementDialog = ({
   categoryId,
   restaurantId,
 }: Props) => {
+  const navigate = useNavigate();
   const { data: allCustomizations = [] } = useCustomizations(restaurantId);
   const { data: category } = useCategory(categoryId);
   const { data: limit } = useCustomizationLimit(restaurantId);
@@ -171,7 +173,11 @@ export const CategoryManagementDialog = ({
                         Please upgrade to Premium to add more customizations and unlock additional features.
                       </p>
                     </div>
-                    <Button variant="outline" className="border-amber-500 text-amber-500 hover:bg-amber-500/10">
+                    <Button 
+                      variant="outline" 
+                      className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
+                      onClick={() => navigate('/profile/subscription')}
+                    >
                       Upgrade to Premium
                     </Button>
                   </CardContent>
@@ -239,7 +245,7 @@ export const CategoryManagementDialog = ({
                   <div
                     key={cust.customizationId}
                     className={cn(
-                      "flex items-center justify-between p-4 border rounded-xl transition-all duration-200",
+                      "flex items-center justify-between p-4 border rounded-lg transition-all duration-200",
                       disabled ? "opacity-50 cursor-not-allowed" : "hover:shadow-md hover:border-primary/30 cursor-pointer",
                       isSelected && "bg-primary/5 border-primary/50 shadow-sm",
                       "animate-in fade-in slide-in-from-left-2 duration-300"
@@ -247,12 +253,12 @@ export const CategoryManagementDialog = ({
                     style={{ animationDelay: `${index * 30}ms` }}
                     onClick={() => !disabled && handleToggle(cust.customizationId, !isSelected)}
                   >
-                    <div className="flex items-center gap-3 flex-1">
+                    <div className="flex items-center gap-4 flex-1">
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={(checked) => !disabled && handleToggle(cust.customizationId, checked as boolean)}
                         disabled={disabled}
-                        className="pointer-events-none"
+                        className="pointer-events-none mt-0.5"
                       />
                       <div className="flex-1">
                         <div className="flex items-center justify-between gap-2">
