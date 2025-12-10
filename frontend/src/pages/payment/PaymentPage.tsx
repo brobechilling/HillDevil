@@ -17,6 +17,15 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { QRCodeCanvas } from "qrcode.react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const PaymentPage = () => {
   const navigate = useNavigate();
@@ -27,6 +36,8 @@ const PaymentPage = () => {
   const [loading, setLoading] = useState(true);
   const [payment, setPayment] = useState<SubscriptionPaymentResponse | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<string>("");
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
 
   // Extract restaurant context from location.state and payment response
   const initialPayment = location.state as SubscriptionPaymentResponse | null;
@@ -108,6 +119,7 @@ const PaymentPage = () => {
 
   const handleCancel = async () => {
     if (!payment?.payOsOrderCode) return;
+    setIsCanceling(true);
     try {
       await subscriptionPaymentApi.cancel(payment.payOsOrderCode);
       toast({
@@ -121,6 +133,9 @@ const PaymentPage = () => {
         title: "Error canceling payment",
         description: "Please try again.",
       });
+    } finally {
+      setIsCanceling(false);
+      setShowCancelDialog(false);
     }
   };
 
@@ -263,7 +278,7 @@ const PaymentPage = () => {
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button
                     variant="destructive"
-                    onClick={handleCancel}
+                    onClick={() => setShowCancelDialog(true)}
                     disabled={
                       loading || payment.subscriptionPaymentStatus !== "PENDING"
                     }
@@ -353,6 +368,28 @@ const PaymentPage = () => {
         </Card>
         </motion.div>
       </div>
+
+      {/* Cancel Payment Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Payment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this payment? You will need to start a new payment process if you want to continue with the subscription.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2">
+            <AlertDialogCancel>Keep Payment</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancel}
+              disabled={isCanceling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCanceling ? "Canceling..." : "Yes, Cancel Payment"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 };
