@@ -372,7 +372,7 @@ useEffect(() => {
     return pkg ? pkg.name : packageId;
   };
 
-  const getDashboardLink = () => '/dashboard/owner/brand-selection';
+  const getDashboardLink = () => '/brand-selection';
 
   return (
     <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/30">
