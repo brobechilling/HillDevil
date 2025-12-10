@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -94,6 +95,7 @@ interface MenuManagementProps {
 }
 
 export const MenuManagement = ({ branchId }: MenuManagementProps) => {
+  const navigate = useNavigate();
   const { isLoading: isSessionLoading } = useSessionStore();
 
   const selectedRestaurantRaw = typeof window !== 'undefined' ? localStorage.getItem('selected_restaurant') : null;
@@ -235,7 +237,11 @@ export const MenuManagement = ({ branchId }: MenuManagementProps) => {
                       Please upgrade to Premium to add more menu items and unlock additional features.
                     </p>
                   </div>
-                  <Button variant="outline" className="border-amber-500 text-amber-500 hover:bg-amber-500/10">
+                  <Button 
+                    variant="outline" 
+                    className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
+                    onClick={() => navigate('/profile/subscription')}
+                  >
                     Upgrade to Premium
                   </Button>
                 </CardContent>

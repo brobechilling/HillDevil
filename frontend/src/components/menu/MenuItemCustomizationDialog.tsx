@@ -187,7 +187,7 @@ export const MenuItemCustomizationDialog = ({
                   <div
                     key={cust.customizationId}
                     className={cn(
-                      "flex items-center justify-between p-4 border rounded-xl transition-all duration-200",
+                      "flex items-center justify-between p-4 border rounded-lg transition-all duration-200",
                       "hover:shadow-md hover:border-primary/30 cursor-pointer",
                       isSelected && "bg-primary/5 border-primary/50 shadow-sm",
                       "animate-in fade-in slide-in-from-left-2 duration-300"
@@ -195,11 +195,11 @@ export const MenuItemCustomizationDialog = ({
                     style={{ animationDelay: `${index * 30}ms` }}
                     onClick={() => handleToggle(cust.customizationId, !isSelected)}
                   >
-                    <div className="flex items-center gap-3 flex-1">
+                    <div className="flex items-center gap-4 flex-1">
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={(checked) => handleToggle(cust.customizationId, checked as boolean)}
-                        className="pointer-events-none"
+                        className="pointer-events-none mt-0.5"
                       />
                       <div className="flex-1">
                         <div className="flex items-center justify-between gap-2">

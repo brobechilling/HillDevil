@@ -132,7 +132,7 @@ export default function PaymentSuccessPage() {
                   size="lg"
                   variant="outline"
                   className="w-full font-medium"
-                  onClick={() => navigate("/dashboard/owner")}
+                  onClick={() => navigate("/dashboard/owner/branch-selection")}
                 >
                   View All Restaurants
                 </Button>

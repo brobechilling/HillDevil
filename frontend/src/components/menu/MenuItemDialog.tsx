@@ -248,13 +248,14 @@ export const MenuItemDialog = ({
           </div>
 
           {/* Customization */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Checkbox
               checked={hasCustomization}
               onCheckedChange={(v) => setValue("hasCustomization", v === true)}
+              className="mt-0.5"
             />
 
-            <Label className="text-sm">Has Customization</Label>
+            <Label className="text-sm cursor-pointer">Has Customization</Label>
 
             <TooltipProvider>
               <Tooltip>

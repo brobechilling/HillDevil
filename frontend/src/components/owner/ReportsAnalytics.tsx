@@ -263,7 +263,7 @@ export const ReportsAnalytics = ({ restaurantId }: ReportsAnalyticsProps) => {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{item.menuItemName}</p>
                         <p className="text-sm text-muted-foreground">
-                          {item.quantitySold} {item.quantitySold === 1 ? 'order' : 'orders'}
+                          {item.quantitySold} {item.quantitySold === 1 ? 'unit sold' : 'units sold'}
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">

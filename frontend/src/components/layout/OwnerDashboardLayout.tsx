@@ -100,14 +100,6 @@ const OwnerDashboardLayout = ({ children }: OwnerDashboardLayoutProps) => {
       gradient: 'from-green-500 to-emerald-500'
     },
     {
-      id: 'customization',
-      path: '/dashboard/owner/customization',
-      icon: Palette,
-      label: 'Branding',
-      description: 'Customize branch appearance',
-      gradient: 'from-pink-500 to-rose-500'
-    },
-    {
       id: 'reports',
       path: '/dashboard/owner/reports',
       icon: BarChart3,
