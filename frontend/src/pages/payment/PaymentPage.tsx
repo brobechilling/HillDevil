@@ -186,9 +186,7 @@ const PaymentPage = () => {
             <CardDescription>Could not initialize payment session.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" onClick={() => navigate(-1)}>
-              Back
-            </Button>
+            <p className="text-sm text-muted-foreground mb-4">Please try again or contact support.</p>
           </CardContent>
         </Card>
       </motion.div>
@@ -262,11 +260,6 @@ const PaymentPage = () => {
 
               {/* Actions */}
               <div className="flex justify-center gap-4">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button variant="outline" onClick={() => navigate(-1)} disabled={loading}>
-                    Back
-                  </Button>
-                </motion.div>
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button
                     variant="destructive"

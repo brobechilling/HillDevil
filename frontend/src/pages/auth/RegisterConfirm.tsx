@@ -520,10 +520,27 @@ const RegisterConfirm = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: 0.9 }}
+                    className="flex gap-3"
                   >
                     <motion.div
                       whileHover={{ scale: isPending ? 1 : 1.02 }}
                       whileTap={{ scale: isPending ? 1 : 0.98 }}
+                      className="flex-1"
+                    >
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        disabled={isPending} 
+                        className="w-full"
+                        onClick={() => navigate("/")}
+                      >
+                        Cancel
+                      </Button>
+                    </motion.div>
+                    <motion.div
+                      whileHover={{ scale: isPending ? 1 : 1.02 }}
+                      whileTap={{ scale: isPending ? 1 : 0.98 }}
+                      className="flex-1"
                     >
                       <Button type="submit" disabled={isPending} className="w-full">
                         {registerMutation.isPending && (
