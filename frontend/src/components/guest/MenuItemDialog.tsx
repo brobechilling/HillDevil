@@ -79,106 +79,99 @@ const MenuItemDialog = ({ open, onOpenChange, menuItem, onAddItem }: MenuItemDia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-sm sm:max-w-lg w-full max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-semibold">{menuItem.name}</DialogTitle>
+          <DialogTitle>{menuItem.name}</DialogTitle>
           <DialogDescription>{menuItem.description}</DialogDescription>
         </DialogHeader>
 
-        {menuItem.imageUrl && (
-          <img
-            src={menuItem.imageUrl}
-            alt={menuItem.name}
-            className="rounded-lg w-full h-60 object-cover"
-          />
-        )}
+        <div className="px-1 space-y-4 flex-1 min-h-0">
 
-        <Separator className="my-3" />
-
-        <div className="space-y-3">
-          <h4 className="font-semibold text-lg">Customizations</h4>
-          {isLoading ? (
-            <div className="flex justify-center py-6">
-              <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
-            </div>
-          ) : customizations && customizations.length > 0 ? (
-            <ul className="space-y-2">
-              {customizations.map((c) => {
-                const selected = selectedCustoms[c.customizationId];
-                return (
-                  <li
-                    key={c.customizationId}
-                    className={`flex justify-between items-center border p-2 rounded-lg cursor-pointer ${
-                      selected ? 'border-primary bg-primary/10' : ''
-                    }`}
-                    onClick={() => toggleCustomization(c.customizationId, c.price)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {selected && <Check className="w-4 h-4 text-primary" />}
-                      <span>{c.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {selected && (
-                        <>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateCustomizationQty(c.customizationId, -1);
-                            }}
-                          >
-                            <Minus className="w-3 h-3" />
-                          </Button>
-                          <span>{selected}</span>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateCustomizationQty(c.customizationId, 1);
-                            }}
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </>
-                      )}
-                      <span className="font-medium text-primary">+{c.price} VND</span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="text-gray-500 text-sm">No customization available.</p>
+          {menuItem.imageUrl && (
+            <img
+              src={menuItem.imageUrl}
+              alt={menuItem.name}
+              className="rounded-lg w-full h-40 sm:h-60 object-cover"
+            />
           )}
-        </div>
 
-        <Separator className="my-3" />
+          <Separator />
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              size="icon"
-              variant="outline"
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-            >
-              <Minus className="w-4 h-4" />
-            </Button>
-            <span className="w-6 text-center font-semibold">{quantity}</span>
-            <Button size="icon" variant="outline" onClick={() => setQuantity((q) => q + 1)}>
-              <Plus className="w-4 h-4" />
-            </Button>
+          <div className="space-y-3 min-h-0">
+            <h4 className="font-semibold">Customizations</h4>
+
+            {isLoading ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+            ) : customizations && customizations.length > 0 ? (
+              <ul className="space-y-2 max-h-48 sm:max-h-64 overflow-y-auto pr-1">
+                {customizations.map((c) => {
+                  const selected = selectedCustoms[c.customizationId];
+                  return (
+                    <li
+                      key={c.customizationId}
+                      className={`flex justify-between items-center border p-2 rounded-lg cursor-pointer ${
+                        selected ? 'border-primary bg-primary/10' : ''
+                      }`}
+                      onClick={() => toggleCustomization(c.customizationId, c.price)}
+                    >
+                      <div className="flex items-center gap-2">
+                        {selected && <Check className=" text-primary" />}
+                        <span>{c.name}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {selected && (
+                          <>
+                            <Button size="icon" variant="ghost"
+                              onClick={(e) => { e.stopPropagation(); updateCustomizationQty(c.customizationId, -1); }}>
+                              <Minus className="w-3 h-3" />
+                            </Button>
+
+                            <span>{selected}</span>
+
+                            <Button size="icon" variant="ghost"
+                              onClick={(e) => { e.stopPropagation(); updateCustomizationQty(c.customizationId, 1); }}>
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </>
+                        )}
+
+                        <span className="font-medium text-primary text-xs sm:text-sm">
+                          +{c.price} VND
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-gray-500 text-sm">No customization available.</p>
+            )}
           </div>
-          <div className="text-xl font-bold">{computeTotal().toLocaleString()} VND</div>
-        </div>
 
-        <Input
-          placeholder="Add note (optional)"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          className="mt-3"
-        />
+          <Separator />
+
+           <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              >
+                <Minus className="w-4 h-4" />
+              </Button>
+              <span className="w-6 text-center font-semibold">{quantity}</span>
+              <Button size="icon" variant="outline" onClick={() => setQuantity((q) => q + 1)}>
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="text-xl font-bold">{computeTotal().toLocaleString()} VND</div>
+          </div>
+
+          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder='Add note (optional)'/>
+        </div>
 
         <DialogFooter>
           <Button className="w-full mt-3" onClick={handleAdd}>

@@ -87,81 +87,104 @@ const GuestLanding = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-6">
       <Card className="shadow-md">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">{restaurant.name}</CardTitle>
-          <CardDescription>{branch.address}</CardDescription>
+          <CardTitle className="text-xl sm:text-2xl font-bold">{restaurant.name}</CardTitle>
+          <CardDescription className="text-sm sm:text-base">{branch.address}</CardDescription>
         </CardHeader>
       </Card>
 
       <Separator />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* Grid responsive tốt hơn */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
         {branchMenuItems.map((item) => {
-          const selectedCount = orderItems.filter((i) => i.menuItemId === item.menuItemId).length;
+          const selectedCount =
+            orderItems.filter((i) => i.menuItemId === item.menuItemId).length;
+
           return (
             <Card
               key={item.branchMenuItemId}
               className="hover:shadow-lg transition cursor-pointer relative"
-              onClick={() => handleViewOrderItem(item)} 
+              onClick={() => handleViewOrderItem(item)}
             >
               {selectedCount > 0 && (
-                <Badge className="absolute top-2 right-2 bg-green-600 text-white">
+                <Badge className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-green-600 text-white">
                   {selectedCount}
                 </Badge>
               )}
               <CardHeader className="p-0">
                 {item.imageUrl ? (
-                  <img src={item.imageUrl} alt={item.name} className="rounded-t-xl w-full h-48 object-cover" />
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="rounded-t-xl w-full h-28 sm:h-48 object-cover"
+                  />
                 ) : (
-                  <div className="h-48 bg-gray-200 flex items-center justify-center text-gray-400">No Image</div>
+                  <div className="h-28 sm:h-48 bg-gray-200 flex items-center justify-center text-gray-400">
+                    No Image
+                  </div>
                 )}
               </CardHeader>
-              <CardContent className="p-4 space-y-2">
+              <CardContent className="p-2 sm:p-4 space-y-1 sm:space-y-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold">{item.name}</CardTitle>
-                  {item.bestSeller && <Badge variant="destructive">Best Seller</Badge>}
+                  <CardTitle className="text-sm sm:text-lg font-semibold">
+                    {item.name}
+                  </CardTitle>
+                  {item.bestSeller && (
+                    <Badge variant="destructive" className="text-[10px] sm:text-xs">
+                      Best Seller
+                    </Badge>
+                  )}
                 </div>
-                <CardDescription className="line-clamp-2 text-sm text-gray-600">
+                <CardDescription className="line-clamp-2 text-xs sm:text-sm text-gray-600">
                   {item.description}
                 </CardDescription>
-                {!item.available && <Badge variant="destructive">Out of order</Badge>}
-                <div className="text-right font-medium text-primary">{item.price.toLocaleString()} VND</div>
+                {!item.available && (
+                  <Badge variant="destructive" className="text-[10px] sm:text-xs">
+                    Out of order
+                  </Badge>
+                )}
+                <div className="text-right font-medium text-primary text-sm sm:text-base">
+                  {item.price.toLocaleString()} VND
+                </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* --- Order Summary --- */}
+      {/* Order summary responsive */}
       {orderItems.length > 0 && (
-        <Card className="shadow-lg p-4 space-y-4">
-          <h3 className="font-bold text-xl flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-600" /> Selected Items
+        <Card className="shadow-lg p-3 sm:p-4 space-y-4 sticky bottom-0 bg-white">
+          <h3 className="font-bold text-lg sm:text-xl flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" /> 
+            Selected Items
           </h3>
-          {orderItems.map((item, idx) => (
-            <div
-              key={idx}
-              className="flex justify-between items-center border-b pb-2 mb-2 text-sm"
-            >
-              <div>
-                <div className="font-medium">{branchMenuItems.find((i) => i.menuItemId === item.menuItemId)?.name}</div>
-                <div className="text-gray-500">
-                  x{item.quantity} — {item.totalPrice.toLocaleString()} VND
-                </div>
-              </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => handleRemoveItem(idx)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-          ))}
 
-          <div className="text-right font-bold text-lg">
+          <div className="max-h-40 overflow-y-auto pr-1">
+            {orderItems.map((item, idx) => (
+              <div
+                key={idx}
+                className="flex justify-between items-center border-b pb-2 mb-2 text-xs sm:text-sm"
+              >
+                <div>
+                  <div className="font-medium">
+                    {branchMenuItems.find((i) => i.menuItemId === item.menuItemId)?.name}
+                  </div>
+                  <div className="text-gray-500">
+                    x{item.quantity} — {item.totalPrice.toLocaleString()} VND
+                  </div>
+                </div>
+                <Button size="icon" variant="ghost" onClick={() => handleRemoveItem(idx)}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-right font-bold text-base sm:text-lg">
             Total:{' '}
             {orderItems.reduce((sum, i) => sum + i.totalPrice, 0).toLocaleString()} VND
           </div>
